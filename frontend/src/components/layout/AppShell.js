@@ -1,0 +1,59 @@
+import { useState } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Header } from "@/components/layout/Header";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import Dashboard from "@/pages/Dashboard";
+import Sales from "@/pages/Sales";
+import Customers from "@/pages/Customers";
+import Invoices from "@/pages/Invoices";
+import Expenses from "@/pages/Expenses";
+import Suppliers from "@/pages/Suppliers";
+import Products from "@/pages/Products";
+import Inventory from "@/pages/Inventory";
+import Employees from "@/pages/Employees";
+import Tasks from "@/pages/Tasks";
+import Reports from "@/pages/Reports";
+import Settings from "@/pages/Settings";
+
+export function AppShell() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-background">
+      <div className="hidden lg:block">
+        <Sidebar />
+      </div>
+
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent side="left" className="w-64 p-0">
+          <Sidebar onNavigate={() => setMobileOpen(false)} />
+        </SheetContent>
+      </Sheet>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Header onMenuClick={() => setMobileOpen(true)} />
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <Routes>
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/sales" element={<Sales />} />
+              <Route path="/customers" element={<Customers />} />
+              <Route path="/invoices" element={<Invoices />} />
+              <Route path="/expenses" element={<Expenses />} />
+              <Route path="/suppliers" element={<Suppliers />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/inventory" element={<Inventory />} />
+              <Route path="/employees" element={<Employees />} />
+              <Route path="/tasks" element={<Tasks />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}

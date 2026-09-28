@@ -1,0 +1,161 @@
+{
+  "theme_strategy": {
+    "default_mode": "dark",
+    "theme_toggle_supported": true,
+    "aesthetic_concept": "Linear/Vercel Precision meets Swiss Financial Engineering (Archetype 4: Swiss & High-Contrast with Obsidian Dark mode and crisp Light theme)",
+    "dark_palette": {
+      "background": "#090A0F",
+      "surface_base": "#0E1117",
+      "surface_elevated": "#141824",
+      "surface_overlay": "#1B2132",
+      "border_subtle": "#1F2639",
+      "border_strong": "#2D374D",
+      "text_primary": "#F8FAFC",
+      "text_secondary": "#94A3B8",
+      "text_muted": "#64748B",
+      "accent_primary": "#3B82F6",
+      "accent_hover": "#2563EB",
+      "accent_emerald": "#10B981",
+      "accent_amber": "#F59E0B",
+      "accent_rose": "#F43F5E",
+      "accent_violet": "#8B5CF6"
+    },
+    "light_palette": {
+      "background": "#F8FAFC",
+      "surface_base": "#FFFFFF",
+      "surface_elevated": "#F1F5F9",
+      "surface_overlay": "#E2E8F0",
+      "border_subtle": "#E2E8F0",
+      "border_strong": "#CBD5E1",
+      "text_primary": "#0F172A",
+      "text_secondary": "#475569",
+      "text_muted": "#64748B",
+      "accent_primary": "#2563EB",
+      "accent_hover": "#1D4ED8",
+      "accent_emerald": "#059669",
+      "accent_amber": "#D97706",
+      "accent_rose": "#E11D48",
+      "accent_violet": "#7C3AED"
+    }
+  },
+  "typography": {
+    "font_family_headings": "Outfit, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    "font_family_body": "IBM Plex Sans, -apple-system, BlinkMacSystemFont, sans-serif",
+    "font_family_mono": "'JetBrains Mono', 'Fira Code', monospace",
+    "hierarchy": {
+      "h1_page_title": "text-2xl sm:text-3xl font-bold tracking-tight",
+      "h2_section_header": "text-xl sm:text-2xl font-semibold tracking-tight",
+      "h3_card_title": "text-base sm:text-lg font-semibold tracking-normal",
+      "h4_table_heading": "text-xs font-semibold uppercase tracking-wider text-muted-foreground",
+      "kpi_metric_large": "text-3xl font-extrabold tracking-tight font-mono",
+      "body_regular": "text-sm text-foreground leading-relaxed",
+      "body_muted": "text-xs sm:text-sm text-muted-foreground leading-normal",
+      "badge_text": "text-xs font-medium tracking-wide uppercase px-2.5 py-0.5 rounded-full"
+    },
+    "anti_default_rules": "No Inter for headings. Use Outfit or Cabinet Grotesk style with tight tracking. Numbers and financial values must use monospace font or tabular figures."
+  },
+  "visual_enhancers": {
+    "surface_treatment": "Tactical Minimalism with crisp 1px borders (border-border/60). Never use soft muddy drop shadows; use subtle inner highlight or 1px hairline rings.",
+    "glassmorphism_nav": "Header and sticky top navigation must use backdrop-blur-xl bg-background/85 border-b border-border/80. NEVER completely transparent.",
+    "active_indicator": "Active sidebar and tab items receive a 2px left border accent or subtle pill indicator bg-primary/10 text-primary border-l-2 border-primary.",
+    "status_badges": {
+      "paid_or_completed": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+      "pending_or_in_progress": "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+      "overdue_or_failed": "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+      "draft_or_neutral": "bg-slate-500/10 text-slate-400 border border-slate-500/20",
+      "active": "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+    }
+  },
+  "grids_and_layouts": {
+    "shell_structure": {
+      "sidebar_desktop_width": "w-64 shrink-0 border-r border-border/70 bg-card/60 backdrop-blur-md flex flex-col justify-between h-screen sticky top-0",
+      "header_height": "h-16 border-b border-border/70 px-6 flex items-center justify-between sticky top-0 z-40 bg-background/90 backdrop-blur-md",
+      "main_viewport": "flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 max-w-7xl mx-auto w-full"
+    },
+    "bento_dashboard_grid": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6",
+    "dashboard_split_sections": "grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6",
+    "crud_table_container": "rounded-xl border border-border/80 bg-card/90 shadow-sm overflow-hidden",
+    "modal_form_grid": "grid grid-cols-1 sm:grid-cols-2 gap-4"
+  },
+  "modules_and_navigation": [
+    { "name": "Dashboard", "path": "/dashboard", "icon": "LayoutDashboard", "section": "Core" },
+    { "name": "Sales", "path": "/sales", "icon": "TrendingUp", "section": "Finance" },
+    { "name": "Customers", "path": "/customers", "icon": "Users", "section": "CRM", "crud_ready": true },
+    { "name": "Invoices", "path": "/invoices", "icon": "FileText", "section": "Finance", "priority": "high" },
+    { "name": "Expenses", "path": "/expenses", "icon": "Receipt", "section": "Finance", "crud_ready": true },
+    { "name": "Products", "path": "/products", "icon": "Package", "section": "Inventory", "crud_ready": true },
+    { "name": "Inventory", "path": "/inventory", "icon": "Warehouse", "section": "Inventory", "priority": "high" },
+    { "name": "Suppliers", "path": "/suppliers", "icon": "Truck", "section": "CRM" },
+    { "name": "Employees", "path": "/employees", "icon": "Briefcase", "section": "Operations" },
+    { "name": "Tasks", "path": "/tasks", "icon": "CheckSquare", "section": "Operations" },
+    { "name": "Reports", "path": "/reports", "icon": "BarChart3", "section": "Analytics" },
+    { "name": "Settings", "path": "/settings", "icon": "Sliders", "section": "System" }
+  ],
+  "multi_currency_config": {
+    "currencies": [
+      { "code": "USD", "symbol": "$", "name": "US Dollar", "rate": 1.0 },
+      { "code": "EUR", "symbol": "€", "name": "Euro", "rate": 0.92 },
+      { "code": "GBP", "symbol": "£", "name": "British Pound", "rate": 0.79 },
+      { "code": "INR", "symbol": "₹", "name": "Indian Rupee", "rate": 83.5 }
+    ],
+    "default_currency": "USD",
+    "formatter_rule": "Format numbers with proper locale separators and prefix symbol based on active currency setting"
+  },
+  "image_urls": [
+    {
+      "category": "team_workspace_banner",
+      "url": "https://images.unsplash.com/photo-1522071820081-009f0129c71c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDF8MHwxfHNlYXJjaHwzfHxidXNpbmVzcyUyMHRlYW0lMjB3b3Jrc3BhY2UlMjBvZmZpY2V8ZW58MHx8fHwxNzkwNTczMzk4fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Collaborative business team around laptops in a high-tech modern office",
+      "placement": "Workspace welcome modal or company settings profile header banner"
+    },
+    {
+      "category": "executive_office_modern",
+      "url": "https://images.unsplash.com/photo-1541746972996-4e0b0f43e02a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDF8MHwxfHNlYXJjaHwxfHxidXNpbmVzcyUyMHRlYW0lMjB3b3Jrc3BhY2UlMjBvZmZpY2V8ZW58MHx8fHwxNzkwNTczMzk4fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Glass conference room meeting with ambient architectural lighting",
+      "placement": "Auth pages branding backdrop or organization switcher illustration"
+    },
+    {
+      "category": "open_office_workstation",
+      "url": "https://images.unsplash.com/photo-1606857521015-7f9fcf423740?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDF8MHwxfHNlYXJjaHwyfHxidXNpbmVzcyUyMHRlYW0lMjB3b3Jrc3BhY2UlMjBvZmZpY2V8ZW58MHx8fHwxNzkwNTczMzk4fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Professional engineering workstation with dual monitors",
+      "placement": "Reports / Analytics overview card cover"
+    }
+  ],
+  "component_path": {
+    "auth": "src/components/auth/AuthModal.js",
+    "shell_layout": "src/components/layout/AppShell.js",
+    "sidebar": "src/components/layout/Sidebar.js",
+    "header": "src/components/layout/Header.js",
+    "workspace_switcher": "src/components/layout/WorkspaceSwitcher.js",
+    "dashboard": "src/components/dashboard/DashboardView.js",
+    "kpi_card": "src/components/dashboard/KpiCard.js",
+    "data_table": "src/components/common/DataTable.js",
+    "crud_modal": "src/components/common/CrudModal.js",
+    "customers_view": "src/components/modules/CustomersView.js",
+    "products_view": "src/components/modules/ProductsView.js",
+    "expenses_view": "src/components/modules/ExpensesView.js",
+    "invoices_view": "src/components/modules/InvoicesView.js",
+    "inventory_view": "src/components/modules/InventoryView.js",
+    "settings_view": "src/components/modules/SettingsView.js",
+    "ai_insights_card": "src/components/dashboard/AiInsightsPlaceholder.js"
+  },
+  "instructions_to_main_agent": [
+    "You are working with React JavaScript (.js/.jsx) files. Do NOT use .tsx or TypeScript annotations in files.",
+    "Implement a complete dark/light theme switch toggled from the top header and settings, defaulting to dark mode with smooth CSS transition.",
+    "Ensure the top header and dropdowns NEVER have transparent backgrounds (use bg-background/95 or bg-card/95 with backdrop-blur-md and solid border-border).",
+    "Provide a working Workspace Switcher in the top header and sidebar top with at least 3 pre-seeded organizations (e.g., 'Acme Global Ventures', 'Nexus Retail Logistics', 'Apex Studio LLC').",
+    "Build full functional CRUD for Customers, Products, and Expenses with validation, search filtering, edit modal, delete confirmation dialog, and responsive table views.",
+    "Implement rich Invoices module with status filter (All, Paid, Pending, Overdue, Draft) and quick create dialog, plus Inventory module with stock movements and reorder badges.",
+    "Dashboard must display live calculated KPIs based on state: Total Revenue, Outstanding Invoices, Total Expenses, Estimated Net Profit, Customer Count, and Product Count.",
+    "Include an AI-Powered Business Insights card ('AI Insights Engine' - planned module) with preview recommendations, predictive churn alert, and cashflow forecast prompt.",
+    "Ensure multi-currency toggle (USD, EUR, GBP, INR) affects all dashboard metrics, invoice totals, and expense summaries with live currency symbol formatting.",
+    "Every interactive element and key text MUST have a descriptive kebab-case 'data-testid' attribute (e.g. data-testid='sidebar-nav-invoices', data-testid='kpi-total-sales', data-testid='create-customer-button', data-testid='theme-toggle-button')."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": {
+    "do_not_center_app": "NEVER set text-align: center on .App or main containers. Keep left-aligned natural data flows.",
+    "no_universal_transition": "Do NOT apply universal transition: all. Use targeted transitions on background-color, border-color, and opacity.",
+    "toast_implementation": "Use Sonner for toasts with action confirmations (create, edit, delete, workspace switch, currency change).",
+    "empty_states": "Include purposeful empty state designs with contextual icon, action button, and descriptive copy.",
+    "no_raw_emojis": "Use Lucide-React icons only. No emoji icons in system navigation or status badges."
+  }
+}
