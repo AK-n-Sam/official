@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Plus, Target, UserPlus, MoreHorizontal } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
@@ -40,6 +41,15 @@ export default function Leads() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      setEditing(null); setModalOpen(true);
+      const p = new URLSearchParams(searchParams); p.delete("new"); setSearchParams(p, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const submit = async (payload) => {
     try {

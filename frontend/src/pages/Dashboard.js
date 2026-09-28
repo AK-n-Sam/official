@@ -11,6 +11,7 @@ import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { ErrorState } from "@/components/common/States";
 import { Icon } from "@/components/common/Icon";
+import { useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ function SectionCard({ title, action, onAction, children, testId }) {
 
 export default function Dashboard() {
   const { format, currency } = useCurrency();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -74,11 +76,14 @@ export default function Dashboard() {
   const rate = CURRENCIES[currency].rate;
   const chartTooltip = { background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12 };
   const yFmt = (v) => `${CURRENCIES[currency].symbol}${Math.round(v * rate / 1000)}k`;
+  const hour = new Date().getHours();
+  const greetWord = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const firstName = (user?.name || "there").split(" ")[0];
 
   return (
     <div className="space-y-6 animate-in-up">
-      <PageHeader title="Dashboard" subtitle="A live snapshot of your business performance.">
-        <Button variant="outline" onClick={() => navigate("/invoices")} data-testid="dash-new-invoice"><Plus className="mr-2 h-4 w-4" /> New Invoice</Button>
+      <PageHeader title={`${greetWord}, ${firstName} 👋`} subtitle="Here's how your business is doing today.">
+        <Button variant="outline" onClick={() => navigate("/invoices?new=1")} data-testid="dash-new-invoice"><Plus className="mr-2 h-4 w-4" /> New Invoice</Button>
       </PageHeader>
 
       {/* Primary money KPIs — the four numbers that matter most */}

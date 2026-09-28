@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TeamTab } from "@/components/settings/TeamTab";
 import { Loader2 } from "lucide-react";
 
 function Row({ label, children }) {
@@ -75,6 +76,7 @@ export default function Settings() {
       <Tabs defaultValue="business">
         <TabsList data-testid="settings-tabs">
           <TabsTrigger value="business" data-testid="tab-business">Business</TabsTrigger>
+          <TabsTrigger value="team" data-testid="tab-team">Team</TabsTrigger>
           <TabsTrigger value="profile" data-testid="tab-profile">Profile</TabsTrigger>
           <TabsTrigger value="preferences" data-testid="tab-preferences">Preferences</TabsTrigger>
           <TabsTrigger value="invoicing" data-testid="tab-invoicing">Invoicing</TabsTrigger>
@@ -97,6 +99,10 @@ export default function Settings() {
               {saving === "org" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save Business Info
             </Button>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="team">
+          <TeamTab />
         </TabsContent>
 
         <TabsContent value="profile">

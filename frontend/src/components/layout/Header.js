@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Bell, Sun, Moon, Menu, LogOut, User, Settings as SettingsIcon, AlertTriangle, Package, CheckSquare } from "lucide-react";
+import { Search, Bell, Sun, Moon, Menu, LogOut, User, Settings as SettingsIcon, AlertTriangle, Package, CheckSquare, Plus, FileText, Users, Receipt, CheckSquare as TaskIcon, Target } from "lucide-react";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -39,6 +39,24 @@ export function Header({ onMenuClick }) {
       <GlobalSearch />
 
       <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm" className="h-9 gap-1.5" data-testid="quick-create-button">
+              <Plus className="h-4 w-4" /><span className="hidden sm:inline">Create</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel>Quick Create</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate("/invoices?new=1")} data-testid="quick-create-invoice"><FileText className="mr-2 h-4 w-4" /> Invoice</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/customers?new=1")} data-testid="quick-create-customer"><Users className="mr-2 h-4 w-4" /> Customer</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/expenses?new=1")} data-testid="quick-create-expense"><Receipt className="mr-2 h-4 w-4" /> Expense</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/products?new=1")} data-testid="quick-create-product"><Package className="mr-2 h-4 w-4" /> Product</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/tasks?new=1")} data-testid="quick-create-task"><TaskIcon className="mr-2 h-4 w-4" /> Task</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/leads?new=1")} data-testid="quick-create-lead"><Target className="mr-2 h-4 w-4" /> Lead</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <Select value={currency} onValueChange={setCurrency}>
           <SelectTrigger className="h-9 w-[88px] border-border/60 bg-card/50" data-testid="currency-selector">
             <SelectValue />

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Plus, Search, FileText, DollarSign, Send, Clock, XCircle } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
@@ -30,6 +30,15 @@ export default function Invoices() {
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [payFor, setPayFor] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      setEditing(null); setModalOpen(true);
+      const p = new URLSearchParams(searchParams); p.delete("new"); setSearchParams(p, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const params = {};
   if (status !== "all") params.status = status;

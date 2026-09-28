@@ -1,5 +1,6 @@
 import os
 import uuid
+import secrets
 import logging
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
@@ -549,6 +550,72 @@ async def activity_feed(user: dict = Depends(get_current_user)):
         events.append({"type": "task", "title": "Task completed", "description": t["title"], "date": t.get("updated_at", ""), "link": "/tasks"})
     events.sort(key=lambda x: x.get("date", ""), reverse=True)
     return events[:20]
+
+
+# ---------------- Team / Members (multi-user) ----------------
+team = APIRouter(prefix="/team", tags=["team"])
+
+
+@team.get("")
+async def list_team(user: dict = Depends(get_current_user)):
+    org = await db.organizations.find_one({"id": user["active_org_id"]}, {"_id": 0})
+    owner_id = org.get("owner_user_id") if org else None
+    members = await db.users.find({"org_ids": user["active_org_id"]}, {"_id": 0, "password_hash": 0}).to_list(200)
+    return [{
+        "id": m["id"], "name": m["name"], "email": m["email"],
+        "role": "owner" if m["id"] == owner_id else m.get("role", "member"),
+        "job_title": m.get("job_title", ""), "picture": m.get("picture", ""),
+        "is_you": m["id"] == user["id"], "created_at": m.get("created_at", ""),
+    } for m in members]
+
+
+@team.post("/invite")
+async def invite_member(payload: dict = Body(...), user: dict = Depends(get_current_user)):
+    name = (payload.get("name") or "").strip()
+    email = (payload.get("email") or "").strip().lower()
+    role = payload.get("role", "member")
+    if role not in ("admin", "member"):
+        role = "member"
+    if not name or not email:
+        raise HTTPException(status_code=400, detail="Name and email are required")
+    org_id = user["active_org_id"]
+    existing = await db.users.find_one({"email": email})
+    if existing:
+        if org_id in existing.get("org_ids", []):
+            raise HTTPException(status_code=400, detail="This person is already in the workspace")
+        await db.users.update_one({"id": existing["id"]}, {"$addToSet": {"org_ids": org_id}})
+        return {"status": "added_existing", "email": email, "name": existing["name"]}
+    temp_password = secrets.token_urlsafe(6)
+    uid = f"user_{uuid.uuid4().hex[:12]}"
+    await db.users.insert_one({
+        "id": uid, "name": name, "email": email, "password_hash": hash_password(temp_password),
+        "picture": "", "phone": "", "job_title": "Team Member", "provider": "password", "role": role,
+        "org_ids": [org_id], "active_org_id": org_id,
+        "preferences": {"currency": "USD", "timezone": "America/New_York", "date_format": "MMM d, yyyy", "email_notifications": True},
+        "created_at": now_iso(), "updated_at": now_iso(),
+    })
+    return {"status": "invited", "email": email, "name": name, "temp_password": temp_password}
+
+
+@team.delete("/{member_id}")
+async def remove_member(member_id: str, user: dict = Depends(get_current_user)):
+    org_id = user["active_org_id"]
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
+    if not org or org.get("owner_user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Only the workspace owner can remove members")
+    if member_id == org.get("owner_user_id"):
+        raise HTTPException(status_code=400, detail="The owner cannot be removed")
+    member = await db.users.find_one({"id": member_id, "org_ids": org_id}, {"_id": 0})
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+    await db.users.update_one({"id": member_id}, {"$pull": {"org_ids": org_id}})
+    if member.get("active_org_id") == org_id:
+        remaining = [o for o in member.get("org_ids", []) if o != org_id]
+        await db.users.update_one({"id": member_id}, {"$set": {"active_org_id": remaining[0] if remaining else ""}})
+    return {"success": True}
+
+
+api.include_router(team)
 
 
 # ---------------- Settings / Organizations ----------------
