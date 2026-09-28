@@ -40,6 +40,13 @@ Auth & workspaces · App shell (sidebar, header, workspace switcher, notificatio
 - Add AI Insights engine (LLM) on dashboard.
 - Invoice PDF/print + email send.
 
+## Iteration 4 — Personalized, Interactive & Multi-User (2026-06-28)
+- **Multi-user teams**: Settings > Team tab. `GET /api/team`, `POST /api/team/invite` (creates a member with a temp password or adds an existing user), `DELETE /api/team/{id}` (owner-only). Invited members share the workspace's org_id and see the same data. Verified an invited user logs in and sees the same seeded customers.
+- **Personalization**: time-based greeting with the user's first name on the Dashboard.
+- **Easier workflow**: global "Create" quick-action menu in the header opens the create form for Invoice/Customer/Expense/Product/Task/Lead from anywhere (via `?new=1` auto-open in ResourceManager, Invoices, Tasks, Leads).
+- Invite emails now validated via Pydantic `EmailStr`.
+- Verified: 5/5 iter-4 backend tests + 100% frontend flows, no bugs. Known (deferred): admin role stored but not yet privilege-gated; invite shows temp password in-app (demo-friendly) rather than emailing a reset link.
+
 ## Iteration 3 — Cohesion & Polish (2026-06-28)
 - **Global Search**: header search (`GET /api/search?q=`) across customers, invoices, products, expenses, employees, tasks — typed results that navigate to the record's page. Replaces the previous dead search input.
 - **Business Activity Feed**: `GET /api/activity` merges recent events (customer added, invoice created/paid, payment recorded, expense created, stock changed, task completed) from existing collections; shown on the Dashboard beside Recent Transactions, each item links to its record.

@@ -12,7 +12,7 @@ from database import db, now_iso
 from models import (
     CustomerCreate, SupplierCreate, ProductCreate, ExpenseCreate, EmployeeCreate,
     TaskCreate, InvoiceCreate, StockMovementCreate, PaymentInput, PaymentCreate, LeadCreate,
-    OrganizationUpdate, ProfileUpdate, PreferencesUpdate, SwitchOrgInput,
+    OrganizationUpdate, ProfileUpdate, PreferencesUpdate, SwitchOrgInput, InviteInput,
 )
 from crud import make_crud
 from auth import router as auth_router, get_current_user, hash_password, verify_password
@@ -570,14 +570,10 @@ async def list_team(user: dict = Depends(get_current_user)):
 
 
 @team.post("/invite")
-async def invite_member(payload: dict = Body(...), user: dict = Depends(get_current_user)):
-    name = (payload.get("name") or "").strip()
-    email = (payload.get("email") or "").strip().lower()
-    role = payload.get("role", "member")
-    if role not in ("admin", "member"):
-        role = "member"
-    if not name or not email:
-        raise HTTPException(status_code=400, detail="Name and email are required")
+async def invite_member(payload: InviteInput, user: dict = Depends(get_current_user)):
+    name = payload.name.strip()
+    email = payload.email.strip().lower()
+    role = payload.role if payload.role in ("admin", "member") else "member"
     org_id = user["active_org_id"]
     existing = await db.users.find_one({"email": email})
     if existing:

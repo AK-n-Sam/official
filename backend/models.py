@@ -58,6 +58,12 @@ class SwitchOrgInput(_Base):
     org_id: str
 
 
+class InviteInput(_Base):
+    name: str = Field(min_length=1)
+    email: EmailStr
+    role: str = "member"
+
+
 # ---------- Modules (Create payloads) ----------
 class CustomerCreate(_Base):
     name: str = Field(min_length=1)
