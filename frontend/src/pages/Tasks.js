@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { Plus, GripVertical } from "lucide-react";
+import { Plus, LayoutGrid, List, Search, MoreHorizontal, AlertTriangle } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { formatDate } from "@/lib/format";
@@ -8,34 +8,53 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { DataTable } from "@/components/common/DataTable";
+import { EmptyState } from "@/components/common/EmptyState";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
 
 const COLUMNS = [
-  { key: "todo", label: "To Do" },
-  { key: "in_progress", label: "In Progress" },
-  { key: "done", label: "Done" },
+  { key: "todo", label: "To Do", match: ["todo"] },
+  { key: "in_progress", label: "In Progress", match: ["in_progress"] },
+  { key: "completed", label: "Completed", match: ["completed", "done"] },
 ];
 
 const FIELDS = [
   { name: "title", label: "Title", required: true, full: true },
   { name: "description", label: "Description", type: "textarea", full: true },
-  { name: "assignee", label: "Assignee" },
+  { name: "assignee", label: "Assigned To" },
+  { name: "customer_name", label: "Related Customer" },
+  { name: "reference", label: "Reference" },
   { name: "priority", label: "Priority", type: "select", default: "medium", options: [
     { value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }] },
   { name: "status", label: "Status", type: "select", default: "todo", options: [
-    { value: "todo", label: "To Do" }, { value: "in_progress", label: "In Progress" }, { value: "done", label: "Done" }] },
+    { value: "todo", label: "To Do" }, { value: "in_progress", label: "In Progress" }, { value: "completed", label: "Completed" }] },
   { name: "due_date", label: "Due Date", type: "date" },
 ];
 
+const isOverdue = (t) => t.status !== "completed" && t.status !== "done" && t.due_date && t.due_date < new Date().toISOString().slice(0, 10);
+
 export default function Tasks() {
   const { data, loading, refetch } = useResource("/tasks", {});
+  const [view, setView] = useState("board");
+  const [search, setSearch] = useState("");
+  const [priority, setPriority] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
+
+  const filtered = useMemo(() => data.filter((t) => {
+    if (search && !t.title.toLowerCase().includes(search.toLowerCase()) && !(t.customer_name || "").toLowerCase().includes(search.toLowerCase())) return false;
+    if (priority !== "all" && t.priority !== priority) return false;
+    if (statusFilter === "overdue") return isOverdue(t);
+    if (statusFilter !== "all" && !(t.status === statusFilter || (statusFilter === "completed" && t.status === "done"))) return false;
+    return true;
+  }), [data, search, priority, statusFilter]);
 
   const submit = async (payload) => {
     try {
@@ -44,67 +63,118 @@ export default function Tasks() {
       refetch();
     } catch (e) { toast.error(formatApiError(e)); throw e; }
   };
-
   const moveTo = async (task, status) => {
     try { await api.put(`/tasks/${task.id}`, { status }); refetch(); }
     catch (e) { toast.error(formatApiError(e)); }
   };
-
   const remove = async () => {
     try { await api.delete(`/tasks/${deleting.id}`); toast.success("Task deleted"); setDeleting(null); refetch(); }
     catch (e) { toast.error(formatApiError(e)); }
   };
 
+  const overdueCount = data.filter(isOverdue).length;
+
+  const columns = [
+    { key: "title", label: "Task", render: (r) => (
+      <div className="flex items-center gap-2">
+        {isOverdue(r) && <AlertTriangle className="h-3.5 w-3.5 text-rose-500" />}
+        <div><p className="font-medium">{r.title}</p>{r.customer_name && <p className="text-xs text-muted-foreground">{r.customer_name}</p>}</div>
+      </div>
+    ) },
+    { key: "assignee", label: "Assignee", render: (r) => r.assignee || "—" },
+    { key: "priority", label: "Priority", render: (r) => <StatusBadge status={r.priority} /> },
+    { key: "due_date", label: "Due", render: (r) => <span className={isOverdue(r) ? "text-rose-500" : ""}>{formatDate(r.due_date)}</span> },
+    { key: "status", label: "Status", render: (r) => <StatusBadge status={r.status} /> },
+  ];
+
   return (
     <div className="space-y-6 animate-in-up">
-      <PageHeader title="Tasks" subtitle="Organize your team's work across stages.">
-        <Button onClick={() => { setEditing(null); setModalOpen(true); }} data-testid="create-task-button">
-          <Plus className="mr-2 h-4 w-4" /> New Task
-        </Button>
+      <PageHeader title="Tasks" subtitle={overdueCount > 0 ? `${overdueCount} task(s) overdue and need attention.` : "Organize your team's work across stages."}>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-lg border border-border/70 p-0.5">
+            <Button variant={view === "board" ? "secondary" : "ghost"} size="sm" className="h-8" onClick={() => setView("board")} data-testid="task-view-board"><LayoutGrid className="h-4 w-4" /></Button>
+            <Button variant={view === "list" ? "secondary" : "ghost"} size="sm" className="h-8" onClick={() => setView("list")} data-testid="task-view-list"><List className="h-4 w-4" /></Button>
+          </div>
+          <Button onClick={() => { setEditing(null); setModalOpen(true); }} data-testid="create-task-button">
+            <Plus className="mr-2 h-4 w-4" /> New Task
+          </Button>
+        </div>
       </PageHeader>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {COLUMNS.map((col) => {
-          const tasks = data.filter((t) => t.status === col.key);
-          return (
-            <div key={col.key} className="space-y-3" data-testid={`task-column-${col.key}`}>
-              <div className="flex items-center justify-between px-1">
-                <h3 className="text-sm font-semibold">{col.label}</h3>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">{tasks.length}</span>
-              </div>
-              <div className="space-y-2.5">
-                {loading ? <Skeleton className="h-24 rounded-xl" /> : tasks.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-border/60 py-8 text-center text-xs text-muted-foreground">No tasks</div>
-                ) : tasks.map((t) => (
-                  <Card key={t.id} className="border-border/70 bg-card/90 p-4" data-testid={`task-card-${t.id}`}>
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-medium leading-snug">{t.title}</p>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {COLUMNS.filter((c) => c.key !== t.status).map((c) => (
-                            <DropdownMenuItem key={c.key} onClick={() => moveTo(t, c.key)} data-testid={`move-${t.id}-${c.key}`}>Move to {c.label}</DropdownMenuItem>
-                          ))}
-                          <DropdownMenuItem onClick={() => { setEditing(t); setModalOpen(true); }}>Edit</DropdownMenuItem>
-                          <DropdownMenuItem className="text-rose-500 focus:text-rose-500" onClick={() => setDeleting(t)}>Delete</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    {t.description && <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{t.description}</p>}
-                    <div className="mt-3 flex items-center justify-between">
-                      <StatusBadge status={t.priority} />
-                      <span className="text-xs text-muted-foreground">{t.assignee || "Unassigned"}</span>
-                    </div>
-                    {t.due_date && <p className="mt-2 text-[11px] text-muted-foreground">Due {formatDate(t.due_date)}</p>}
-                  </Card>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1 sm:max-w-xs">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks..." className="pl-9" data-testid="task-search" />
+        </div>
+        <Select value={priority} onValueChange={setPriority}>
+          <SelectTrigger className="w-full sm:w-40" data-testid="task-filter-priority"><SelectValue placeholder="Priority" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Priorities</SelectItem>
+            <SelectItem value="high">High</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="low">Low</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-40" data-testid="task-filter-status"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="todo">To Do</SelectItem><SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem><SelectItem value="overdue">Overdue</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
+
+      {view === "list" ? (
+        loading ? <Skeleton className="h-64 rounded-xl" /> : filtered.length === 0 ? (
+          <EmptyState icon={List} title="No tasks match" description="Adjust filters or create a new task." />
+        ) : (
+          <DataTable columns={columns} rows={filtered} testId="tasks-table"
+            onEdit={(row) => { setEditing(row); setModalOpen(true); }} onDelete={(row) => setDeleting(row)} />
+        )
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {COLUMNS.map((col) => {
+            const tasks = filtered.filter((t) => col.match.includes(t.status));
+            return (
+              <div key={col.key} className="space-y-3" data-testid={`task-column-${col.key}`}>
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-sm font-semibold">{col.label}</h3>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">{tasks.length}</span>
+                </div>
+                <div className="space-y-2.5">
+                  {loading ? <Skeleton className="h-24 rounded-xl" /> : tasks.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-border/60 py-8 text-center text-xs text-muted-foreground">No tasks</div>
+                  ) : tasks.map((t) => (
+                    <Card key={t.id} className="border-border/70 bg-card/90 p-4" data-testid={`task-card-${t.id}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-medium leading-snug">{t.title}</p>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {COLUMNS.filter((c) => c.key !== t.status).map((c) => (
+                              <DropdownMenuItem key={c.key} onClick={() => moveTo(t, c.key)} data-testid={`move-${t.id}-${c.key}`}>Move to {c.label}</DropdownMenuItem>
+                            ))}
+                            <DropdownMenuItem onClick={() => { setEditing(t); setModalOpen(true); }}>Edit</DropdownMenuItem>
+                            <DropdownMenuItem className="text-rose-500 focus:text-rose-500" onClick={() => setDeleting(t)}>Delete</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      {t.customer_name && <p className="mt-1 text-xs text-primary">{t.customer_name}</p>}
+                      {t.description && <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{t.description}</p>}
+                      <div className="mt-3 flex items-center justify-between">
+                        <StatusBadge status={t.priority} />
+                        <span className="text-xs text-muted-foreground">{t.assignee || "Unassigned"}</span>
+                      </div>
+                      {t.due_date && <p className={`mt-2 text-[11px] ${isOverdue(t) ? "text-rose-500" : "text-muted-foreground"}`}>Due {formatDate(t.due_date)}</p>}
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <CrudModal open={modalOpen} onOpenChange={setModalOpen} title={editing ? "Edit Task" : "New Task"}
         fields={FIELDS} initial={editing} onSubmit={submit} submitLabel={editing ? "Save changes" : "Create Task"} />

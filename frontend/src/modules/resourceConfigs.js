@@ -20,8 +20,8 @@ export const customersConfig = (fmt) => ({
       <div><p className="font-medium">{r.name}</p><p className="text-xs text-muted-foreground">{r.email || "—"}</p></div>
     ) },
     { key: "company", label: "Company", render: (r) => r.company || "—" },
-    { key: "phone", label: "Phone", render: (r) => r.phone || "—" },
-    { key: "city", label: "Location", render: (r) => [r.city, r.country].filter(Boolean).join(", ") || "—" },
+    { key: "total_sales", label: "Total Sales", render: (r) => <span className="font-mono text-emerald-500">{fmt(r.total_sales || 0)}</span> },
+    { key: "outstanding", label: "Outstanding", render: (r) => <span className={r.outstanding > 0 ? "font-mono text-amber-500" : "font-mono text-muted-foreground"}>{fmt(r.outstanding || 0)}</span> },
     { key: "status", label: "Status", render: (r) => <StatusBadge status={r.status} /> },
   ],
   fields: [
@@ -50,6 +50,7 @@ export const productsConfig = (fmt) => ({
       <div><p className="font-medium">{r.name}</p><p className="text-xs text-muted-foreground">{r.sku}</p></div>
     ) },
     { key: "category", label: "Category", render: (r) => r.category || "—" },
+    { key: "supplier_name", label: "Supplier", render: (r) => r.supplier_name || "—" },
     { key: "price", label: "Price", render: (r) => <span className="font-mono">{fmt(r.price)}</span> },
     { key: "cost", label: "Cost", render: (r) => <span className="font-mono text-muted-foreground">{fmt(r.cost)}</span> },
     { key: "stock_quantity", label: "Stock", render: (r) => (
@@ -64,9 +65,11 @@ export const productsConfig = (fmt) => ({
     { name: "sku", label: "SKU", placeholder: "SKU-1001" },
     { name: "category", label: "Category", placeholder: "Electronics" },
     { name: "price", label: "Selling Price (USD)", type: "number", min: 0, default: 0 },
-    { name: "cost", label: "Cost (USD)", type: "number", min: 0, default: 0 },
-    { name: "stock_quantity", label: "Stock Quantity", type: "number", min: 0, default: 0 },
-    { name: "reorder_level", label: "Reorder Level", type: "number", min: 0, default: 5 },
+    { name: "cost", label: "Purchase Price (USD)", type: "number", min: 0, default: 0 },
+    { name: "tax_rate", label: "Tax Rate (0-1, e.g. 0.08)", type: "number", min: 0, default: 0 },
+    { name: "supplier_name", label: "Supplier", placeholder: "Supplier name" },
+    { name: "stock_quantity", label: "Current Stock", type: "number", min: 0, default: 0 },
+    { name: "reorder_level", label: "Minimum Stock Level", type: "number", min: 0, default: 5 },
     { name: "unit", label: "Unit", default: "unit", placeholder: "unit / kg / box" },
     { name: "status", label: "Status", type: "select", default: "active", options: STATUS_OPTS },
     { name: "description", label: "Description", type: "textarea", full: true },
@@ -158,7 +161,8 @@ export const employeesConfig = (fmt) => ({
     { name: "job_title", label: "Job Title", placeholder: "Sales Manager" },
     { name: "department", label: "Department", placeholder: "Sales" },
     { name: "salary", label: "Annual Salary (USD)", type: "number", min: 0, default: 0 },
-    { name: "hire_date", label: "Hire Date", type: "date" },
+    { name: "hire_date", label: "Joining Date", type: "date" },
     { name: "status", label: "Status", type: "select", default: "active", options: STATUS_OPTS },
+    { name: "notes", label: "Notes", type: "textarea", full: true, placeholder: "Additional details..." },
   ],
 });

@@ -5,13 +5,17 @@ import { Header } from "@/components/layout/Header";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import Dashboard from "@/pages/Dashboard";
 import Sales from "@/pages/Sales";
+import Leads from "@/pages/Leads";
 import Customers from "@/pages/Customers";
+import CustomerDetail from "@/pages/CustomerDetail";
 import Invoices from "@/pages/Invoices";
+import InvoiceDetail from "@/pages/InvoiceDetail";
 import Expenses from "@/pages/Expenses";
 import Suppliers from "@/pages/Suppliers";
 import Products from "@/pages/Products";
 import Inventory from "@/pages/Inventory";
 import Employees from "@/pages/Employees";
+import EmployeeDetail from "@/pages/EmployeeDetail";
 import Tasks from "@/pages/Tasks";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
@@ -39,13 +43,17 @@ export function AppShell() {
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/sales" element={<Sales />} />
+              <Route path="/leads" element={<Leads />} />
               <Route path="/customers" element={<Customers />} />
+              <Route path="/customers/:id" element={<CustomerDetail />} />
               <Route path="/invoices" element={<Invoices />} />
+              <Route path="/invoices/:id" element={<InvoiceDetail />} />
               <Route path="/expenses" element={<Expenses />} />
               <Route path="/suppliers" element={<Suppliers />} />
               <Route path="/products" element={<Products />} />
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/employees" element={<Employees />} />
+              <Route path="/employees/:id" element={<EmployeeDetail />} />
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/settings" element={<Settings />} />

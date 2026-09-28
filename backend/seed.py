@@ -128,10 +128,12 @@ async def _seed_org(org_id: str, profile: dict):
     products = []
     for i, (pname, cat, price, cost) in enumerate(profile["products"]):
         stock = random.randint(0, 60)
+        sup = suppliers[i % len(suppliers)] if suppliers else {"id": "", "name": ""}
         products.append({
             "id": _id(), "org_id": org_id, "name": pname, "sku": f"SKU-{1000+i}",
-            "category": cat, "price": float(price), "cost": float(cost),
+            "category": cat, "price": float(price), "cost": float(cost), "tax_rate": 0.08,
             "stock_quantity": stock, "reorder_level": 10, "unit": "unit",
+            "supplier_id": sup["id"], "supplier_name": sup["name"],
             "description": f"{pname} - premium quality", "status": "active",
             "created_at": _iso_days_ago(100 - i * 3), "updated_at": now_iso(),
         })
@@ -154,7 +156,7 @@ async def _seed_org(org_id: str, profile: dict):
 
     # Invoices + payments
     invoices, payments = [], []
-    statuses = ["paid", "paid", "paid", "paid", "paid", "pending", "overdue", "paid", "pending", "draft"]
+    statuses = ["paid", "paid", "paid", "partially_paid", "sent", "pending", "overdue", "paid", "partially_paid", "draft", "cancelled", "sent"]
     n_inv = max(8, int(16 * scale) + 4)
     for i in range(n_inv):
         cust = random.choice(customers)
@@ -163,19 +165,26 @@ async def _seed_org(org_id: str, profile: dict):
         for _ in range(n_items):
             prod = random.choice(products)
             qty = random.randint(3, 12)
-            line = round(prod["price"] * qty, 2)
+            disc = random.choice([0, 0, 0, round(prod["price"] * 0.5, 2)])
+            line = round(prod["price"] * qty - disc, 2)
             subtotal += line
             items.append({"product_id": prod["id"], "description": prod["name"],
-                          "quantity": qty, "unit_price": prod["price"], "total": line})
+                          "quantity": qty, "unit_price": prod["price"], "discount": disc, "total": line})
         status = statuses[i % len(statuses)]
         tax_rate = 0.08
         tax_amount = round(subtotal * tax_rate, 2)
         total = round(subtotal + tax_amount, 2)
         issued = random.randint(3, 160)
-        amount_paid = total if status == "paid" else 0.0
+        if status == "paid":
+            amount_paid = total
+        elif status == "partially_paid":
+            amount_paid = round(total * 0.4, 2)
+        else:
+            amount_paid = 0.0
         inv_id = _id()
+        num = f"{profile['name'][:3].upper()}-{1001+i}"
         invoices.append({
-            "id": inv_id, "org_id": org_id, "invoice_number": f"{profile['name'][:3].upper()}-{1001+i}",
+            "id": inv_id, "org_id": org_id, "invoice_number": num,
             "customer_id": cust["id"], "customer_name": cust["name"],
             "issue_date": _date_days_ago(issued),
             "due_date": _date_days_ahead(30 - issued % 30) if status != "overdue" else _date_days_ago(random.randint(1, 15)),
@@ -183,11 +192,12 @@ async def _seed_org(org_id: str, profile: dict):
             "tax_rate": tax_rate, "tax_amount": tax_amount, "total": total,
             "amount_paid": amount_paid, "notes": "", "created_at": _iso_days_ago(issued), "updated_at": now_iso(),
         })
-        if status == "paid":
+        if amount_paid > 0:
             payments.append({
-                "id": _id(), "org_id": org_id, "invoice_id": inv_id, "invoice_number": f"{profile['name'][:3].upper()}-{1001+i}",
-                "customer_id": cust["id"], "customer_name": cust["name"], "amount": total,
-                "method": "bank_transfer", "date": _date_days_ago(max(1, issued - 5)),
+                "id": _id(), "org_id": org_id, "invoice_id": inv_id, "invoice_number": num,
+                "customer_id": cust["id"], "customer_name": cust["name"], "amount": amount_paid,
+                "method": random.choice(["bank_transfer", "card", "cash"]),
+                "date": _date_days_ago(max(1, issued - 5)), "notes": "",
                 "created_at": _iso_days_ago(max(1, issued - 5)),
             })
     await db.invoices.insert_many(invoices)
@@ -208,18 +218,42 @@ async def _seed_org(org_id: str, profile: dict):
         "id": _id(), "org_id": org_id, "name": n, "email": f"{n.split()[0].lower()}@{profile['name'].split()[0].lower()}.com",
         "phone": f"+1 555 0{300+i}", "job_title": title, "department": dept, "salary": float(sal),
         "status": "active", "hire_date": _date_days_ago(random.randint(120, 900)),
+        "notes": f"{title} in {dept}. Reliable team member.",
         "created_at": _iso_days_ago(random.randint(120, 900)), "updated_at": now_iso(),
     } for i, (n, title, dept, sal) in enumerate(profile["employees"])]
     await db.employees.insert_many(employees)
 
-    # Tasks
-    tasks = [{
-        "id": _id(), "org_id": org_id, "title": t, "description": "", "assignee": random.choice(profile["employees"])[0],
-        "priority": pr, "status": st,
-        "due_date": _date_days_ahead(random.randint(-5, 20)),
-        "created_at": _iso_days_ago(random.randint(1, 30)), "updated_at": now_iso(),
-    } for t, pr, st in profile["tasks"]]
+    # Tasks (some linked to customers)
+    tasks = []
+    for t, pr, st in profile["tasks"]:
+        linked = random.random() < 0.5
+        c = random.choice(customers) if linked else None
+        tasks.append({
+            "id": _id(), "org_id": org_id, "title": t, "description": "",
+            "assignee": random.choice(profile["employees"])[0], "priority": pr, "status": st,
+            "due_date": _date_days_ahead(random.randint(-5, 20)),
+            "customer_id": c["id"] if c else "", "customer_name": c["name"] if c else "", "reference": "",
+            "created_at": _iso_days_ago(random.randint(1, 30)), "updated_at": now_iso(),
+        })
     await db.tasks.insert_many(tasks)
+
+    # Leads (sales pipeline)
+    stages = ["lead", "qualified", "proposal", "won", "lost"]
+    lead_names = ["Brightpath Solutions", "Quantum Retail", "Cedar & Co", "Vantage Logistics",
+                  "Harbor Foods", "Zenith Media", "Peak Performance Gym", "Lumina Interiors"]
+    owners = [e[0] for e in profile["employees"]]
+    leads = []
+    for i in range(max(5, int(8 * scale))):
+        name = lead_names[i % len(lead_names)]
+        leads.append({
+            "id": _id(), "org_id": org_id, "name": f"{name} contact", "company": name,
+            "email": f"hello@{name.split()[0].lower()}.com", "phone": f"+1 555 0{400+i}",
+            "stage": stages[i % len(stages)], "owner": random.choice(owners),
+            "value": float(random.choice([1500, 3200, 5400, 8900, 12000])),
+            "source": random.choice(["Website", "Referral", "Cold Outreach", "Event"]),
+            "notes": "", "customer_id": "", "created_at": _iso_days_ago(random.randint(1, 60)), "updated_at": now_iso(),
+        })
+    await db.leads.insert_many(leads)
 
 
 async def create_user_workspaces(user_id: str, user_name: str, user_email: str):

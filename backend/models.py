@@ -87,11 +87,34 @@ class ProductCreate(_Base):
     category: Optional[str] = ""
     price: float = 0
     cost: float = 0
+    tax_rate: float = 0
     stock_quantity: int = 0
     reorder_level: int = 5
     unit: str = "unit"
+    supplier_id: Optional[str] = ""
+    supplier_name: Optional[str] = ""
     description: Optional[str] = ""
     status: str = "active"
+
+
+class LeadCreate(_Base):
+    name: str = Field(min_length=1)
+    company: Optional[str] = ""
+    email: Optional[str] = ""
+    phone: Optional[str] = ""
+    stage: str = "lead"  # lead | qualified | proposal | won | lost
+    owner: Optional[str] = ""
+    value: float = 0
+    source: Optional[str] = ""
+    notes: Optional[str] = ""
+
+
+class PaymentCreate(_Base):
+    invoice_id: str
+    amount: float
+    method: str = "bank_transfer"
+    date: Optional[str] = ""
+    notes: Optional[str] = ""
 
 
 class ExpenseCreate(_Base):
@@ -113,6 +136,7 @@ class EmployeeCreate(_Base):
     salary: float = 0
     status: str = "active"
     hire_date: Optional[str] = ""
+    notes: Optional[str] = ""
 
 
 class TaskCreate(_Base):
@@ -120,8 +144,11 @@ class TaskCreate(_Base):
     description: Optional[str] = ""
     assignee: Optional[str] = ""
     priority: str = "medium"
-    status: str = "todo"
+    status: str = "todo"  # todo | in_progress | completed
     due_date: Optional[str] = ""
+    customer_id: Optional[str] = ""
+    customer_name: Optional[str] = ""
+    reference: Optional[str] = ""
 
 
 class InvoiceItem(_Base):
@@ -129,6 +156,7 @@ class InvoiceItem(_Base):
     description: str = ""
     quantity: float = 1
     unit_price: float = 0
+    discount: float = 0
 
 
 class InvoiceCreate(_Base):

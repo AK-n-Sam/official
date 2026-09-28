@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, Legend, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import api, { formatApiError } from "@/lib/api";
 import { useCurrency } from "@/context/CurrencyContext";
 import { CURRENCIES } from "@/lib/format";
@@ -59,6 +59,10 @@ export default function Dashboard() {
         <KpiCard label="Products" value={stats.product_count} icon="Package" tone="primary" sub={`${stats.low_stock_count} low stock`} testId="kpi-products" />
         <KpiCard label="Invoices" value={stats.invoice_count} icon="FileText" tone="emerald" sub="total issued" testId="kpi-invoices" />
         <KpiCard label="Employees" value={stats.employee_count} icon="Briefcase" tone="amber" sub="active team" testId="kpi-employees" />
+        <KpiCard label="Amount Collected" value={format(stats.amount_collected)} icon="CreditCard" tone="emerald" sub="all payments" testId="kpi-collected" />
+        <KpiCard label="Overdue" value={format(stats.overdue_amount)} icon="AlertTriangle" tone="rose" sub={`${stats.overdue_count} invoices`} testId="kpi-overdue" />
+        <KpiCard label="New Customers" value={stats.new_customers} icon="UserPlus" tone="violet" sub="last 30 days" testId="kpi-new-customers" />
+        <KpiCard label="Open Tasks" value={stats.open_tasks} icon="CheckSquare" tone="amber" sub="in progress" testId="kpi-open-tasks" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -95,6 +99,40 @@ export default function Dashboard() {
         </Card>
 
         <AiInsightsPlaceholder />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card className="border-border/70 bg-card/90 p-5" data-testid="sales-by-category-chart">
+          <h3 className="mb-4 font-heading text-base font-semibold">Sales by Category</h3>
+          {stats.sales_by_category.length === 0 ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">No sales data yet.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={stats.sales_by_category} layout="vertical" margin={{ left: 20, right: 16 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${CURRENCIES[currency].symbol}${Math.round(v * rate / 1000)}k`} />
+                <YAxis type="category" dataKey="category" width={90} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12 }} formatter={(v) => [format(v), "Sales"]} cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }} />
+                <Bar dataKey="amount" fill="hsl(var(--chart-1))" radius={[0, 6, 6, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </Card>
+
+        <Card className="border-border/70 bg-card/90 p-5" data-testid="invoice-status-chart">
+          <h3 className="mb-4 font-heading text-base font-semibold">Invoice Status</h3>
+          <ResponsiveContainer width="100%" height={260}>
+            <PieChart>
+              <Pie data={stats.invoice_status_breakdown} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={95} innerRadius={52} paddingAngle={2}>
+                {stats.invoice_status_breakdown.map((_, i) => (
+                  <Cell key={i} fill={["hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-1))", "hsl(var(--chart-5))", "hsl(var(--chart-4))", "hsl(var(--muted-foreground))", "hsl(var(--border))"][i % 7]} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12 }} formatter={(v, n) => [v, String(n).replace(/_/g, " ")]} />
+              <Legend wrapperStyle={{ fontSize: 11, textTransform: "capitalize" }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

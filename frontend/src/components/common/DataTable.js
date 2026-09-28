@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 
-export function DataTable({ columns, rows, onEdit, onDelete, rowActions, testId }) {
+export function DataTable({ columns, rows, onEdit, onDelete, rowActions, onRowClick, testId }) {
   return (
     <div className="overflow-hidden rounded-xl border border-border/80 bg-card/90 shadow-sm">
       <div className="overflow-x-auto">
@@ -20,14 +20,19 @@ export function DataTable({ columns, rows, onEdit, onDelete, rowActions, testId 
           </TableHeader>
           <TableBody>
             {rows.map((row) => (
-              <TableRow key={row.id} data-testid={`table-row-${row.id}`} className="group">
+              <TableRow
+                key={row.id}
+                data-testid={`table-row-${row.id}`}
+                className={onRowClick ? "group cursor-pointer" : "group"}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+              >
                 {columns.map((c) => (
                   <TableCell key={c.key} className={c.className || "whitespace-nowrap text-sm"}>
                     {c.render ? c.render(row) : row[c.key] ?? "—"}
                   </TableCell>
                 ))}
                 {(onEdit || onDelete || rowActions) && (
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8" data-testid={`row-actions-${row.id}`}>

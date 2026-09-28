@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDebounce } from "@/hooks/useDebounce";
 
-export function ResourceManager({ config }) {
+export function ResourceManager({ config, onRowClick }) {
   const { title, subtitle, endpoint, singular, columns, fields, filters = [], icon, searchPlaceholder } = config;
   const [search, setSearch] = useState("");
   const debounced = useDebounce(search, 300);
@@ -117,6 +117,7 @@ export function ResourceManager({ config }) {
           rows={data}
           onEdit={openEdit}
           onDelete={(row) => setDeleting(row)}
+          onRowClick={onRowClick}
           testId={`${singular.toLowerCase()}-table`}
         />
       )}

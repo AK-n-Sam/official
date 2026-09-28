@@ -12,8 +12,9 @@ export const NAV_SECTIONS = [
     ],
   },
   {
-    label: "Relationships",
+    label: "Sales & CRM",
     items: [
+      { name: "Leads", path: "/leads", icon: "Target" },
       { name: "Customers", path: "/customers", icon: "Users" },
       { name: "Suppliers", path: "/suppliers", icon: "Truck" },
     ],
