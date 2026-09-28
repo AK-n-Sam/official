@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 2 testing of NexusOS extended CRM/Invoicing/Payments/Inventory features. Backend: 32/32 pytest tests passed (21 regression from iter1 + 11 new for leads CRUD+convert, customer history/list totals, dashboard extended KPIs, invoice status transitions incl. draft->sent->overdue->paid, invoice detail with payments+balance, employees CRUD, tasks with customer link, payments error cases, and the CRITICAL end-to-end workflow: customer -> product(stock 50) -> invoice(qty 10, 10%% discount) -> stock deducted to 40 -> partial payment -> partially_paid -> mark paid -> paid + balance 0 + customer outstanding 0 + dashboard amount_collected reflects). Frontend Playwright: login+demo-fill lands on Dashboard showing all 4 new KPIs (Amount Collected $34,638.77, Overdue $3,520.26, New Customers 2, Open Tasks 7) plus sales-by-category and invoice-status charts; Leads pipeline board renders all 5 stages and lead-create modal creates a card; Customers list shows Total Sales + Outstanding columns and row-click opens /customers/:id detail; Invoices list tab filters present, row-click opens /invoices/:id showing line items with discounts, totals breakdown (subtotal/tax/total/paid/balance) and payment history; Record Payment modal on invoice detail successfully applies partial payment ($2,021.76 -> $2,011.76 = -$10 as entered); Tasks board/list toggle works and priority filter renders; Employees row-click opens /employees/:id; session persists on reload.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Header theme toggle", "issues": ["data-testid is 'theme-toggle-button' (from Header.js) — matches implementation; the task hint mentioned 'theme toggle' generically. No bug, note for future tests."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_iteration2.py",
+    "/app/test_reports/pytest/all_results.xml",
+    "/app/test_reports/pytest/iteration2_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py customer_history returns flat total_sales/outstanding/total_paid (not nested under 'totals'). Frontend CustomerDetail.js must consume this flat shape — verified aligned via UI navigation but worth documenting for API consumers.",
+    "Leads convert endpoint (POST /api/leads/{id}/convert) creates a new customer even if a lead with same email already exists as customer — no dedupe. Consider merging by email to avoid duplicate customers.",
+    "Invoice `_deduct_inventory` deducts stock also when draft->sent status change AND on create-as-sent; both paths guarded but idempotency across repeated status flips (sent->draft->sent) not tracked — could double-deduct. Recommend a boolean flag `inventory_deducted` on invoice doc.",
+    "Dashboard stats loads full invoices/expenses/payments/products/tasks collections (up to 5000 each) per request. For org with high volume this is expensive; consider Mongo aggregations."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration2.py (new)"
+  ],
+  "success_rate": { "backend": "100% (32/32)", "frontend": "100% of critical flows" },
+  "test_credentials": "aniruddh.samarth@gmail.com / Admin@12345 (workspace: Acme Global Ventures active on login)",
+  "seed_data_creation": "None. Tests create TEST_-prefixed rows and clean them up themselves. One residual TEST_Flow_Cust customer may exist if a prior run's cleanup was interrupted (safe to ignore).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All new iter2 endpoints (leads convert, customer history, invoice detail/status, payments, extended dashboard) fully green. Frontend uses data-testid theme-toggle-button (not theme-toggle). Leads new-lead modal has only 1 visible input in first render (name); other fields likely appear after tabbing or the modal auto-focuses name. Invoice status tabs: some Radix TabsList tabs may report is_visible=False due to wrapping/aria-hidden but are all rendered and clickable. Backend workflow verified end-to-end including 10-unit inventory deduction on invoice sent, partial-payment status transitions, and dashboard aggregation.",
+  "rca of the issue": "N/A — no bugs found."
+}

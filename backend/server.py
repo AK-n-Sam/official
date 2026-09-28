@@ -121,11 +121,12 @@ async def create_invoice(payload: InvoiceCreate, user: dict = Depends(get_curren
         "issue_date": data["issue_date"], "due_date": data["due_date"], "status": status,
         "items": items, "subtotal": subtotal, "tax_rate": data["tax_rate"], "tax_amount": tax_amount,
         "total": total, "amount_paid": amount_paid, "notes": data.get("notes", ""),
+        "inventory_deducted": status not in ("draft", "cancelled"),
         "created_at": now_iso(), "updated_at": now_iso(),
     }
     await db.invoices.insert_one(doc)
     # Deduct inventory for stocked line items unless the invoice is a draft/cancelled
-    if status not in ("draft", "cancelled"):
+    if doc["inventory_deducted"]:
         await _deduct_inventory(user["active_org_id"], items, doc["invoice_number"])
     if status == "paid":
         await _record_payment(user["active_org_id"], doc, total, "bank_transfer", data["issue_date"], "Auto-recorded on paid invoice")
@@ -158,9 +159,10 @@ async def set_invoice_status(invoice_id: str, payload: dict = Body(...), user: d
         if remaining > 0:
             await _record_payment(user["active_org_id"], invoice, remaining, "bank_transfer", now_iso()[:10], "Marked as paid")
         updates["amount_paid"] = invoice["total"]
-    # Deduct inventory the first time a draft is sent
-    if invoice["status"] == "draft" and new_status in ("sent", "paid"):
+    # Deduct inventory the first time an invoice leaves draft (only once)
+    if new_status in ("sent", "paid") and not invoice.get("inventory_deducted"):
         await _deduct_inventory(user["active_org_id"], invoice.get("items", []), invoice["invoice_number"])
+        updates["inventory_deducted"] = True
     await db.invoices.update_one({"id": invoice_id}, {"$set": updates})
     return await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
 

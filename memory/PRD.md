@@ -39,3 +39,14 @@ Auth & workspaces · App shell (sidebar, header, workspace switcher, notificatio
 - Wire global search across customers/invoices/products.
 - Add AI Insights engine (LLM) on dashboard.
 - Invoice PDF/print + email send.
+
+## Iteration 2 — Connected Operational Workflows (2026-06-28)
+Extended the foundation into a genuinely usable, cross-connected SME app. All verified: 32/32 backend tests, 100% frontend flows.
+- **CRM**: Customers list now shows computed Total Sales + Outstanding; clicking opens a Customer Detail page (`/customers/:id`) with KPIs and Invoices/Payments/Tasks/About tabs (`/customers/:id/history`). New Sales Pipeline (`/leads`) — Lead→Qualified→Proposal→Won→Lost board with create/edit, stage moves, owner, value, and **Convert to Customer**.
+- **Invoicing (full)**: statuses Draft/Sent/Partially Paid/Paid/Overdue/Cancelled; per-line discounts + tax; auto invoice numbers; Invoice Detail page (`/invoices/:id`) with line items, totals breakdown, payment history and status actions; edit modal.
+- **Payments**: standalone `POST /payments` + record-payment modal; correctly transitions invoice to partially_paid/paid, updates balance and customer outstanding.
+- **Inventory connection**: creating/sending an invoice for stocked products **deducts stock and logs a stock movement** (idempotent via `inventory_deducted` flag — no double-deduct on status flips). Products gained tax rate, purchase price, supplier, min-stock.
+- **Employees**: directory rows open Employee Detail page (`/employees/:id`) with profile, salary, notes.
+- **Tasks**: board + list views, priority/status filters, overdue detection, related customer.
+- **Dashboard upgrade**: added Amount Collected, Overdue, New Customers, Open Tasks KPIs; Sales-by-Category bar and Invoice-Status donut charts — all from real data.
+- **Known limitations**: lead-convert has no email dedupe; dashboard uses in-memory aggregation (fine at prototype scale); global search + AI insights still placeholders; no receipt file upload for expenses yet.
