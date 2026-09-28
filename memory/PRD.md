@@ -40,7 +40,11 @@ Auth & workspaces · App shell (sidebar, header, workspace switcher, notificatio
 - Add AI Insights engine (LLM) on dashboard.
 - Invoice PDF/print + email send.
 
-## Iteration 2 — Connected Operational Workflows (2026-06-28)
+## Iteration 3 — Cohesion & Polish (2026-06-28)
+- **Global Search**: header search (`GET /api/search?q=`) across customers, invoices, products, expenses, employees, tasks — typed results that navigate to the record's page. Replaces the previous dead search input.
+- **Business Activity Feed**: `GET /api/activity` merges recent events (customer added, invoice created/paid, payment recorded, expense created, stock changed, task completed) from existing collections; shown on the Dashboard beside Recent Transactions, each item links to its record.
+- Verified: 11/11 new backend tests + full frontend flows for both features; single overall regression failure is a known pytest-xdist parallelism flake (not a real bug).
+- **Known limitations**: search limited to 5 hits/type (no pagination); activity uses on-read aggregation (fine at prototype scale) rather than a dedicated activity_log; search excludes leads/suppliers by design.
 Extended the foundation into a genuinely usable, cross-connected SME app. All verified: 32/32 backend tests, 100% frontend flows.
 - **CRM**: Customers list now shows computed Total Sales + Outstanding; clicking opens a Customer Detail page (`/customers/:id`) with KPIs and Invoices/Payments/Tasks/About tabs (`/customers/:id/history`). New Sales Pipeline (`/leads`) — Lead→Qualified→Proposal→Won→Lost board with create/edit, stage moves, owner, value, and **Convert to Customer**.
 - **Invoicing (full)**: statuses Draft/Sent/Partially Paid/Paid/Overdue/Cancelled; per-line discounts + tax; auto invoice numbers; Invoice Detail page (`/invoices/:id`) with line items, totals breakdown, payment history and status actions; edit modal.

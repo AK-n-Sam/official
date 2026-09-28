@@ -540,7 +540,7 @@ async def activity_feed(user: dict = Depends(get_current_user)):
         verb = "paid" if i["status"] == "paid" else "created"
         events.append({"type": "invoice", "title": f"Invoice {verb}", "description": f"{i['invoice_number']} · {i.get('customer_name', '')}", "date": i.get("created_at", ""), "link": f"/invoices/{i['id']}"})
     for p in await db.payments.find({"org_id": org_id}, {"_id": 0}).sort("created_at", -1).limit(15).to_list(15):
-        events.append({"type": "payment", "title": "Payment recorded", "description": f"{p.get('invoice_number', '')} · {p.get('customer_name', '')}", "date": p.get("created_at", ""), "link": "/sales"})
+        events.append({"type": "payment", "title": "Payment recorded", "description": f"{p.get('invoice_number', '')} · {p.get('customer_name', '')}", "date": p.get("created_at", ""), "link": f"/invoices/{p['invoice_id']}" if p.get("invoice_id") else "/sales"})
     for e in await db.expenses.find({"org_id": org_id}, {"_id": 0}).sort("created_at", -1).limit(10).to_list(10):
         events.append({"type": "expense", "title": "Expense created", "description": f"{e['category']} · {e.get('vendor', '')}", "date": e.get("created_at", ""), "link": "/expenses"})
     for m in await db.stock_movements.find({"org_id": org_id}, {"_id": 0}).sort("created_at", -1).limit(10).to_list(10):

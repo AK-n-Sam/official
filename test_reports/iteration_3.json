@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 3 polish testing focused on the two new features: GET /api/search (global search) and GET /api/activity (business activity feed), plus quick regression. Backend: 11/11 new tests pass (empty-query returns [], auth-required 401, customer name search returns typed customer hit with link /customers/:id, invoice prefix search returns invoice results with /invoices/:id links, gibberish returns [], cross-org isolation confirmed - other workspace customer id not leaked; activity endpoint returns list<=20, correct types {customer,invoice,payment,expense,stock,task}, sorted desc by date, unauth 401, newly-created invoice surfaces in feed with correct /invoices/:id link). Regression: 31/32 prior tests pass; the 1 failure (test_iteration2.TestRealisticWorkflow.test_full_flow) is a PRE-EXISTING FLAKE from parallel pytest-xdist execution where TestInvoices creates a $110 invoice on customers[0] which races with the workflow test's customer_history assertion (paid=1089 vs total_sales=1199 = leftover 110). Not related to iteration 3, cleaned up 2 stale TEST_Flow_Cust customers. Frontend Playwright: login-> Dashboard shows data-testid=activity-feed with 20 activity-item-<i> entries; clicking first item navigates (to /sales for a payment). Header data-testid=global-search-input: 'Hooli' -> data-testid=search-results with 4 typed search-result-<id> items, clicking customer navigated to /customers/3ab175df... ; 'zzqxwvunexist123' -> data-testid=search-empty visible; 'ACM' -> 15 typed results, clicking invoice navigated to /invoices/eaf11aed... showing full invoice detail (ACM-1001 Paid, line items with discounts, totals, payment history). No console errors observed.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration3.py",
+    "/app/test_reports/pytest/iter3_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py /api/search hard-codes limit(5) per collection - fine for MVP but if a workspace has 50+ customers matching 'a', results are silently truncated with no pagination indicator. Consider returning a 'has_more' flag or higher limit for text-heavy collections.",
+    "server.py /api/activity does 6 sequential Mongo queries (customers/invoices/payments/expenses/stock_movements/tasks) then Python-side sort+truncate to 20. On large orgs this is O(N) reads. Consider a unified activity_log collection populated on write, or Mongo $unionWith aggregation.",
+    "/api/activity payment events link to /sales (list page) not to the underlying invoice. Would be more useful to link to /invoices/<invoice_id> so user lands on invoice detail with payment history already shown.",
+    "/api/search does not include leads, suppliers - problem statement listed 6 types (customers/invoices/products/expenses/employees/tasks) which matches implementation, but PRD sidebar has Leads and Suppliers routes; consider adding for completeness.",
+    "Pre-existing: parallel pytest-xdist causes test_iteration2 workflow flake. Prior iter2 also flagged residual TEST_Flow_Cust. Consider serial mark on TestRealisticWorkflow or unique customer names per run."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration3.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% on iter3 (11/11); 31/32 overall (1 pre-existing xdist flake unrelated to iter3)",
+    "frontend": "100% of iter3 critical flows (activity feed + global search customer/invoice/gibberish)"
+  },
+  "test_credentials": "aniruddh.samarth@gmail.com / Admin@12345",
+  "seed_data_creation": "None. Cleaned up 2 stale TEST_Flow_Cust customers from prior iter2 interrupted runs.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iter3 endpoints /api/search and /api/activity fully green. Data-testids confirmed present: global-search-input, search-results, search-result-<id>, search-empty, activity-feed, activity-item-<i>. When testing xdist flake: run TestRealisticWorkflow serially or with -p no:xdist. Payment activity events link to /sales - verify with product owner if this is intended.",
+  "rca of the issue": "N/A for iter3 - no bugs. The single regression failure is pytest-xdist parallelism race: TestInvoices creates 110 invoice+payment on customers[0] concurrently with TestRealisticWorkflow which asserts new customer's total_sales==paid.total. Fix: add @pytest.mark.serial or use per-test customer name/email UUIDs."
+}
