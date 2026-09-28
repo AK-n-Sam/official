@@ -504,6 +504,53 @@ async def notifications(user: dict = Depends(get_current_user)):
     return items
 
 
+# ---------------- Global Search ----------------
+@api.get("/search", tags=["search"])
+async def global_search(request: Request, user: dict = Depends(get_current_user)):
+    q = (request.query_params.get("q") or "").strip()
+    if not q:
+        return []
+    org_id = user["active_org_id"]
+    rx = {"$regex": q, "$options": "i"}
+    results = []
+
+    for c in await db.customers.find({"org_id": org_id, "$or": [{"name": rx}, {"email": rx}, {"company": rx}]}, {"_id": 0}).limit(5).to_list(5):
+        results.append({"type": "customer", "id": c["id"], "title": c["name"], "subtitle": c.get("company") or c.get("email", ""), "link": f"/customers/{c['id']}"})
+    for i in await db.invoices.find({"org_id": org_id, "$or": [{"invoice_number": rx}, {"customer_name": rx}]}, {"_id": 0}).limit(5).to_list(5):
+        results.append({"type": "invoice", "id": i["id"], "title": i["invoice_number"], "subtitle": f"{i.get('customer_name', '')} · {i.get('status', '')}", "link": f"/invoices/{i['id']}"})
+    for p in await db.products.find({"org_id": org_id, "$or": [{"name": rx}, {"sku": rx}, {"category": rx}]}, {"_id": 0}).limit(5).to_list(5):
+        results.append({"type": "product", "id": p["id"], "title": p["name"], "subtitle": f"{p.get('sku', '')} · {p.get('stock_quantity', 0)} in stock", "link": "/products"})
+    for e in await db.expenses.find({"org_id": org_id, "$or": [{"category": rx}, {"vendor": rx}, {"description": rx}]}, {"_id": 0}).limit(5).to_list(5):
+        results.append({"type": "expense", "id": e["id"], "title": e["category"], "subtitle": f"{e.get('vendor', '')} · {e.get('amount', 0)}", "link": "/expenses"})
+    for em in await db.employees.find({"org_id": org_id, "$or": [{"name": rx}, {"email": rx}, {"job_title": rx}]}, {"_id": 0}).limit(5).to_list(5):
+        results.append({"type": "employee", "id": em["id"], "title": em["name"], "subtitle": em.get("job_title", ""), "link": f"/employees/{em['id']}"})
+    for t in await db.tasks.find({"org_id": org_id, "$or": [{"title": rx}, {"assignee": rx}, {"customer_name": rx}]}, {"_id": 0}).limit(5).to_list(5):
+        results.append({"type": "task", "id": t["id"], "title": t["title"], "subtitle": f"{t.get('status', '')} · {t.get('assignee', '')}", "link": "/tasks"})
+    return results
+
+
+# ---------------- Business Activity Feed ----------------
+@api.get("/activity", tags=["dashboard"])
+async def activity_feed(user: dict = Depends(get_current_user)):
+    org_id = user["active_org_id"]
+    events = []
+    for c in await db.customers.find({"org_id": org_id}, {"_id": 0}).sort("created_at", -1).limit(15).to_list(15):
+        events.append({"type": "customer", "title": "Customer added", "description": c["name"], "date": c.get("created_at", ""), "link": f"/customers/{c['id']}"})
+    for i in await db.invoices.find({"org_id": org_id}, {"_id": 0}).sort("created_at", -1).limit(15).to_list(15):
+        verb = "paid" if i["status"] == "paid" else "created"
+        events.append({"type": "invoice", "title": f"Invoice {verb}", "description": f"{i['invoice_number']} · {i.get('customer_name', '')}", "date": i.get("created_at", ""), "link": f"/invoices/{i['id']}"})
+    for p in await db.payments.find({"org_id": org_id}, {"_id": 0}).sort("created_at", -1).limit(15).to_list(15):
+        events.append({"type": "payment", "title": "Payment recorded", "description": f"{p.get('invoice_number', '')} · {p.get('customer_name', '')}", "date": p.get("created_at", ""), "link": "/sales"})
+    for e in await db.expenses.find({"org_id": org_id}, {"_id": 0}).sort("created_at", -1).limit(10).to_list(10):
+        events.append({"type": "expense", "title": "Expense created", "description": f"{e['category']} · {e.get('vendor', '')}", "date": e.get("created_at", ""), "link": "/expenses"})
+    for m in await db.stock_movements.find({"org_id": org_id}, {"_id": 0}).sort("created_at", -1).limit(10).to_list(10):
+        events.append({"type": "stock", "title": f"Stock {m['type']}", "description": f"{m['product_name']} · {m['quantity']}", "date": m.get("created_at", ""), "link": "/inventory"})
+    for t in await db.tasks.find({"org_id": org_id, "status": {"$in": ["completed", "done"]}}, {"_id": 0}).sort("updated_at", -1).limit(8).to_list(8):
+        events.append({"type": "task", "title": "Task completed", "description": t["title"], "date": t.get("updated_at", ""), "link": "/tasks"})
+    events.sort(key=lambda x: x.get("date", ""), reverse=True)
+    return events[:20]
+
+
 # ---------------- Settings / Organizations ----------------
 @api.get("/organizations", tags=["settings"])
 async def list_orgs(user: dict = Depends(get_current_user)):

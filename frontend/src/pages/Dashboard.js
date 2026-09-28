@@ -8,6 +8,7 @@ import { formatDate } from "@/lib/format";
 import { PageHeader } from "@/components/common/PageHeader";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { AiInsightsPlaceholder } from "@/components/dashboard/AiInsightsPlaceholder";
+import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { ErrorState } from "@/components/common/States";
 import { Card } from "@/components/ui/card";
@@ -183,6 +184,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <Card className="border-border/70 bg-card/90" data-testid="recent-transactions">
         <div className="border-b border-border/70 px-5 py-4">
           <h3 className="font-heading text-base font-semibold">Recent Transactions</h3>
@@ -206,6 +208,8 @@ export default function Dashboard() {
           ))}
         </div>
       </Card>
+      <ActivityFeed />
+      </div>
     </div>
   );
 }

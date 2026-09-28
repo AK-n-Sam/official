@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { CURRENCIES } from "@/lib/format";
+import { GlobalSearch } from "@/components/layout/GlobalSearch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -35,15 +36,7 @@ export function Header({ onMenuClick }) {
         <Menu className="h-5 w-5" />
       </Button>
 
-      <div className="relative hidden max-w-md flex-1 sm:block">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search across your business..."
-          className="h-9 border-border/60 bg-card/50 pl-9"
-          data-testid="global-search-input"
-          onKeyDown={(e) => { if (e.key === "Enter" && e.target.value) navigate("/customers"); }}
-        />
-      </div>
+      <GlobalSearch />
 
       <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
         <Select value={currency} onValueChange={setCurrency}>
