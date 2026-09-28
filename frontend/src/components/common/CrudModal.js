@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/common/FormField";
 import { Loader2 } from "lucide-react";
@@ -59,6 +59,7 @@ export function CrudModal({ open, onOpenChange, title, fields, initial, onSubmit
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl" data-testid="crud-modal">
         <DialogHeader>
           <DialogTitle className="text-xl">{title}</DialogTitle>
+          <DialogDescription>Fill in the details below and save.</DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-4 py-2 sm:grid-cols-2">
           {fields.map((f) => (

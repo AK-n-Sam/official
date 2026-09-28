@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Trash2, Plus } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useCurrency } from "@/context/CurrencyContext";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,7 +86,10 @@ export function InvoiceModal({ open, onOpenChange, initial, onSaved }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-3xl" data-testid="invoice-modal">
-        <DialogHeader><DialogTitle className="text-xl">{initial ? "Edit Invoice" : "New Invoice"}</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle className="text-xl">{initial ? "Edit Invoice" : "New Invoice"}</DialogTitle>
+          <DialogDescription>Select a customer, add line items, and totals calculate automatically.</DialogDescription>
+        </DialogHeader>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
