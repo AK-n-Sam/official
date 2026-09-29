@@ -52,6 +52,7 @@ class OrganizationUpdate(_Base):
     invoice_tax_rate: Optional[float] = None
     invoice_due_days: Optional[int] = None
     invoice_notes: Optional[str] = None
+    admins_see_all: Optional[bool] = None
 
 
 class SwitchOrgInput(_Base):
@@ -62,6 +63,10 @@ class InviteInput(_Base):
     name: str = Field(min_length=1)
     email: EmailStr
     role: str = "member"
+
+
+class ReassignInput(_Base):
+    to_member_id: str = Field(min_length=1)
 
 
 # ---------- Modules (Create payloads) ----------
@@ -110,6 +115,7 @@ class LeadCreate(_Base):
     phone: Optional[str] = ""
     stage: str = "lead"  # lead | qualified | proposal | won | lost
     owner: Optional[str] = ""
+    owner_id: Optional[str] = ""
     value: float = 0
     source: Optional[str] = ""
     notes: Optional[str] = ""
@@ -149,6 +155,7 @@ class TaskCreate(_Base):
     title: str = Field(min_length=1)
     description: Optional[str] = ""
     assignee: Optional[str] = ""
+    assignee_id: Optional[str] = ""
     priority: str = "medium"
     status: str = "todo"  # todo | in_progress | completed
     due_date: Optional[str] = ""

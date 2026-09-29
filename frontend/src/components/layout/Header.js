@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Bell, Sun, Moon, Menu, LogOut, User, Settings as SettingsIcon, AlertTriangle, Package, CheckSquare, Plus, FileText, Users, Receipt, CheckSquare as TaskIcon, Target } from "lucide-react";
+import { Search, Bell, Sun, Moon, Menu, LogOut, User, Settings as SettingsIcon, AlertTriangle, Package, CheckSquare, Plus, FileText, Users, Receipt, CheckSquare as TaskIcon, Target, PanelLeft, Rows3, Rows2 } from "lucide-react";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
+import { useLayout } from "@/context/LayoutContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { CURRENCIES } from "@/lib/format";
 import { GlobalSearch } from "@/components/layout/GlobalSearch";
@@ -20,6 +21,7 @@ const NOTIF_ICON = { overdue: AlertTriangle, stock: Package, task: CheckSquare }
 export function Header({ onMenuClick }) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { toggleSidebar, density, setDensity } = useLayout();
   const { currency, setCurrency } = useCurrency();
   const navigate = useNavigate();
   const [notifs, setNotifs] = useState([]);
@@ -34,6 +36,10 @@ export function Header({ onMenuClick }) {
     <header className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-border/70 bg-background/90 px-4 backdrop-blur-md sm:px-6">
       <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuClick} data-testid="mobile-menu-button">
         <Menu className="h-5 w-5" />
+      </Button>
+
+      <Button variant="ghost" size="icon" className="hidden lg:flex" onClick={toggleSidebar} data-testid="sidebar-toggle-desktop">
+        <PanelLeft className="h-5 w-5" />
       </Button>
 
       <GlobalSearch />
@@ -69,6 +75,10 @@ export function Header({ onMenuClick }) {
             ))}
           </SelectContent>
         </Select>
+
+        <Button variant="ghost" size="icon" onClick={() => setDensity(density === "compact" ? "comfortable" : "compact")} data-testid="density-toggle-button" className="hidden h-9 w-9 sm:flex" title={density === "compact" ? "Comfortable view" : "Compact view"}>
+          {density === "compact" ? <Rows3 className="h-[18px] w-[18px]" /> : <Rows2 className="h-[18px] w-[18px]" />}
+        </Button>
 
         <Button variant="ghost" size="icon" onClick={toggleTheme} data-testid="theme-toggle-button" className="h-9 w-9">
           {theme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}

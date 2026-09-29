@@ -29,6 +29,20 @@ export function FormField({ field, value, error, onChange }) {
               ))}
             </SelectContent>
           </Select>
+        ) : type === "member" ? (
+          <Select value={value ? String(value) : "__unassigned__"} onValueChange={(v) => onChange(name, v === "__unassigned__" ? "" : v)}>
+            <SelectTrigger data-testid={testId}>
+              <SelectValue placeholder={placeholder || "Unassigned"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__unassigned__" data-testid={`${testId}-opt-unassigned`}>Unassigned</SelectItem>
+              {(options || []).map((o) => (
+                <SelectItem key={o.value} value={String(o.value)} data-testid={`${testId}-opt-${o.value}`}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         ) : (
           <Input id={name} data-testid={testId} type={type === "number" ? "number" : type === "date" ? "date" : "text"}
             value={value ?? ""} placeholder={placeholder}

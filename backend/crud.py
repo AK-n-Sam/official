@@ -5,13 +5,30 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Body
 from database import db, now_iso
 
 
-def is_privileged(user: dict) -> bool:
+def can_manage_team(user: dict) -> bool:
+    """Team management (invite/remove/reassign) is allowed for owners and admins."""
     return user.get("role") in ("owner", "admin")
 
 
+def sees_all_records(user: dict) -> bool:
+    """Data visibility: owners always see everything. Admins see everything only when
+    the workspace owner enabled 'admins_see_all'. Members only see their own records."""
+    role = user.get("role")
+    if role == "owner":
+        return True
+    if role == "admin":
+        return bool(user.get("admins_see_all", False))
+    return False
+
+
+def is_privileged(user: dict) -> bool:
+    """Kept for team-management gating (owner/admin)."""
+    return can_manage_team(user)
+
+
 def member_filter(user: dict) -> dict:
-    """Members only see records they created; owners/admins see everything in the org."""
-    return {} if is_privileged(user) else {"created_by": user["id"]}
+    """Members (and scope-limited admins) only see records they created."""
+    return {} if sees_all_records(user) else {"created_by": user["id"]}
 
 
 def make_crud(collection: str, CreateModel, search_fields: List[str], filter_fields: List[str] = None, member_scoped: bool = False):

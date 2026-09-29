@@ -12,7 +12,7 @@ from database import db, now_iso
 from models import (
     CustomerCreate, SupplierCreate, ProductCreate, ExpenseCreate, EmployeeCreate,
     TaskCreate, InvoiceCreate, StockMovementCreate, PaymentInput, PaymentCreate, LeadCreate,
-    OrganizationUpdate, ProfileUpdate, PreferencesUpdate, SwitchOrgInput, InviteInput,
+    OrganizationUpdate, ProfileUpdate, PreferencesUpdate, SwitchOrgInput, InviteInput, ReassignInput,
 )
 from crud import make_crud, is_privileged, member_filter
 from auth import router as auth_router, get_current_user, hash_password, verify_password
@@ -616,6 +616,32 @@ async def remove_member(member_id: str, user: dict = Depends(get_current_user)):
     return {"success": True}
 
 
+REASSIGN_COLLECTIONS = ["customers", "invoices", "expenses", "tasks", "leads", "payments"]
+
+
+@team.post("/{member_id}/reassign")
+async def reassign_member(member_id: str, payload: ReassignInput, user: dict = Depends(get_current_user)):
+    if not is_privileged(user):
+        raise HTTPException(status_code=403, detail="Only owners and admins can reassign records")
+    org_id = user["active_org_id"]
+    to_id = payload.to_member_id
+    if member_id == to_id:
+        raise HTTPException(status_code=400, detail="Choose a different teammate to reassign to")
+    from_member = await db.users.find_one({"id": member_id, "org_ids": org_id}, {"_id": 0})
+    to_member = await db.users.find_one({"id": to_id, "org_ids": org_id}, {"_id": 0})
+    if not from_member or not to_member:
+        raise HTTPException(status_code=404, detail="Member not found in this workspace")
+    counts = {}
+    total = 0
+    for coll in REASSIGN_COLLECTIONS:
+        res = await db[coll].update_many({"org_id": org_id, "created_by": member_id}, {"$set": {"created_by": to_id, "updated_at": now_iso()}})
+        counts[coll] = res.modified_count
+        total += res.modified_count
+    await db.tasks.update_many({"org_id": org_id, "assignee_id": member_id}, {"$set": {"assignee_id": to_id, "assignee": to_member["name"], "updated_at": now_iso()}})
+    await db.leads.update_many({"org_id": org_id, "owner_id": member_id}, {"$set": {"owner_id": to_id, "owner": to_member["name"], "updated_at": now_iso()}})
+    return {"success": True, "counts": counts, "total": total, "from": from_member["name"], "to": to_member["name"]}
+
+
 api.include_router(team)
 
 
@@ -625,8 +651,8 @@ async def my_work(user: dict = Depends(get_current_user)):
     org = user["active_org_id"]
     uid = user["id"]
     name = user.get("name", "")
-    tasks = await db.tasks.find({"org_id": org, "status": {"$nin": ["completed", "done"]}, "$or": [{"assignee": name}, {"created_by": uid}]}, {"_id": 0}).sort("due_date", 1).to_list(200)
-    leads = await db.leads.find({"org_id": org, "stage": {"$nin": ["won", "lost"]}, "$or": [{"owner": name}, {"created_by": uid}]}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    tasks = await db.tasks.find({"org_id": org, "status": {"$nin": ["completed", "done"]}, "$or": [{"assignee_id": uid}, {"assignee": name}, {"created_by": uid}]}, {"_id": 0}).sort("due_date", 1).to_list(200)
+    leads = await db.leads.find({"org_id": org, "stage": {"$nin": ["won", "lost"]}, "$or": [{"owner_id": uid}, {"owner": name}, {"created_by": uid}]}, {"_id": 0}).sort("created_at", -1).to_list(200)
     events = []
     for i in await db.invoices.find({"org_id": org, "created_by": uid}, {"_id": 0}).sort("created_at", -1).limit(8).to_list(8):
         events.append({"type": "invoice", "title": f"Invoice {'paid' if i['status'] == 'paid' else 'created'}", "description": f"{i['invoice_number']} · {i.get('customer_name', '')}", "date": i.get("created_at", ""), "link": f"/invoices/{i['id']}"})

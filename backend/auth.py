@@ -86,7 +86,10 @@ async def get_current_user(request: Request) -> dict:
     user = await db.users.find_one({"id": user_id}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
-    return _public_user(user)
+    pub = _public_user(user)
+    org = await db.organizations.find_one({"id": pub.get("active_org_id")}, {"_id": 0, "admins_see_all": 1})
+    pub["admins_see_all"] = bool(org and org.get("admins_see_all", False))
+    return pub
 
 
 async def _build_user(name, email, password_hash=None, picture="", provider="password"):

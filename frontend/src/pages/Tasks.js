@@ -27,7 +27,7 @@ const COLUMNS = [
 const FIELDS = [
   { name: "title", label: "Title", required: true, full: true },
   { name: "description", label: "Description", type: "textarea", full: true },
-  { name: "assignee", label: "Assigned To" },
+  { name: "assignee_id", label: "Assigned To", type: "member" },
   { name: "customer_name", label: "Related Customer" },
   { name: "reference", label: "Reference" },
   { name: "priority", label: "Priority", type: "select", default: "medium", options: [
@@ -41,6 +41,7 @@ const isOverdue = (t) => t.status !== "completed" && t.status !== "done" && t.du
 
 export default function Tasks() {
   const { data, loading, refetch } = useResource("/tasks", {});
+  const [members, setMembers] = useState([]);
   const [view, setView] = useState("board");
   const [search, setSearch] = useState("");
   const [priority, setPriority] = useState("all");
@@ -58,6 +59,16 @@ export default function Tasks() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    api.get("/team").then(({ data }) => setMembers(data)).catch(() => {});
+  }, []);
+
+  const fields = useMemo(() => FIELDS.map((f) => (
+    f.name === "assignee_id"
+      ? { ...f, options: members.map((m) => ({ value: m.id, label: m.name + (m.is_you ? " (you)" : "") })) }
+      : f
+  )), [members]);
+
   const filtered = useMemo(() => data.filter((t) => {
     if (search && !t.title.toLowerCase().includes(search.toLowerCase()) && !(t.customer_name || "").toLowerCase().includes(search.toLowerCase())) return false;
     if (priority !== "all" && t.priority !== priority) return false;
@@ -67,6 +78,8 @@ export default function Tasks() {
   }), [data, search, priority, statusFilter]);
 
   const submit = async (payload) => {
+    const m = members.find((x) => x.id === payload.assignee_id);
+    payload.assignee = m ? m.name : "";
     try {
       if (editing) { await api.put(`/tasks/${editing.id}`, payload); toast.success("Task updated"); }
       else { await api.post("/tasks", payload); toast.success("Task created"); }
@@ -187,7 +200,7 @@ export default function Tasks() {
       )}
 
       <CrudModal open={modalOpen} onOpenChange={setModalOpen} title={editing ? "Edit Task" : "New Task"}
-        fields={FIELDS} initial={editing} onSubmit={submit} submitLabel={editing ? "Save changes" : "Create Task"} />
+        fields={fields} initial={editing} onSubmit={submit} submitLabel={editing ? "Save changes" : "Create Task"} />
       <ConfirmDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}
         title="Delete task?" description={`This will remove "${deleting?.title}".`} onConfirm={remove} />
     </div>

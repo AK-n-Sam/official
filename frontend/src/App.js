@@ -4,6 +4,7 @@ import "@/App.css";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { CurrencyProvider } from "@/context/CurrencyContext";
+import { LayoutProvider } from "@/context/LayoutContext";
 import { AppShell } from "@/components/layout/AppShell";
 import AuthPage from "@/pages/AuthPage";
 import AuthCallback from "@/pages/AuthCallback";
@@ -29,7 +30,7 @@ function AppRoutes() {
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <AuthPage />} />
       <Route
         path="/*"
-        element={user ? <CurrencyProvider><AppShell /></CurrencyProvider> : <Navigate to="/login" replace />}
+        element={user ? <CurrencyProvider><LayoutProvider><AppShell /></LayoutProvider></CurrencyProvider> : <Navigate to="/login" replace />}
       />
     </Routes>
   );

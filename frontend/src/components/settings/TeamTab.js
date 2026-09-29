@@ -1,17 +1,21 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { UserPlus, Trash2, Loader2, Copy, ShieldCheck } from "lucide-react";
+import { UserPlus, Trash2, Loader2, Copy, ShieldCheck, UserCog, ArrowRightLeft } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { EmptyState } from "@/components/common/EmptyState";
+import { MoreHorizontal } from "lucide-react";
 
 export function TeamTab() {
   const { user } = useAuth();
@@ -24,13 +28,24 @@ export function TeamTab() {
   const [invited, setInvited] = useState(null);
   const [removing, setRemoving] = useState(null);
 
+  // Admin scope toggle (owner only)
+  const [org, setOrg] = useState(null);
+  const [savingScope, setSavingScope] = useState(false);
+
+  // Reassign workflow
+  const [reassigning, setReassigning] = useState(null);
+  const [reassignTo, setReassignTo] = useState("");
+  const [reassignBusy, setReassignBusy] = useState(false);
+
   const load = useCallback(() => {
     setLoading(true);
     api.get("/team").then(({ data }) => setMembers(data)).catch(() => {}).finally(() => setLoading(false));
+    api.get("/organizations/current").then(({ data }) => setOrg(data)).catch(() => {});
   }, []);
   useEffect(load, [load]);
 
   const me = members.find((m) => m.is_you);
+  const isOwner = me?.role === "owner";
   const isPrivileged = me?.role === "owner" || me?.role === "admin";
 
   const invite = async () => {
@@ -53,6 +68,30 @@ export function TeamTab() {
     try { await api.delete(`/team/${removing.id}`); toast.success(`${removing.name} removed`); setRemoving(null); load(); }
     catch (e) { toast.error(formatApiError(e)); }
   };
+
+  const toggleAdminScope = async (checked) => {
+    setSavingScope(true);
+    setOrg((o) => ({ ...o, admins_see_all: checked }));
+    try {
+      await api.put("/settings/organization", { admins_see_all: checked });
+      toast.success(checked ? "Admins can now see all workspace records" : "Admins are limited to their own records");
+    } catch (e) { toast.error(formatApiError(e)); setOrg((o) => ({ ...o, admins_see_all: !checked })); }
+    finally { setSavingScope(false); }
+  };
+
+  const openReassign = (m) => { setReassigning(m); setReassignTo(""); };
+  const doReassign = async () => {
+    if (!reassignTo) { toast.error("Choose a teammate to reassign to"); return; }
+    setReassignBusy(true);
+    try {
+      const { data } = await api.post(`/team/${reassigning.id}/reassign`, { to_member_id: reassignTo });
+      toast.success(`Reassigned ${data.total} record(s) from ${data.from} to ${data.to}`);
+      setReassigning(null);
+    } catch (e) { toast.error(formatApiError(e)); }
+    finally { setReassignBusy(false); }
+  };
+
+  const reassignTargets = members.filter((m) => m.id !== reassigning?.id);
 
   return (
     <div className="space-y-5">
@@ -94,6 +133,23 @@ export function TeamTab() {
       </Card>
       )}
 
+      {isOwner && org && (
+      <Card className="border-border/70 bg-card/90 p-6" data-testid="admin-scope-card">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><UserCog className="h-4.5 w-4.5" /></div>
+            <div>
+              <h3 className="font-heading text-base font-semibold">Admin data access</h3>
+              <p className="mt-0.5 max-w-md text-sm text-muted-foreground">
+                When off, admins only see records they created — just like members. Turn on to let all admins view every record across the workspace.
+              </p>
+            </div>
+          </div>
+          <Switch checked={!!org.admins_see_all} disabled={savingScope} onCheckedChange={toggleAdminScope} data-testid="admin-scope-toggle" />
+        </div>
+      </Card>
+      )}
+
       <Card className="border-border/70 bg-card/90">
         <div className="border-b border-border/70 px-5 py-4"><h3 className="font-heading text-base font-semibold">Workspace Members ({members.length})</h3></div>
         {loading ? (
@@ -104,6 +160,7 @@ export function TeamTab() {
           <div className="divide-y divide-border/50" data-testid="team-members">
             {members.map((m) => {
               const initials = (m.name || "?").split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+              const canManage = isPrivileged && !m.is_you && m.role !== "owner";
               return (
                 <div key={m.id} className="flex items-center justify-between px-5 py-3" data-testid={`team-member-${m.id}`}>
                   <div className="flex items-center gap-3">
@@ -115,8 +172,18 @@ export function TeamTab() {
                   </div>
                   <div className="flex items-center gap-3">
                     <Badge variant="secondary" className="capitalize gap-1">{m.role === "owner" && <ShieldCheck className="h-3 w-3" />}{m.role}</Badge>
-                    {isPrivileged && !m.is_you && m.role !== "owner" && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500" onClick={() => setRemoving(m)} data-testid={`remove-member-${m.id}`}><Trash2 className="h-4 w-4" /></Button>
+                    {canManage && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" data-testid={`member-actions-${m.id}`}><MoreHorizontal className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={() => openReassign(m)} data-testid={`reassign-member-${m.id}`}><ArrowRightLeft className="mr-2 h-4 w-4" /> Reassign records</DropdownMenuItem>
+                          {isOwner && (
+                            <DropdownMenuItem onClick={() => setRemoving(m)} className="text-rose-500 focus:text-rose-500" data-testid={`remove-member-${m.id}`}><Trash2 className="mr-2 h-4 w-4" /> Remove from workspace</DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
                   </div>
                 </div>
@@ -127,7 +194,35 @@ export function TeamTab() {
       </Card>
 
       <ConfirmDialog open={!!removing} onOpenChange={(o) => !o && setRemoving(null)}
-        title="Remove member?" description={`${removing?.name || "This member"} will lose access to this workspace.`} confirmLabel="Remove" onConfirm={remove} />
+        title="Remove member?" description={`${removing?.name || "This member"} will lose access to this workspace. Consider reassigning their records first.`} confirmLabel="Remove" onConfirm={remove} />
+
+      <Dialog open={!!reassigning} onOpenChange={(o) => !o && setReassigning(null)}>
+        <DialogContent data-testid="reassign-dialog">
+          <DialogHeader>
+            <DialogTitle>Reassign {reassigning?.name}'s records</DialogTitle>
+            <DialogDescription>
+              Move all customers, invoices, expenses, tasks and leads created by {reassigning?.name} to another teammate. {reassigning?.name} stays on the team.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Label className="text-xs text-muted-foreground">Reassign to</Label>
+            <Select value={reassignTo} onValueChange={setReassignTo}>
+              <SelectTrigger className="mt-1.5" data-testid="reassign-target"><SelectValue placeholder="Select a teammate" /></SelectTrigger>
+              <SelectContent>
+                {reassignTargets.map((m) => (
+                  <SelectItem key={m.id} value={m.id} data-testid={`reassign-opt-${m.id}`}>{m.name}{m.is_you ? " (you)" : ""} · {m.role}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReassigning(null)} data-testid="reassign-cancel">Cancel</Button>
+            <Button onClick={doReassign} disabled={reassignBusy} data-testid="reassign-confirm">
+              {reassignBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Reassign records
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

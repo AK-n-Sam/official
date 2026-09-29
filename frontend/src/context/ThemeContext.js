@@ -3,20 +3,34 @@ import { createContext, useContext, useEffect, useState } from "react";
 const ThemeContext = createContext(null);
 export const useTheme = () => useContext(ThemeContext);
 
+const getSystemTheme = () =>
+  window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(() => localStorage.getItem("bmp_theme") || "dark");
+  // pref: "system" | "light" | "dark". Default follows the OS with a manual override.
+  const [pref, setPref] = useState(() => localStorage.getItem("bmp_theme") || "system");
+  const [systemTheme, setSystemTheme] = useState(getSystemTheme);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = (e) => setSystemTheme(e.matches ? "dark" : "light");
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  const theme = pref === "system" ? systemTheme : pref;
 
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === "dark") root.classList.add("dark");
-    else root.classList.remove("dark");
-    localStorage.setItem("bmp_theme", theme);
-  }, [theme]);
+    root.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("bmp_theme", pref);
+  }, [theme, pref]);
 
-  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
+  const toggleTheme = () => setPref(theme === "dark" ? "light" : "dark");
+  const setThemePref = (p) => setPref(p);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, pref, toggleTheme, setThemePref }}>
       {children}
     </ThemeContext.Provider>
   );

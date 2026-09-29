@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Plus, Target, UserPlus, MoreHorizontal } from "lucide-react";
@@ -27,7 +27,7 @@ const FIELDS = [
   { name: "email", label: "Email", type: "email" },
   { name: "phone", label: "Phone" },
   { name: "value", label: "Estimated Value (USD)", type: "number", min: 0, default: 0 },
-  { name: "owner", label: "Owner" },
+  { name: "owner_id", label: "Owner", type: "member" },
   { name: "stage", label: "Stage", type: "select", default: "lead", options: STAGES.map((s) => ({ value: s.key, label: s.label })) },
   { name: "source", label: "Source", type: "select", default: "Website", options: [
     { value: "Website", label: "Website" }, { value: "Referral", label: "Referral" },
@@ -38,10 +38,21 @@ const FIELDS = [
 export default function Leads() {
   const { format } = useCurrency();
   const { data, loading, refetch } = useResource("/leads", {});
+  const [members, setMembers] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    api.get("/team").then(({ data }) => setMembers(data)).catch(() => {});
+  }, []);
+
+  const fields = useMemo(() => FIELDS.map((f) => (
+    f.name === "owner_id"
+      ? { ...f, options: members.map((m) => ({ value: m.id, label: m.name + (m.is_you ? " (you)" : "") })) }
+      : f
+  )), [members]);
 
   useEffect(() => {
     if (searchParams.get("new") === "1") {
@@ -52,6 +63,8 @@ export default function Leads() {
   }, []);
 
   const submit = async (payload) => {
+    const m = members.find((x) => x.id === payload.owner_id);
+    payload.owner = m ? m.name : "";
     try {
       if (editing) { await api.put(`/leads/${editing.id}`, payload); toast.success("Lead updated"); }
       else { await api.post("/leads", payload); toast.success("Lead created"); }
@@ -130,7 +143,7 @@ export default function Leads() {
       </div>
 
       <CrudModal open={modalOpen} onOpenChange={setModalOpen} title={editing ? "Edit Lead" : "New Lead"}
-        fields={FIELDS} initial={editing} onSubmit={submit} submitLabel={editing ? "Save changes" : "Create Lead"} />
+        fields={fields} initial={editing} onSubmit={submit} submitLabel={editing ? "Save changes" : "Create Lead"} />
       <ConfirmDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}
         title="Delete lead?" description={`This will remove "${deleting?.company || deleting?.name}".`} onConfirm={remove} />
     </div>

@@ -91,3 +91,10 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 .animate-in-up { animation: fadeInUp 0.4s ease-out both; }
+
+/* Density: compact mode tightens table rows for information-dense views */
+[data-density="compact"] table td,
+[data-density="compact"] table th {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+}

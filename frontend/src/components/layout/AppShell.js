@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
+import { useLayout } from "@/context/LayoutContext";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import Dashboard from "@/pages/Dashboard";
 import MyWork from "@/pages/MyWork";
@@ -23,11 +24,12 @@ import Settings from "@/pages/Settings";
 
 export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { sidebarCollapsed, density } = useLayout();
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <div className="hidden lg:block">
-        <Sidebar />
+        <Sidebar collapsed={sidebarCollapsed} />
       </div>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -39,7 +41,7 @@ export function AppShell() {
       <div className="flex min-w-0 flex-1 flex-col">
         <Header onMenuClick={() => setMobileOpen(true)} />
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <div className={`mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ${density === "compact" ? "py-3" : "py-6"}`}>
             <Routes>
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />

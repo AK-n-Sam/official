@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import api, { formatApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useTheme } from "@/context/ThemeContext";
 import { CURRENCIES } from "@/lib/format";
 import { TIMEZONES } from "@/lib/constants";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -29,6 +30,7 @@ function Row({ label, children }) {
 export default function Settings() {
   const { user, refresh } = useAuth();
   const { setCurrency } = useCurrency();
+  const { pref, setThemePref } = useTheme();
   const [org, setOrg] = useState(null);
   const [profile, setProfile] = useState({ name: "", phone: "", job_title: "" });
   const [prefs, setPrefs] = useState({ currency: "USD", timezone: "America/New_York", date_format: "MMM d, yyyy", email_notifications: true });
@@ -132,6 +134,16 @@ export default function Settings() {
                 <Select value={prefs.timezone} onValueChange={(v) => setPrefs({ ...prefs, timezone: v })}>
                   <SelectTrigger data-testid="pref-timezone"><SelectValue /></SelectTrigger>
                   <SelectContent>{TIMEZONES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
+              </Row>
+              <Row label="Appearance">
+                <Select value={pref} onValueChange={setThemePref}>
+                  <SelectTrigger data-testid="pref-theme"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="system">System (auto)</SelectItem>
+                    <SelectItem value="light">Light</SelectItem>
+                    <SelectItem value="dark">Dark</SelectItem>
+                  </SelectContent>
                 </Select>
               </Row>
             </div>
