@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
+import { WorkspaceTabs } from "@/components/layout/WorkspaceTabs";
 import { useLayout } from "@/context/LayoutContext";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import Dashboard from "@/pages/Dashboard";
@@ -40,6 +41,7 @@ export function AppShell() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Header onMenuClick={() => setMobileOpen(true)} />
+        <WorkspaceTabs />
         <main className="flex-1 overflow-y-auto">
           <div className={`mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ${density === "compact" ? "py-3" : "py-6"}`}>
             <Routes>

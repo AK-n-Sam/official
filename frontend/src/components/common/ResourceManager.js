@@ -49,7 +49,7 @@ function ResourceCards({ columns, rows, onEdit, onDelete, onRowClick, singular }
           <div className="mt-3 space-y-1.5 border-t border-border/50 pt-3">
             {rest.map((c) => (
               <div key={c.key} className="flex items-center justify-between gap-3 text-sm">
-                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground/70">{c.label}</span>
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground/80">{c.label}</span>
                 <span className="min-w-0 truncate text-right">{c.render ? c.render(row) : row[c.key] ?? "—"}</span>
               </div>
             ))}

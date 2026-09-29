@@ -39,7 +39,7 @@ export function Sidebar({ onNavigate, collapsed = false }) {
         {NAV_SECTIONS.map((section) => (
           <div key={section.label} className="mb-5">
             {!collapsed && (
-              <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+              <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">
                 {section.label}
               </p>
             )}
