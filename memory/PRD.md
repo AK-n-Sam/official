@@ -40,6 +40,13 @@ Auth & workspaces · App shell (sidebar, header, workspace switcher, notificatio
 - Add AI Insights engine (LLM) on dashboard.
 - Invoice PDF/print + email send.
 
+## Iteration 5 — Role Permissions & My Work (2026-06-28)
+- **Role-based record scoping**: records now carry `created_by`. Owners/admins see all workspace data; **members see only records they created** (customers, invoices, expenses, tasks, leads, payments). Shared reference data (products, suppliers, employees) stays visible to all. Dashboard metrics respect the same scope. Verified: member sees 0 customers until they create one; owner sees all 9.
+- **Privilege gating**: only owners/admins can invite (`403` for members) and remove members; the invite UI is hidden for members.
+- **My Work** (`/my-work` + nav): a personal home showing the signed-in user's open tasks (assigned or created), active leads they own, and their recent activity — with quick stats (open tasks, active leads, overdue).
+- Seed `created_by` is set to the workspace owner (with a one-time backfill for the pre-existing demo owner) so the owner's My Work and member scoping behave correctly.
+- Verified via curl: scoping, invite-403, and My Work for both roles. Frontend compiles clean.
+
 ## Iteration 4 — Personalized, Interactive & Multi-User (2026-06-28)
 - **Multi-user teams**: Settings > Team tab. `GET /api/team`, `POST /api/team/invite` (creates a member with a temp password or adds an existing user), `DELETE /api/team/{id}` (owner-only). Invited members share the workspace's org_id and see the same data. Verified an invited user logs in and sees the same seeded customers.
 - **Personalization**: time-based greeting with the user's first name on the Dashboard.

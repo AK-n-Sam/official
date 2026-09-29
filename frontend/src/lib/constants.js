@@ -1,7 +1,10 @@
 export const NAV_SECTIONS = [
   {
     label: "Core",
-    items: [{ name: "Dashboard", path: "/dashboard", icon: "LayoutDashboard" }],
+    items: [
+      { name: "Dashboard", path: "/dashboard", icon: "LayoutDashboard" },
+      { name: "My Work", path: "/my-work", icon: "CircleUser" },
+    ],
   },
   {
     label: "Finance",

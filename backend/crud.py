@@ -5,15 +5,30 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Body
 from database import db, now_iso
 
 
-def make_crud(collection: str, CreateModel, search_fields: List[str], filter_fields: List[str] = None):
+def is_privileged(user: dict) -> bool:
+    return user.get("role") in ("owner", "admin")
+
+
+def member_filter(user: dict) -> dict:
+    """Members only see records they created; owners/admins see everything in the org."""
+    return {} if is_privileged(user) else {"created_by": user["id"]}
+
+
+def make_crud(collection: str, CreateModel, search_fields: List[str], filter_fields: List[str] = None, member_scoped: bool = False):
     from auth import get_current_user
 
     router = APIRouter()
     filter_fields = filter_fields or []
 
+    def _base(user):
+        q = {"org_id": user["active_org_id"]}
+        if member_scoped:
+            q.update(member_filter(user))
+        return q
+
     @router.get("")
     async def list_items(request: Request, user: dict = Depends(get_current_user)):
-        query: Dict[str, Any] = {"org_id": user["active_org_id"]}
+        query: Dict[str, Any] = _base(user)
         params = request.query_params
         search = params.get("search")
         if search and search_fields:
@@ -29,6 +44,7 @@ def make_crud(collection: str, CreateModel, search_fields: List[str], filter_fie
         doc = payload.model_dump()
         doc["id"] = str(uuid.uuid4())
         doc["org_id"] = user["active_org_id"]
+        doc["created_by"] = user["id"]
         doc["created_at"] = now_iso()
         doc["updated_at"] = now_iso()
         await db[collection].insert_one(doc)
@@ -37,26 +53,24 @@ def make_crud(collection: str, CreateModel, search_fields: List[str], filter_fie
 
     @router.get("/{item_id}")
     async def get_item(item_id: str, user: dict = Depends(get_current_user)):
-        doc = await db[collection].find_one({"id": item_id, "org_id": user["active_org_id"]}, {"_id": 0})
+        doc = await db[collection].find_one({"id": item_id, **_base(user)}, {"_id": 0})
         if not doc:
             raise HTTPException(status_code=404, detail="Not found")
         return doc
 
     @router.put("/{item_id}")
     async def update_item(item_id: str, payload: Dict[str, Any] = Body(...), user: dict = Depends(get_current_user)):
-        for k in ("id", "org_id", "_id", "created_at"):
+        for k in ("id", "org_id", "_id", "created_at", "created_by"):
             payload.pop(k, None)
         payload["updated_at"] = now_iso()
-        res = await db[collection].update_one(
-            {"id": item_id, "org_id": user["active_org_id"]}, {"$set": payload}
-        )
+        res = await db[collection].update_one({"id": item_id, **_base(user)}, {"$set": payload})
         if res.matched_count == 0:
             raise HTTPException(status_code=404, detail="Not found")
-        return await db[collection].find_one({"id": item_id, "org_id": user["active_org_id"]}, {"_id": 0})
+        return await db[collection].find_one({"id": item_id}, {"_id": 0})
 
     @router.delete("/{item_id}")
     async def delete_item(item_id: str, user: dict = Depends(get_current_user)):
-        res = await db[collection].delete_one({"id": item_id, "org_id": user["active_org_id"]})
+        res = await db[collection].delete_one({"id": item_id, **_base(user)})
         if res.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Not found")
         return {"success": True}

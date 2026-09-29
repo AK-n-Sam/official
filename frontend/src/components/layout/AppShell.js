@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import Dashboard from "@/pages/Dashboard";
+import MyWork from "@/pages/MyWork";
 import Sales from "@/pages/Sales";
 import Leads from "@/pages/Leads";
 import Customers from "@/pages/Customers";
@@ -42,6 +43,7 @@ export function AppShell() {
             <Routes>
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/my-work" element={<MyWork />} />
               <Route path="/sales" element={<Sales />} />
               <Route path="/leads" element={<Leads />} />
               <Route path="/customers" element={<Customers />} />

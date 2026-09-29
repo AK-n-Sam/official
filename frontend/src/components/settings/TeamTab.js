@@ -30,7 +30,8 @@ export function TeamTab() {
   }, []);
   useEffect(load, [load]);
 
-  const isOwner = members.find((m) => m.is_you)?.role === "owner";
+  const me = members.find((m) => m.is_you);
+  const isPrivileged = me?.role === "owner" || me?.role === "admin";
 
   const invite = async () => {
     if (!name.trim() || !email.trim()) { toast.error("Enter a name and email"); return; }
@@ -55,6 +56,7 @@ export function TeamTab() {
 
   return (
     <div className="space-y-5">
+      {isPrivileged && (
       <Card className="border-border/70 bg-card/90 p-6">
         <div className="mb-4 flex items-center gap-2">
           <UserPlus className="h-4 w-4 text-primary" />
@@ -90,6 +92,7 @@ export function TeamTab() {
           </div>
         )}
       </Card>
+      )}
 
       <Card className="border-border/70 bg-card/90">
         <div className="border-b border-border/70 px-5 py-4"><h3 className="font-heading text-base font-semibold">Workspace Members ({members.length})</h3></div>
@@ -112,7 +115,7 @@ export function TeamTab() {
                   </div>
                   <div className="flex items-center gap-3">
                     <Badge variant="secondary" className="capitalize gap-1">{m.role === "owner" && <ShieldCheck className="h-3 w-3" />}{m.role}</Badge>
-                    {isOwner && !m.is_you && m.role !== "owner" && (
+                    {isPrivileged && !m.is_you && m.role !== "owner" && (
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500" onClick={() => setRemoving(m)} data-testid={`remove-member-${m.id}`}><Trash2 className="h-4 w-4" /></Button>
                     )}
                   </div>

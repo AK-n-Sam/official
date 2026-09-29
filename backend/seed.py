@@ -273,4 +273,6 @@ async def create_user_workspaces(user_id: str, user_name: str, user_email: str):
             "created_at": now_iso(), "updated_at": now_iso(),
         })
         await _seed_org(org_id, profile)
+        for coll in ("customers", "suppliers", "products", "expenses", "employees", "tasks", "invoices", "payments", "stock_movements", "leads"):
+            await db[coll].update_many({"org_id": org_id}, {"$set": {"created_by": user_id}})
     return org_ids[0], org_ids

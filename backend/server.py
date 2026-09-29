@@ -14,7 +14,7 @@ from models import (
     TaskCreate, InvoiceCreate, StockMovementCreate, PaymentInput, PaymentCreate, LeadCreate,
     OrganizationUpdate, ProfileUpdate, PreferencesUpdate, SwitchOrgInput, InviteInput,
 )
-from crud import make_crud
+from crud import make_crud, is_privileged, member_filter
 from auth import router as auth_router, get_current_user, hash_password, verify_password
 from seed import create_user_workspaces
 
@@ -33,10 +33,10 @@ async def root():
 # ---------------- Generic CRUD modules ----------------
 api.include_router(make_crud("suppliers", SupplierCreate, ["name", "contact_name", "email", "category"], ["status"]), prefix="/suppliers", tags=["suppliers"])
 api.include_router(make_crud("products", ProductCreate, ["name", "sku", "category", "supplier_name"], ["status", "category"]), prefix="/products", tags=["products"])
-api.include_router(make_crud("expenses", ExpenseCreate, ["category", "vendor", "description"], ["status", "category", "payment_method"]), prefix="/expenses", tags=["expenses"])
+api.include_router(make_crud("expenses", ExpenseCreate, ["category", "vendor", "description"], ["status", "category", "payment_method"], member_scoped=True), prefix="/expenses", tags=["expenses"])
 api.include_router(make_crud("employees", EmployeeCreate, ["name", "email", "job_title", "department"], ["status", "department"]), prefix="/employees", tags=["employees"])
-api.include_router(make_crud("tasks", TaskCreate, ["title", "assignee", "description", "customer_name"], ["status", "priority"]), prefix="/tasks", tags=["tasks"])
-api.include_router(make_crud("leads", LeadCreate, ["name", "company", "email", "owner"], ["stage", "owner"]), prefix="/leads", tags=["leads"])
+api.include_router(make_crud("tasks", TaskCreate, ["title", "assignee", "description", "customer_name"], ["status", "priority"], member_scoped=True), prefix="/tasks", tags=["tasks"])
+api.include_router(make_crud("leads", LeadCreate, ["name", "company", "email", "owner"], ["stage", "owner"], member_scoped=True), prefix="/leads", tags=["leads"])
 
 
 # ---------------- Invoices (custom) ----------------
@@ -93,7 +93,7 @@ async def _deduct_inventory(org_id, items, invoice_number):
 
 @inv.get("")
 async def list_invoices(request: Request, user: dict = Depends(get_current_user)):
-    q = {"org_id": user["active_org_id"]}
+    q = {"org_id": user["active_org_id"], **member_filter(user)}
     status = request.query_params.get("status")
     if status and status != "all":
         q["status"] = status
@@ -123,6 +123,7 @@ async def create_invoice(payload: InvoiceCreate, user: dict = Depends(get_curren
         "items": items, "subtotal": subtotal, "tax_rate": data["tax_rate"], "tax_amount": tax_amount,
         "total": total, "amount_paid": amount_paid, "notes": data.get("notes", ""),
         "inventory_deducted": status not in ("draft", "cancelled"),
+        "created_by": user["id"],
         "created_at": now_iso(), "updated_at": now_iso(),
     }
     await db.invoices.insert_one(doc)
@@ -137,7 +138,7 @@ async def create_invoice(payload: InvoiceCreate, user: dict = Depends(get_curren
 
 @inv.get("/{invoice_id}")
 async def get_invoice(invoice_id: str, user: dict = Depends(get_current_user)):
-    invoice = await db.invoices.find_one({"id": invoice_id, "org_id": user["active_org_id"]}, {"_id": 0})
+    invoice = await db.invoices.find_one({"id": invoice_id, "org_id": user["active_org_id"], **member_filter(user)}, {"_id": 0})
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
     payments = await db.payments.find({"invoice_id": invoice_id, "org_id": user["active_org_id"]}, {"_id": 0}).sort("created_at", -1).to_list(200)
@@ -198,7 +199,8 @@ async def _record_payment(org_id, invoice, amount, method, date, notes=""):
         "id": str(uuid.uuid4()), "org_id": org_id, "invoice_id": invoice["id"],
         "invoice_number": invoice["invoice_number"], "customer_id": invoice.get("customer_id", ""),
         "customer_name": invoice.get("customer_name", ""), "amount": float(amount),
-        "method": method, "date": date or now_iso()[:10], "notes": notes, "created_at": now_iso(),
+        "method": method, "date": date or now_iso()[:10], "notes": notes,
+        "created_by": invoice.get("created_by", ""), "created_at": now_iso(),
     })
 
 
@@ -248,7 +250,7 @@ async def _customer_totals(org_id):
 
 @cust.get("")
 async def list_customers(request: Request, user: dict = Depends(get_current_user)):
-    q = {"org_id": user["active_org_id"]}
+    q = {"org_id": user["active_org_id"], **member_filter(user)}
     params = request.query_params
     search = params.get("search")
     if search:
@@ -269,7 +271,7 @@ async def list_customers(request: Request, user: dict = Depends(get_current_user
 @cust.post("")
 async def create_customer(payload: CustomerCreate, user: dict = Depends(get_current_user)):
     doc = payload.model_dump()
-    doc.update({"id": str(uuid.uuid4()), "org_id": user["active_org_id"], "created_at": now_iso(), "updated_at": now_iso()})
+    doc.update({"id": str(uuid.uuid4()), "org_id": user["active_org_id"], "created_by": user["id"], "created_at": now_iso(), "updated_at": now_iso()})
     await db.customers.insert_one(doc)
     doc.pop("_id", None)
     return doc
@@ -278,7 +280,7 @@ async def create_customer(payload: CustomerCreate, user: dict = Depends(get_curr
 @cust.get("/{customer_id}/history")
 async def customer_history(customer_id: str, user: dict = Depends(get_current_user)):
     org_id = user["active_org_id"]
-    customer = await db.customers.find_one({"id": customer_id, "org_id": org_id}, {"_id": 0})
+    customer = await db.customers.find_one({"id": customer_id, "org_id": org_id, **member_filter(user)}, {"_id": 0})
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
     invoices = await db.invoices.find({"org_id": org_id, "customer_id": customer_id}, {"_id": 0}).sort("created_at", -1).to_list(1000)
@@ -346,7 +348,7 @@ async def convert_lead(lead_id: str, user: dict = Depends(get_current_user)):
 # ---------------- Payments ----------------
 @api.get("/payments", tags=["payments"])
 async def list_payments(user: dict = Depends(get_current_user)):
-    return await db.payments.find({"org_id": user["active_org_id"]}, {"_id": 0}).sort("created_at", -1).to_list(2000)
+    return await db.payments.find({"org_id": user["active_org_id"], **member_filter(user)}, {"_id": 0}).sort("created_at", -1).to_list(2000)
 
 
 @api.post("/payments", tags=["payments"])
@@ -399,18 +401,19 @@ async def create_movement(payload: StockMovementCreate, user: dict = Depends(get
 @api.get("/dashboard/stats", tags=["dashboard"])
 async def dashboard_stats(user: dict = Depends(get_current_user)):
     org_id = user["active_org_id"]
-    invoices = await db.invoices.find({"org_id": org_id}, {"_id": 0}).to_list(5000)
-    expenses = await db.expenses.find({"org_id": org_id}, {"_id": 0}).to_list(5000)
-    payments = await db.payments.find({"org_id": org_id}, {"_id": 0}).to_list(5000)
+    mf = member_filter(user)
+    invoices = await db.invoices.find({"org_id": org_id, **mf}, {"_id": 0}).to_list(5000)
+    expenses = await db.expenses.find({"org_id": org_id, **mf}, {"_id": 0}).to_list(5000)
+    payments = await db.payments.find({"org_id": org_id, **mf}, {"_id": 0}).to_list(5000)
     products = await db.products.find({"org_id": org_id}, {"_id": 0}).to_list(5000)
-    tasks = await db.tasks.find({"org_id": org_id}, {"_id": 0}).to_list(5000)
+    tasks = await db.tasks.find({"org_id": org_id, **mf}, {"_id": 0}).to_list(5000)
 
     total_sales = round(sum(i["total"] for i in invoices if i["status"] == "paid"), 2)
     outstanding = round(sum(i["total"] - i.get("amount_paid", 0) for i in invoices if i["status"] in ("pending", "sent", "overdue", "partially_paid")), 2)
     total_expenses = round(sum(e["amount"] for e in expenses), 2)
     profit = round(total_sales - total_expenses, 2)
     amount_collected = round(sum(p["amount"] for p in payments), 2)
-    customer_count = await db.customers.count_documents({"org_id": org_id})
+    customer_count = await db.customers.count_documents({"org_id": org_id, **mf})
     product_count = len(products)
     supplier_count = await db.suppliers.count_documents({"org_id": org_id})
     employee_count = await db.employees.count_documents({"org_id": org_id})
@@ -420,7 +423,7 @@ async def dashboard_stats(user: dict = Depends(get_current_user)):
     overdue_amount = round(sum(i["total"] - i.get("amount_paid", 0) for i in overdue_invoices), 2)
     low_stock = [p for p in products if p["stock_quantity"] <= p["reorder_level"]]
     cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
-    new_customers = await db.customers.count_documents({"org_id": org_id, "created_at": {"$gte": cutoff}})
+    new_customers = await db.customers.count_documents({"org_id": org_id, "created_at": {"$gte": cutoff}, **mf})
     open_tasks = sum(1 for t in tasks if t["status"] != "completed" and t["status"] != "done")
 
     recent_invoices = sorted(invoices, key=lambda x: x.get("created_at", ""), reverse=True)[:5]
@@ -571,6 +574,8 @@ async def list_team(user: dict = Depends(get_current_user)):
 
 @team.post("/invite")
 async def invite_member(payload: InviteInput, user: dict = Depends(get_current_user)):
+    if not is_privileged(user):
+        raise HTTPException(status_code=403, detail="Only owners and admins can invite members")
     name = payload.name.strip()
     email = payload.email.strip().lower()
     role = payload.role if payload.role in ("admin", "member") else "member"
@@ -612,6 +617,25 @@ async def remove_member(member_id: str, user: dict = Depends(get_current_user)):
 
 
 api.include_router(team)
+
+
+# ---------------- My Work (personal home) ----------------
+@api.get("/my-work", tags=["dashboard"])
+async def my_work(user: dict = Depends(get_current_user)):
+    org = user["active_org_id"]
+    uid = user["id"]
+    name = user.get("name", "")
+    tasks = await db.tasks.find({"org_id": org, "status": {"$nin": ["completed", "done"]}, "$or": [{"assignee": name}, {"created_by": uid}]}, {"_id": 0}).sort("due_date", 1).to_list(200)
+    leads = await db.leads.find({"org_id": org, "stage": {"$nin": ["won", "lost"]}, "$or": [{"owner": name}, {"created_by": uid}]}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    events = []
+    for i in await db.invoices.find({"org_id": org, "created_by": uid}, {"_id": 0}).sort("created_at", -1).limit(8).to_list(8):
+        events.append({"type": "invoice", "title": f"Invoice {'paid' if i['status'] == 'paid' else 'created'}", "description": f"{i['invoice_number']} · {i.get('customer_name', '')}", "date": i.get("created_at", ""), "link": f"/invoices/{i['id']}"})
+    for p in await db.payments.find({"org_id": org, "created_by": uid}, {"_id": 0}).sort("created_at", -1).limit(6).to_list(6):
+        events.append({"type": "payment", "title": "Payment recorded", "description": f"{p.get('invoice_number', '')} · {p.get('customer_name', '')}", "date": p.get("created_at", ""), "link": f"/invoices/{p.get('invoice_id', '')}"})
+    for c in await db.customers.find({"org_id": org, "created_by": uid}, {"_id": 0}).sort("created_at", -1).limit(6).to_list(6):
+        events.append({"type": "customer", "title": "Customer added", "description": c["name"], "date": c.get("created_at", ""), "link": f"/customers/{c['id']}"})
+    events.sort(key=lambda x: x.get("date", ""), reverse=True)
+    return {"tasks": tasks, "leads": leads, "activity": events[:12], "open_tasks": len(tasks), "open_leads": len(leads)}
 
 
 # ---------------- Settings / Organizations ----------------
