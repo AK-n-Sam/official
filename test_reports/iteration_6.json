@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 6 — People Picker, Reassign Work, Admin Scope, Layout/Theme toggles, Grid/Table view. Backend: /app/backend/tests/test_iteration6.py 6/6 pass (people picker task+lead persist and surface in member's /my-work; reassign moves created customer + updates task.assignee_id; reassign self=400; member reassign attempt=403; PUT /settings/organization admins_see_all persists both true/false). Frontend Playwright (owner session): 29/30 pass — owner login, header theme-toggle-button switches html.dark class, density-toggle-button changes root, sidebar-toggle-desktop collapses aside (256→68px) and nav remains clickable when collapsed (sidebar-nav-tasks navigates to /tasks). Tasks: create-task-button opens modal, field-assignee_id renders member Select with 'Unassigned' + workspace member (2 opts), task creates OK with picked assignee. Leads: create-lead-button + field-owner_id dropdown with 'Unassigned' + members. Grid/Table toggle verified on customers, products, expenses, suppliers, employees — resource-view-grid renders {singular}-cards, resource-view-table renders {singular}-table. Settings > Team (tab-team): admin-scope-toggle visible for owner, data-state flips checked↔unchecked with success toast (PUT persists). Reassign flow: invited fresh member → member-actions-{id} → reassign-member-{id} opens reassign-dialog → reassign-target dropdown populated → reassign-confirm fires POST /team/{id}/reassign, toast 'Reassigned 0 record(s) from Iter6 UI Test to Aniruddh Samarth' (0 is correct since invited member had no records). Settings > Preferences pref-theme (System/Light/Dark) visible. Invited test member cleaned up via DELETE /team/{id} (200).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration6.py",
+    "/app/test_reports/pytest/iter6_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "backend/server.py:640-641 — reassign updates tasks.assignee_id and leads.owner_id but does not touch stored 'assignee'/'owner' name fields for records where those denormalized names were stamped at creation via a different code path than assignee_id. If any legacy record has assignee set by name only (no assignee_id), it will not be reassigned. Consider matching by assignee_id OR by assignee-name = from_member.name during reassign; or migrate to always resolve via id at read time.",
+    "backend/server.py:654-655 — /my-work groups by ($or assignee_id/assignee/created_by). The 'assignee' name match is brittle if two workspace users share a first+last name; prefer id-only when assignee_id is present.",
+    "TeamTab.js remove-member confirm still shows fallback string; previous iteration flagged 'undefined will lose access' — verified now shows correct name because current code uses `${removing?.name || 'This member'}`. Bug from iter5 appears fixed.",
+    "Reassign dialog target Select includes the source member's owner-role name badge but not the invited-member himself (correctly filtered via `m.id !== reassigning?.id`). Consider also filtering out members with role 'owner' if business rule disallows reassigning to owner — currently owner is a valid target, which is fine."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration6.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (6/6 iter6 tests pass)",
+    "frontend": "97% (29/30 UI checks — 1 non-issue selector on task list card layout: task WAS created with assignee, but grepping a <tr> row failed since task list is card-based)"
+  },
+  "test_credentials": "Owner: aniruddh.samarth@gmail.com / Admin@12345. Members invited on-the-fly with unique emails.",
+  "seed_data_creation": "None permanent. Invited test member removed via DELETE /api/team/{id}. Test task/lead/customer resources cleaned up in fixtures where possible. admins_see_all left restored to true.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All iteration-6 features (people picker on tasks/leads via field-assignee_id/field-owner_id, list/grid view on 5 resources via resource-view-table/resource-view-grid + {singular}-cards/{singular}-table, sidebar-toggle-desktop + sidebar-nav-{lowercased-name}, density-toggle-button, theme-toggle-button + pref-theme, admin-scope-toggle in tab-team, reassign-member-{id}/reassign-dialog/reassign-target/reassign-confirm) are verified green. Tasks page renders items in cards (not <tr>) so future assertion of assignee display should query card-{id} testids. Reassigning an invited-only member yields total=0 which is expected; to fully exercise, log in as invited member, create records, then run reassign.",
+  "rca of the issue": "N/A — no defects observed in iter6 scope. Only test-selector nit: task list is card-based; assertion for assignee-in-row should target [data-testid^='card-'] not tr."
+}

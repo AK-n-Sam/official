@@ -30,6 +30,14 @@ Auth & workspaces · App shell (sidebar, header, workspace switcher, notificatio
 - **Design**: Swiss/high-contrast dark-default theme with light toggle, Outfit/IBM Plex/JetBrains Mono fonts, currency selector, notifications, data-testids throughout.
 - **Testing**: 21/21 backend pytest green; 100% of critical frontend E2E flows green (iteration_1).
 
+## Iteration 6 — People Picker, Reassign, Admin Scope & UI Layout (2026-06-29)
+- **People Picker**: Tasks (`assignee_id`) and Leads (`owner_id`) are now assigned to real workspace teammates via a member dropdown (FormField `type: "member"`, populated from `GET /api/team`). The display name (`assignee`/`owner`) is resolved and stored on submit. `/my-work` matches by `assignee_id`/`owner_id` (falls back to name + `created_by`), so assignments surface accurately on the assignee's personal home.
+- **Reassign Work**: `POST /api/team/{member_id}/reassign` (owner/admin only) bulk-moves all records a member created (customers, invoices, expenses, tasks, leads, payments → `created_by`) plus re-points `tasks.assignee_id`/`leads.owner_id` to a chosen teammate; the member stays on the team. UI: Team tab member row → actions menu → Reassign records → target picker dialog. Self-target=400, member attempt=403.
+- **Admin Scope Rules**: Organizations gained `admins_see_all` (default OFF). When OFF, admins are scoped to their own records like members; when ON they see all workspace data. `get_current_user` stamps `user.admins_see_all` from the active org; `sees_all_records()` (owner=always, admin=flag, member=never) drives `member_filter`. Team-management gating uses `can_manage_team` (owner/admin regardless of scope). Owner-only toggle in Settings > Team.
+- **UI/UX**: Theme now defaults to **system preference** with manual override (`ThemeContext` pref: system/light/dark; header toggle + Settings > Preferences Appearance selector). New **LayoutContext**: collapsible sidebar (header `sidebar-toggle-desktop` + footer `sidebar-collapse-toggle`, persisted) and **density** (compact/comfortable, header `density-toggle-button`, tightens table rows). List pages (Customers/Products/Expenses/Suppliers/Employees) gained a **table/grid view toggle** (persisted) with a card grid.
+- **Email invites**: intentionally deferred — temp-password display retained per user choice.
+- **Verified**: backend 6/6 iteration-6 tests + curl (people picker → my-work, member scoping, reassign counts, 403/400, admins_see_all persist); frontend 29/30 UI checks green (1 test-selector nit, not a bug). `admins_see_all` reset to OFF across all workspaces post-test.
+
 ## Backlog / Remaining (prioritized)
 - **P1**: Global search wiring (currently placeholder input); real AI insights via LLM (structured, not yet wired); invoice PDF export.
 - **P2**: Suppliers↔Products/PO linkage; employee-to-task assignment dropdowns; report date-range filters; per-org base-currency accounting (amounts currently stored USD, display-converted).
