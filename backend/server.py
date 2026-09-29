@@ -149,7 +149,7 @@ async def get_invoice(invoice_id: str, user: dict = Depends(get_current_user)):
 
 @inv.post("/{invoice_id}/status")
 async def set_invoice_status(invoice_id: str, payload: dict = Body(...), user: dict = Depends(get_current_user)):
-    invoice = await db.invoices.find_one({"id": invoice_id, "org_id": user["active_org_id"]}, {"_id": 0})
+    invoice = await db.invoices.find_one({"id": invoice_id, "org_id": user["active_org_id"], **member_filter(user)}, {"_id": 0})
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
     new_status = payload.get("status")
@@ -171,7 +171,7 @@ async def set_invoice_status(invoice_id: str, payload: dict = Body(...), user: d
 
 @inv.put("/{invoice_id}")
 async def update_invoice(invoice_id: str, payload: dict = Body(...), user: dict = Depends(get_current_user)):
-    existing = await db.invoices.find_one({"id": invoice_id, "org_id": user["active_org_id"]}, {"_id": 0})
+    existing = await db.invoices.find_one({"id": invoice_id, "org_id": user["active_org_id"], **member_filter(user)}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Not found")
     if "items" in payload or "tax_rate" in payload:
@@ -187,7 +187,7 @@ async def update_invoice(invoice_id: str, payload: dict = Body(...), user: dict 
 
 @inv.delete("/{invoice_id}")
 async def delete_invoice(invoice_id: str, user: dict = Depends(get_current_user)):
-    res = await db.invoices.delete_one({"id": invoice_id, "org_id": user["active_org_id"]})
+    res = await db.invoices.delete_one({"id": invoice_id, "org_id": user["active_org_id"], **member_filter(user)})
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Not found")
     await db.payments.delete_many({"invoice_id": invoice_id, "org_id": user["active_org_id"]})
@@ -219,7 +219,7 @@ async def _apply_payment(org_id, invoice, amount, method, date, notes=""):
 
 @inv.post("/{invoice_id}/pay")
 async def pay_invoice(invoice_id: str, payload: PaymentInput, user: dict = Depends(get_current_user)):
-    invoice = await db.invoices.find_one({"id": invoice_id, "org_id": user["active_org_id"]}, {"_id": 0})
+    invoice = await db.invoices.find_one({"id": invoice_id, "org_id": user["active_org_id"], **member_filter(user)}, {"_id": 0})
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
     return await _apply_payment(user["active_org_id"], invoice, payload.amount, payload.method, payload.date)
@@ -298,7 +298,7 @@ async def customer_history(customer_id: str, user: dict = Depends(get_current_us
 
 @cust.get("/{customer_id}")
 async def get_customer(customer_id: str, user: dict = Depends(get_current_user)):
-    doc = await db.customers.find_one({"id": customer_id, "org_id": user["active_org_id"]}, {"_id": 0})
+    doc = await db.customers.find_one({"id": customer_id, "org_id": user["active_org_id"], **member_filter(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Not found")
     return doc
@@ -309,7 +309,7 @@ async def update_customer(customer_id: str, payload: dict = Body(...), user: dic
     for k in ("id", "org_id", "_id", "created_at", "total_sales", "outstanding", "invoice_count"):
         payload.pop(k, None)
     payload["updated_at"] = now_iso()
-    res = await db.customers.update_one({"id": customer_id, "org_id": user["active_org_id"]}, {"$set": payload})
+    res = await db.customers.update_one({"id": customer_id, "org_id": user["active_org_id"], **member_filter(user)}, {"$set": payload})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Not found")
     return await db.customers.find_one({"id": customer_id, "org_id": user["active_org_id"]}, {"_id": 0})
@@ -317,7 +317,7 @@ async def update_customer(customer_id: str, payload: dict = Body(...), user: dic
 
 @cust.delete("/{customer_id}")
 async def delete_customer(customer_id: str, user: dict = Depends(get_current_user)):
-    res = await db.customers.delete_one({"id": customer_id, "org_id": user["active_org_id"]})
+    res = await db.customers.delete_one({"id": customer_id, "org_id": user["active_org_id"], **member_filter(user)})
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Not found")
     return {"success": True}
@@ -353,7 +353,7 @@ async def list_payments(user: dict = Depends(get_current_user)):
 
 @api.post("/payments", tags=["payments"])
 async def record_payment(payload: PaymentCreate, user: dict = Depends(get_current_user)):
-    invoice = await db.invoices.find_one({"id": payload.invoice_id, "org_id": user["active_org_id"]}, {"_id": 0})
+    invoice = await db.invoices.find_one({"id": payload.invoice_id, "org_id": user["active_org_id"], **member_filter(user)}, {"_id": 0})
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
     if payload.amount <= 0:

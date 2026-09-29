@@ -127,7 +127,7 @@ export function TeamTab() {
       </Card>
 
       <ConfirmDialog open={!!removing} onOpenChange={(o) => !o && setRemoving(null)}
-        title="Remove member?" description={`${removing?.name} will lose access to this workspace.`} confirmLabel="Remove" onConfirm={remove} />
+        title="Remove member?" description={`${removing?.name || "This member"} will lose access to this workspace.`} confirmLabel="Remove" onConfirm={remove} />
     </div>
   );
 }
