@@ -48,6 +48,16 @@ Auth & workspaces · App shell (sidebar, header, workspace switcher, notificatio
 - **Fixes**: `?new=1` Quick Create now works when already on the target page (`useCreateParam`); notifications are clickable.
 - Verified: 16/16 headless-browser E2E checks for the workflow changes; ESLint (react-app + hooks) clean; esbuild full bundle clean; Help page server-render smoke test.
 
+## Iteration 8 — Feature Depth (2026-09-30)
+- **Invoices**: printable invoice at `/print/invoices/:id` (standalone, always light, A4 `@page` CSS, PAID/OVERDUE/CANCELLED stamp, `?autoprint=1` opens the print dialog; "Save as PDF" names the file after the invoice). **Duplicate** (`InvoiceModal` `template` prop) copies customer, items, tax and notes with fresh dates. Detail page shows notes. CSV export of the current status tab.
+- **Backend invoice rules** (`server.py`): `refresh_overdue` flags sent/pending invoices past their due date as overdue on list/get/dashboard/notifications/customer history; editing an overdue invoice's due date into the future makes it current again. `next_invoice_number` uses an atomic per-workspace `invoice_seq` counter, so numbers are never reused after a delete (previously `1001 + count`). Cancelling an invoice whose stock was deducted returns the stock and logs a stock-in movement.
+- **CSV export** (`lib/csv.js`, UTF-8 BOM, formula-injection guard) on every `ResourceManager` list; customers include Total Sales / Outstanding / Invoices via `exportExtra`. Amounts exported as stored (USD).
+- **Tasks**: HTML5 drag-and-drop between board columns, one-click complete toggle (board and list), optimistic updates with rollback.
+- **Leads**: drag-and-drop between stages; moving to Won offers "Convert to customer"; converted leads link to their customer.
+- **Inventory**: stock value (units × purchase price), low-stock filter, prefilled **Restock** (tops up to 2× minimum level), adjustments shown as "= N" instead of "−N".
+- Help Center updated for all of the above (+3 FAQ entries).
+- Verified: 6/6 API checks (numbering, auto-overdue, cancel restock), 13/13 browser checks for the new features, ESLint clean on all 28 changed frontend files, esbuild full-bundle clean.
+
 ## Backlog / Remaining (prioritized)
 - **P1**: Global search wiring (currently placeholder input); real AI insights via LLM (structured, not yet wired); invoice PDF export.
 - **P2**: Suppliers↔Products/PO linkage; employee-to-task assignment dropdowns; report date-range filters; per-org base-currency accounting (amounts currently stored USD, display-converted).
