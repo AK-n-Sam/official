@@ -21,8 +21,8 @@ import { ArrowUpRight, ArrowDownRight, FileText, CheckSquare, Plus } from "lucid
 function StatChip({ label, value, icon, onClick, testId }) {
   return (
     <button onClick={onClick} data-testid={testId}
-      className="flex items-center gap-3 rounded-xl border border-border/70 bg-card/90 px-4 py-3 text-left transition-colors hover:border-primary/40 hover:bg-accent/40">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+      className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left shadow-sm transition-all duration-200 hover:border-primary/50 hover:bg-muted/30 hover:shadow-md">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground group-hover:text-foreground">
         <Icon name={icon} className="h-4 w-4" />
       </span>
       <span className="min-w-0">
@@ -35,7 +35,7 @@ function StatChip({ label, value, icon, onClick, testId }) {
 
 function SectionCard({ title, action, onAction, children, testId }) {
   return (
-    <Card className="border-border/70 bg-card/90" data-testid={testId}>
+    <Card className="border-border bg-card shadow-sm" data-testid={testId}>
       <div className="flex items-center justify-between border-b border-border/70 px-5 py-4">
         <h3 className="font-heading text-base font-semibold">{title}</h3>
         {action && <Button variant="ghost" size="sm" onClick={onAction}>{action}</Button>}
@@ -74,14 +74,14 @@ export default function Dashboard() {
   if (error) return <ErrorState message={formatApiError(error)} onRetry={load} />;
 
   const rate = CURRENCIES[currency].rate;
-  const chartTooltip = { background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12 };
+  const chartTooltip = { background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12, color: "hsl(var(--foreground))", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.2)" };
   const yFmt = (v) => `${CURRENCIES[currency].symbol}${Math.round(v * rate / 1000)}k`;
   const hour = new Date().getHours();
   const greetWord = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const firstName = (user?.name || "there").split(" ")[0];
 
   return (
-    <div className="space-y-6 animate-in-up">
+    <div className="space-y-8 animate-in-up">
       <PageHeader title={`${greetWord}, ${firstName} 👋`} subtitle="Here's how your business is doing today.">
         <Button variant="outline" onClick={() => navigate("/invoices?new=1")} data-testid="dash-new-invoice"><Plus className="mr-2 h-4 w-4" /> New Invoice</Button>
       </PageHeader>
@@ -104,7 +104,7 @@ export default function Dashboard() {
         {/* OVERVIEW: trend + activity + a compact secondary stat strip */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <Card className="border-border/70 bg-card/90 p-5 lg:col-span-2" data-testid="sales-trend-chart">
+            <Card className="border-border bg-card p-5 shadow-sm lg:col-span-2" data-testid="sales-trend-chart">
               <div className="mb-4">
                 <h3 className="font-heading text-base font-semibold">Revenue vs Expenses</h3>
                 <p className="text-xs text-muted-foreground">Last 6 months</p>
@@ -119,8 +119,8 @@ export default function Dashboard() {
                   <XAxis dataKey="month" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={yFmt} />
                   <Tooltip contentStyle={chartTooltip} formatter={(v, n) => [format(v), n === "sales" ? "Revenue" : "Expenses"]} />
-                  <Area type="monotone" dataKey="sales" stroke="hsl(var(--chart-2))" strokeWidth={2} fill="url(#gSales)" />
-                  <Area type="monotone" dataKey="expenses" stroke="hsl(var(--chart-5))" strokeWidth={2} fill="url(#gExp)" />
+                  <Area type="monotone" dataKey="sales" stroke="hsl(var(--chart-2))" strokeWidth={2} fill="url(#gSales)" isAnimationActive={false} />
+                  <Area type="monotone" dataKey="expenses" stroke="hsl(var(--chart-5))" strokeWidth={2} fill="url(#gExp)" isAnimationActive={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </Card>
@@ -145,7 +145,7 @@ export default function Dashboard() {
         {/* FINANCE: category + status charts, recent invoices */}
         <TabsContent value="finance" className="space-y-6">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <Card className="border-border/70 bg-card/90 p-5" data-testid="sales-by-category-chart">
+            <Card className="border-border bg-card p-5 shadow-sm" data-testid="sales-by-category-chart">
               <h3 className="mb-4 font-heading text-base font-semibold">Sales by Category</h3>
               {stats.sales_by_category.length === 0 ? (
                 <p className="py-12 text-center text-sm text-muted-foreground">No sales data yet.</p>
@@ -156,18 +156,18 @@ export default function Dashboard() {
                     <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={yFmt} />
                     <YAxis type="category" dataKey="category" width={90} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={chartTooltip} formatter={(v) => [format(v), "Sales"]} cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }} />
-                    <Bar dataKey="amount" fill="hsl(var(--chart-1))" radius={[0, 6, 6, 0]} />
+                    <Bar dataKey="amount" fill="hsl(var(--chart-1))" radius={[0, 6, 6, 0]} isAnimationActive={false} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
             </Card>
-            <Card className="border-border/70 bg-card/90 p-5" data-testid="invoice-status-chart">
+            <Card className="border-border bg-card p-5 shadow-sm" data-testid="invoice-status-chart">
               <h3 className="mb-4 font-heading text-base font-semibold">Invoice Status</h3>
               <ResponsiveContainer width="100%" height={260}>
                 <PieChart>
-                  <Pie data={stats.invoice_status_breakdown} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={95} innerRadius={52} paddingAngle={2}>
+                  <Pie data={stats.invoice_status_breakdown} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={95} innerRadius={52} paddingAngle={2} isAnimationActive={false}>
                     {stats.invoice_status_breakdown.map((_, i) => (
-                      <Cell key={i} fill={["hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-1))", "hsl(var(--chart-5))", "hsl(var(--chart-4))", "hsl(var(--muted-foreground))", "hsl(var(--border))"][i % 7]} />
+                      <Cell key={i} stroke="hsl(var(--card))" strokeWidth={2} fill={["hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-1))", "hsl(var(--chart-5))", "hsl(var(--chart-4))", "hsl(var(--muted-foreground))", "hsl(var(--border))"][i % 7]} />
                     ))}
                   </Pie>
                   <Tooltip contentStyle={chartTooltip} formatter={(v, n) => [v, String(n).replace(/_/g, " ")]} />

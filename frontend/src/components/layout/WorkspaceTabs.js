@@ -57,7 +57,7 @@ export function WorkspaceTabs() {
   }, [active, navigate]);
 
   return (
-    <div className="flex items-center gap-1 overflow-x-auto border-b border-border/70 bg-card/40 px-2 py-1.5 backdrop-blur-sm" data-testid="workspace-tabs">
+    <div className="flex items-center gap-1 overflow-x-auto scrollbar-none border-b border-border/70 bg-card/40 px-2 py-1.5 backdrop-blur-sm" data-testid="workspace-tabs">
       {tabs.map((t) => {
         const isActive = t.path === active;
         return (

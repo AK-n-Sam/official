@@ -1,161 +1,280 @@
 {
-  "theme_strategy": {
-    "default_mode": "dark",
-    "theme_toggle_supported": true,
-    "aesthetic_concept": "Linear/Vercel Precision meets Swiss Financial Engineering (Archetype 4: Swiss & High-Contrast with Obsidian Dark mode and crisp Light theme)",
-    "dark_palette": {
-      "background": "#090A0F",
-      "surface_base": "#0E1117",
-      "surface_elevated": "#141824",
-      "surface_overlay": "#1B2132",
-      "border_subtle": "#1F2639",
-      "border_strong": "#2D374D",
-      "text_primary": "#F8FAFC",
-      "text_secondary": "#94A3B8",
-      "text_muted": "#64748B",
-      "accent_primary": "#3B82F6",
-      "accent_hover": "#2563EB",
-      "accent_emerald": "#10B981",
-      "accent_amber": "#F59E0B",
-      "accent_rose": "#F43F5E",
-      "accent_violet": "#8B5CF6"
-    },
-    "light_palette": {
-      "background": "#F8FAFC",
-      "surface_base": "#FFFFFF",
-      "surface_elevated": "#F1F5F9",
-      "surface_overlay": "#E2E8F0",
-      "border_subtle": "#E2E8F0",
-      "border_strong": "#CBD5E1",
-      "text_primary": "#0F172A",
-      "text_secondary": "#475569",
-      "text_muted": "#64748B",
-      "accent_primary": "#2563EB",
-      "accent_hover": "#1D4ED8",
-      "accent_emerald": "#059669",
-      "accent_amber": "#D97706",
-      "accent_rose": "#E11D48",
-      "accent_violet": "#7C3AED"
+  "project_name": "NexusOS",
+  "app_type": "hybrid_fullstack (Data-Dense SME Business Management Dashboard)",
+  "design_direction": "Tactical Precision SaaS — Clean, Deep-Contrast, Editorial-Engineering Hybrid",
+  "archetype": "Swiss & High-Contrast meets The Performance Pro (Dark Navy & Crisp White/Blue)",
+  "overview": "NexusOS enhancement blueprint to eliminate visual artifacts (duplicate ghost numbers, flat gray cards, visual monotony) and elevate the app to a top-tier SME executive cockpit without altering existing business logic, routing, or state stores.",
+  "root_cause_analysis": {
+    "ghost_numbers_bug": {
+      "problem": "User reported 'you can see numbers behind the actual numbers in the preview'.",
+      "root_causes": [
+        "In KpiCard or table cells, opacity or backdrop-filter overlays, duplicate render passes, or decorative watermark counters bleed through.",
+        "Card background transparency (e.g., bg-card/90 or bg-background/90 without solid backing) layered over text or duplicate DOM children.",
+        "Tabular font rendering where fallback fonts render before web font swaps without font-display: optional or layout shift.",
+        "Recharts tooltip overlapping container values or SVG duplicate ghost paths during responsive resize.",
+        "Fix: Ensure solid surfaces on KPI cards ('bg-card' with explicit border rather than semi-transparent layering over content), isolate font-mono tabular-nums in crisp, opaque containers, ensure single value render tree with explicit leading-none and no pseudo-element shadow-clones."
+      ]
     }
   },
   "typography": {
-    "font_family_headings": "Outfit, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-    "font_family_body": "IBM Plex Sans, -apple-system, BlinkMacSystemFont, sans-serif",
-    "font_family_mono": "'JetBrains Mono', 'Fira Code', monospace",
-    "hierarchy": {
-      "h1_page_title": "text-2xl sm:text-3xl font-bold tracking-tight",
-      "h2_section_header": "text-xl sm:text-2xl font-semibold tracking-tight",
-      "h3_card_title": "text-base sm:text-lg font-semibold tracking-normal",
-      "h4_table_heading": "text-xs font-semibold uppercase tracking-wider text-muted-foreground",
-      "kpi_metric_large": "text-3xl font-extrabold tracking-tight font-mono",
-      "body_regular": "text-sm text-foreground leading-relaxed",
-      "body_muted": "text-xs sm:text-sm text-muted-foreground leading-normal",
-      "badge_text": "text-xs font-medium tracking-wide uppercase px-2.5 py-0.5 rounded-full"
+    "font_pairing": {
+      "headings": {
+        "family": "Outfit, ui-sans-serif, system-ui, sans-serif",
+        "weights": [500, 600, 700],
+        "usage": "Page titles, section headers, dialog titles, tab triggers",
+        "rules": "Never use Inter for headings. Always apply tracking-tight or tracking-tighter on text-xl and larger."
+      },
+      "body": {
+        "family": "IBM Plex Sans, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
+        "weights": [400, 500, 600],
+        "usage": "Subtitles, metadata, table rows, form labels, descriptions",
+        "rules": "Comfortable line height leading-relaxed for body, leading-normal for form inputs."
+      },
+      "numbers_and_data": {
+        "family": "JetBrains Mono, ui-monospace, monospace",
+        "weights": [500, 600, 700],
+        "usage": "Currencies, KPI numbers, invoice codes, stat chips, timestamps",
+        "rules": "Always pair with tabular-nums. Maintain strict character alignment. Never blur or apply pseudo-drop-shadows that cause duplicate number ghosts."
+      }
     },
-    "anti_default_rules": "No Inter for headings. Use Outfit or Cabinet Grotesk style with tight tracking. Numbers and financial values must use monospace font or tabular figures."
+    "hierarchy_scale": {
+      "h1_page_header": "text-2xl sm:text-3xl font-heading font-bold tracking-tight text-foreground",
+      "h2_section_header": "text-lg sm:text-xl font-heading font-semibold tracking-tight text-foreground",
+      "h3_card_title": "text-sm sm:text-base font-heading font-semibold text-foreground",
+      "kpi_metric_primary": "font-mono text-2xl sm:text-3xl lg:text-[32px] font-bold tracking-tight tabular-nums text-foreground leading-none",
+      "kpi_metric_secondary": "font-mono text-lg sm:text-xl font-semibold tabular-nums text-foreground leading-tight",
+      "eyebrow_label": "text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
+      "body_text": "text-sm font-normal text-muted-foreground leading-relaxed",
+      "badge_text": "text-[11px] font-medium tracking-wide uppercase",
+      "table_header": "text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground"
+    }
+  },
+  "color_palette_system": {
+    "theme_mode": "System default with light/dark toggle (Light = Crisp Ice White/Blue; Dark = Deep Obsidian/Navy)",
+    "light_tokens": {
+      "--background": "210 40% 98% (Crisp subtle cool white)",
+      "--foreground": "222 47% 11% (Deep charcoal ink)",
+      "--card": "0 0% 100% (Solid pure white - prevents ghost bleed-through)",
+      "--card-foreground": "222 47% 11%",
+      "--popover": "0 0% 100%",
+      "--popover-foreground": "222 47% 11%",
+      "--primary": "221 83% 53% (Electric cobalt blue #2563eb)",
+      "--primary-foreground": "0 0% 100%",
+      "--secondary": "214 32% 95%",
+      "--muted": "214 28% 94%",
+      "--muted-foreground": "215 20% 40%",
+      "--border": "214 26% 89% (Crisp tactile stroke)",
+      "--ring": "221 83% 53%",
+      "--chart-1": "221 83% 53% (Cobalt)",
+      "--chart-2": "158 64% 42% (Emerald green)",
+      "--chart-3": "38 92% 50% (Amber gold)",
+      "--chart-4": "262 83% 58% (Electric violet)",
+      "--chart-5": "350 84% 56% (Vibrant coral/rose)"
+    },
+    "dark_tokens": {
+      "--background": "228 26% 7% (Deep space obsidian #0d1017)",
+      "--foreground": "210 40% 98%",
+      "--card": "226 24% 11% (Grounded obsidian container #141824)",
+      "--card-foreground": "210 40% 98%",
+      "--popover": "226 24% 11%",
+      "--popover-foreground": "210 40% 98%",
+      "--primary": "217 91% 60% (Vibrant radiant cobalt)",
+      "--primary-foreground": "0 0% 100%",
+      "--secondary": "224 22% 16%",
+      "--muted": "224 20% 14%",
+      "--muted-foreground": "215 18% 70%",
+      "--border": "224 20% 19% (1px luminous border)",
+      "--ring": "217 91% 60%",
+      "--chart-1": "217 91% 60%",
+      "--chart-2": "160 84% 42%",
+      "--chart-3": "42 94% 54%",
+      "--chart-4": "262 88% 68%",
+      "--chart-5": "352 87% 62%"
+    },
+    "tactical_tones": {
+      "emerald": {
+        "badge_bg": "bg-emerald-500/10 dark:bg-emerald-500/15",
+        "text": "text-emerald-600 dark:text-emerald-400",
+        "border": "border-emerald-500/20"
+      },
+      "amber": {
+        "badge_bg": "bg-amber-500/10 dark:bg-amber-500/15",
+        "text": "text-amber-600 dark:text-amber-400",
+        "border": "border-amber-500/20"
+      },
+      "rose": {
+        "badge_bg": "bg-rose-500/10 dark:bg-rose-500/15",
+        "text": "text-rose-600 dark:text-rose-400",
+        "border": "border-rose-500/20"
+      },
+      "primary_blue": {
+        "badge_bg": "bg-blue-500/10 dark:bg-blue-500/15",
+        "text": "text-blue-600 dark:text-blue-400",
+        "border": "border-blue-500/20"
+      },
+      "violet": {
+        "badge_bg": "bg-violet-500/10 dark:bg-violet-500/15",
+        "text": "text-violet-600 dark:text-violet-400",
+        "border": "border-violet-500/20"
+      }
+    }
+  },
+  "layout_and_spacing": {
+    "philosophy": "Generous Spacing meets Information Density. Dashboards should breathe at the page and section level, yet stay razor-sharp and dense inside data widgets.",
+    "outer_container": {
+      "max_width": "max-w-7xl mx-auto",
+      "padding_comfortable": "px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8",
+      "padding_compact": "px-4 sm:px-6 lg:px-8 py-4 sm:py-5 space-y-5"
+    },
+    "grid_archetypes": {
+      "kpi_strip": "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5",
+      "dashboard_hero_split": "grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch",
+      "sales_chart_col": "lg:col-span-8 flex flex-col justify-between",
+      "ai_insights_col": "lg:col-span-4 flex flex-col",
+      "glance_chips_grid": "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4",
+      "finance_two_charts": "grid grid-cols-1 lg:grid-cols-2 gap-6",
+      "recent_data_split": "grid grid-cols-1 lg:grid-cols-12 gap-6",
+      "recent_invoices_span": "lg:col-span-8",
+      "recent_tx_span": "lg:col-span-4"
+    }
+  },
+  "component_blueprints": {
+    "kpi_card": {
+      "file_path": "src/components/dashboard/KpiCard.js",
+      "redesign_concept": "Dual-layer micro-architectural card with top accent beacon, high-precision JetBrains Mono metric, and pill delta chip.",
+      "critical_fixes": [
+        "Eliminate semi-transparent bleed by replacing 'bg-card/90' with solid 'bg-card shadow-sm'.",
+        "Remove any stacked text or double-rendered shadows that caused numbers behind numbers.",
+        "Add subtle 1px border with hover glow (border-border hover:border-primary/40 transition-colors).",
+        "Top micro-accent line or icon-badge with tactile contrast."
+      ],
+      "tailwind_classes": {
+        "card_wrapper": "relative overflow-hidden rounded-xl border border-border bg-card p-5 sm:p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:border-border/80 group",
+        "header_row": "flex items-center justify-between gap-3",
+        "label": "text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
+        "icon_badge": "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-transform duration-200 group-hover:scale-105",
+        "metric_value": "mt-4 font-mono text-2xl sm:text-3xl font-bold tracking-tight text-foreground tabular-nums select-all leading-none",
+        "delta_pill": "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums border",
+        "delta_up": "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+        "delta_down": "border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-400",
+        "sub_text": "text-xs font-normal text-muted-foreground truncate"
+      }
+    },
+    "charts_and_data_viz": {
+      "files": ["src/pages/Dashboard.js", "src/pages/Reports.js"],
+      "principles": [
+        "DO NOT animate chart wrappers using CSS transforms or framer-motion transforms: Recharts measures DOM node width via getBoundingClientRect, and scaling transforms trigger measurement glitches and duplicate rendering.",
+        "Use opacity fade-in only: 'opacity-0 animate-[fadeIn_0.3s_ease_forwards]'.",
+        "Chart Card headers must feature a distinct title, clean time-range chip or subtitle, and a compact legend.",
+        "Custom Tooltip styling: Opaque card background with rounded-lg border border-border, shadow-lg, and crisp monospace values.",
+        "Cartesian grid lines: stroke='hsl(var(--border))' strokeDasharray='3 3' opacity={0.6}."
+      ],
+      "tooltip_spec": {
+        "background": "hsl(var(--card))",
+        "border": "1px solid hsl(var(--border))",
+        "borderRadius": "8px",
+        "boxShadow": "0 10px 25px -5px rgba(0,0,0,0.2)",
+        "padding": "10px 14px",
+        "fontSize": "12px",
+        "color": "hsl(var(--foreground))"
+      }
+    },
+    "header_and_navigation": {
+      "file_path": "src/components/layout/Header.js",
+      "redesign_concept": "Tactical Control Deck — solid glassmorphism, crisp border-b, tactile buttons, and high-visibility notification counters.",
+      "rules": [
+        "NEVER use fully transparent backgrounds. Use 'bg-background/95 backdrop-blur-md border-b border-border'.",
+        "Quick Create Button: Primary solid accent with tactile shadow ('shadow-sm hover:shadow-primary/25').",
+        "Theme & Density Toggles: Clean pill-like hover states with high-contrast active icons.",
+        "User Avatar: 1px luminous border with custom status ring."
+      ]
+    },
+    "sidebar": {
+      "file_path": "src/components/layout/Sidebar.js",
+      "redesign_concept": "Obsidian Anchor Rail — clear visual hierarchy between operational sections (Home, Business Ops, Organization), high-contrast active indicators.",
+      "active_state_classes": "bg-primary/10 text-primary font-semibold border-r-2 border-primary rounded-l-lg rounded-r-none",
+      "inactive_state_classes": "text-muted-foreground hover:bg-muted/60 hover:text-foreground rounded-lg transition-colors",
+      "section_header_classes": "px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground/70 mb-2 mt-4"
+    },
+    "workspace_tabs": {
+      "file_path": "src/components/layout/WorkspaceTabs.js",
+      "redesign_concept": "Browser-Style Engineered Tab Strip — clean pill tabs, smooth scroll, clear active marker, quick close interaction.",
+      "active_tab": "bg-background text-foreground border-border shadow-xs font-semibold",
+      "inactive_tab": "bg-muted/40 text-muted-foreground hover:bg-muted/80 hover:text-foreground border-transparent",
+      "container": "flex items-center gap-1.5 overflow-x-auto border-b border-border bg-card/60 px-3 py-2 scrollbar-none"
+    },
+    "stat_chips": {
+      "file_path": "src/pages/Dashboard.js (StatChip component)",
+      "redesign_concept": "Executive Stat Badges — compact cards with icon squircle, uppercase label, and bold JetBrains Mono counters.",
+      "classes": "flex items-center gap-3.5 rounded-xl border border-border bg-card p-3.5 text-left transition-all duration-200 hover:border-primary/50 hover:bg-muted/30 hover:shadow-sm group"
+    },
+    "data_table_and_cards": {
+      "files": ["src/components/common/DataTable.js", "src/components/common/ResourceManager.js"],
+      "enhancements": [
+        "Card view: 3-column responsive grid with crisp divider, uppercase field titles in tracking-wider muted font, and highlighted primary identifier.",
+        "Table view: Crisp border, hover rows with subtle left primary indicator or tinted bg-muted/40.",
+        "Compact density mode support: data-density='compact' row padding py-2.5 vs comfortable py-4."
+      ]
+    },
+    "ai_insights_card": {
+      "file_path": "src/components/dashboard/AiInsightsPlaceholder.js",
+      "redesign_concept": "Subtle Violet-Tinted Copilot Surface — structured insight tiles with micro-action indicators.",
+      "classes": "relative overflow-hidden rounded-xl border border-violet-500/20 bg-gradient-to-b from-violet-500/5 via-card to-card p-5 sm:p-6 shadow-sm"
+    }
   },
   "visual_enhancers": {
-    "surface_treatment": "Tactical Minimalism with crisp 1px borders (border-border/60). Never use soft muddy drop shadows; use subtle inner highlight or 1px hairline rings.",
-    "glassmorphism_nav": "Header and sticky top navigation must use backdrop-blur-xl bg-background/85 border-b border-border/80. NEVER completely transparent.",
-    "active_indicator": "Active sidebar and tab items receive a 2px left border accent or subtle pill indicator bg-primary/10 text-primary border-l-2 border-primary.",
-    "status_badges": {
-      "paid_or_completed": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
-      "pending_or_in_progress": "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-      "overdue_or_failed": "bg-rose-500/10 text-rose-400 border border-rose-500/20",
-      "draft_or_neutral": "bg-slate-500/10 text-slate-400 border border-slate-500/20",
-      "active": "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-    }
-  },
-  "grids_and_layouts": {
-    "shell_structure": {
-      "sidebar_desktop_width": "w-64 shrink-0 border-r border-border/70 bg-card/60 backdrop-blur-md flex flex-col justify-between h-screen sticky top-0",
-      "header_height": "h-16 border-b border-border/70 px-6 flex items-center justify-between sticky top-0 z-40 bg-background/90 backdrop-blur-md",
-      "main_viewport": "flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 max-w-7xl mx-auto w-full"
-    },
-    "bento_dashboard_grid": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6",
-    "dashboard_split_sections": "grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6",
-    "crud_table_container": "rounded-xl border border-border/80 bg-card/90 shadow-sm overflow-hidden",
-    "modal_form_grid": "grid grid-cols-1 sm:grid-cols-2 gap-4"
-  },
-  "modules_and_navigation": [
-    { "name": "Dashboard", "path": "/dashboard", "icon": "LayoutDashboard", "section": "Core" },
-    { "name": "Sales", "path": "/sales", "icon": "TrendingUp", "section": "Finance" },
-    { "name": "Customers", "path": "/customers", "icon": "Users", "section": "CRM", "crud_ready": true },
-    { "name": "Invoices", "path": "/invoices", "icon": "FileText", "section": "Finance", "priority": "high" },
-    { "name": "Expenses", "path": "/expenses", "icon": "Receipt", "section": "Finance", "crud_ready": true },
-    { "name": "Products", "path": "/products", "icon": "Package", "section": "Inventory", "crud_ready": true },
-    { "name": "Inventory", "path": "/inventory", "icon": "Warehouse", "section": "Inventory", "priority": "high" },
-    { "name": "Suppliers", "path": "/suppliers", "icon": "Truck", "section": "CRM" },
-    { "name": "Employees", "path": "/employees", "icon": "Briefcase", "section": "Operations" },
-    { "name": "Tasks", "path": "/tasks", "icon": "CheckSquare", "section": "Operations" },
-    { "name": "Reports", "path": "/reports", "icon": "BarChart3", "section": "Analytics" },
-    { "name": "Settings", "path": "/settings", "icon": "Sliders", "section": "System" }
-  ],
-  "multi_currency_config": {
-    "currencies": [
-      { "code": "USD", "symbol": "$", "name": "US Dollar", "rate": 1.0 },
-      { "code": "EUR", "symbol": "€", "name": "Euro", "rate": 0.92 },
-      { "code": "GBP", "symbol": "£", "name": "British Pound", "rate": 0.79 },
-      { "code": "INR", "symbol": "₹", "name": "Indian Rupee", "rate": 83.5 }
+    "depth_layers": [
+      "Layer 0 (App Canvas): bg-background with subtle noise / structural contrast",
+      "Layer 1 (Cards & Side Rails): bg-card with 1px border-border and soft shadow-xs",
+      "Layer 2 (Floating Popovers, Menus, Modals): bg-popover with border-border and shadow-xl",
+      "Layer 3 (Toasts & Notifications): sonner toasts with high-contrast accents"
     ],
-    "default_currency": "USD",
-    "formatter_rule": "Format numbers with proper locale separators and prefix symbol based on active currency setting"
+    "subtle_tactile_borders": "1px solid hsl(var(--border)) with light-mode 89% luminance and dark-mode 19% luminance for razor-sharp boundaries",
+    "number_formatting_clarity": "All financial numbers use currency context + formatCurrency helper with tabular-nums font-mono so digits don't jump or overlap during updates"
   },
-  "image_urls": [
-    {
-      "category": "team_workspace_banner",
-      "url": "https://images.unsplash.com/photo-1522071820081-009f0129c71c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDF8MHwxfHNlYXJjaHwzfHxidXNpbmVzcyUyMHRlYW0lMjB3b3Jrc3BhY2UlMjBvZmZpY2V8ZW58MHx8fHwxNzkwNTczMzk4fDA&ixlib=rb-4.1.0&q=85",
-      "description": "Collaborative business team around laptops in a high-tech modern office",
-      "placement": "Workspace welcome modal or company settings profile header banner"
-    },
-    {
-      "category": "executive_office_modern",
-      "url": "https://images.unsplash.com/photo-1541746972996-4e0b0f43e02a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDF8MHwxfHNlYXJjaHwxfHxidXNpbmVzcyUyMHRlYW0lMjB3b3Jrc3BhY2UlMjBvZmZpY2V8ZW58MHx8fHwxNzkwNTczMzk4fDA&ixlib=rb-4.1.0&q=85",
-      "description": "Glass conference room meeting with ambient architectural lighting",
-      "placement": "Auth pages branding backdrop or organization switcher illustration"
-    },
-    {
-      "category": "open_office_workstation",
-      "url": "https://images.unsplash.com/photo-1606857521015-7f9fcf423740?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDF8MHwxfHNlYXJjaHwyfHxidXNpbmVzcyUyMHRlYW0lMjB3b3Jrc3BhY2UlMjBvZmZpY2V8ZW58MHx8fHwxNzkwNTczMzk4fDA&ixlib=rb-4.1.0&q=85",
-      "description": "Professional engineering workstation with dual monitors",
-      "placement": "Reports / Analytics overview card cover"
+  "animation_and_motion_guidelines": {
+    "strictly_forbidden": [
+      "Do NOT wrap Recharts ResponsiveContainer in framer-motion components that apply scale(), translateY(), or matrix3d() transforms.",
+      "Do NOT apply 'transition: all' globally on tables or chart wrappers."
+    ],
+    "approved_animations": [
+      "Page fade in: opacity from 0 to 1 with 0.25s ease-out",
+      "Micro-interactions on buttons/cards: transform scale-[1.02] active:scale-[0.98] with transition-transform duration-150",
+      "Tab transitions: smooth border-color and background-color transitions (duration-150)"
+    ]
+  },
+  "accessibility_and_testability": {
+    "wcag_standards": "Contrast ratios >= 4.5:1 for normal text, >= 3:1 for large display headers and icons",
+    "test_id_conventions": {
+      "prefix": "data-testid",
+      "examples": [
+        "kpi-total-sales",
+        "kpi-total-sales-value",
+        "sales-trend-chart",
+        "dashboard-tabs",
+        "dash-tab-overview",
+        "dash-tab-finance",
+        "dash-tab-operations",
+        "workspace-tabs",
+        "tab-chip-dashboard",
+        "density-toggle-button",
+        "theme-toggle-button"
+      ]
     }
-  ],
-  "component_path": {
-    "auth": "src/components/auth/AuthModal.js",
-    "shell_layout": "src/components/layout/AppShell.js",
-    "sidebar": "src/components/layout/Sidebar.js",
-    "header": "src/components/layout/Header.js",
-    "workspace_switcher": "src/components/layout/WorkspaceSwitcher.js",
-    "dashboard": "src/components/dashboard/DashboardView.js",
-    "kpi_card": "src/components/dashboard/KpiCard.js",
-    "data_table": "src/components/common/DataTable.js",
-    "crud_modal": "src/components/common/CrudModal.js",
-    "customers_view": "src/components/modules/CustomersView.js",
-    "products_view": "src/components/modules/ProductsView.js",
-    "expenses_view": "src/components/modules/ExpensesView.js",
-    "invoices_view": "src/components/modules/InvoicesView.js",
-    "inventory_view": "src/components/modules/InventoryView.js",
-    "settings_view": "src/components/modules/SettingsView.js",
-    "ai_insights_card": "src/components/dashboard/AiInsightsPlaceholder.js"
   },
-  "instructions_to_main_agent": [
-    "You are working with React JavaScript (.js/.jsx) files. Do NOT use .tsx or TypeScript annotations in files.",
-    "Implement a complete dark/light theme switch toggled from the top header and settings, defaulting to dark mode with smooth CSS transition.",
-    "Ensure the top header and dropdowns NEVER have transparent backgrounds (use bg-background/95 or bg-card/95 with backdrop-blur-md and solid border-border).",
-    "Provide a working Workspace Switcher in the top header and sidebar top with at least 3 pre-seeded organizations (e.g., 'Acme Global Ventures', 'Nexus Retail Logistics', 'Apex Studio LLC').",
-    "Build full functional CRUD for Customers, Products, and Expenses with validation, search filtering, edit modal, delete confirmation dialog, and responsive table views.",
-    "Implement rich Invoices module with status filter (All, Paid, Pending, Overdue, Draft) and quick create dialog, plus Inventory module with stock movements and reorder badges.",
-    "Dashboard must display live calculated KPIs based on state: Total Revenue, Outstanding Invoices, Total Expenses, Estimated Net Profit, Customer Count, and Product Count.",
-    "Include an AI-Powered Business Insights card ('AI Insights Engine' - planned module) with preview recommendations, predictive churn alert, and cashflow forecast prompt.",
-    "Ensure multi-currency toggle (USD, EUR, GBP, INR) affects all dashboard metrics, invoice totals, and expense summaries with live currency symbol formatting.",
-    "Every interactive element and key text MUST have a descriptive kebab-case 'data-testid' attribute (e.g. data-testid='sidebar-nav-invoices', data-testid='kpi-total-sales', data-testid='create-customer-button', data-testid='theme-toggle-button')."
-  ],
-  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": {
-    "do_not_center_app": "NEVER set text-align: center on .App or main containers. Keep left-aligned natural data flows.",
-    "no_universal_transition": "Do NOT apply universal transition: all. Use targeted transitions on background-color, border-color, and opacity.",
-    "toast_implementation": "Use Sonner for toasts with action confirmations (create, edit, delete, workspace switch, currency change).",
-    "empty_states": "Include purposeful empty state designs with contextual icon, action button, and descriptive copy.",
-    "no_raw_emojis": "Use Lucide-React icons only. No emoji icons in system navigation or status badges."
-  }
+  "step_by_step_implementation_plan": {
+    "step_1": "Audit and harden index.css: enforce solid background variables, refine scrollbars, remove duplicate text-shadow/ghost artifact causes, and configure clean tabular-nums styles.",
+    "step_2": "Upgrade KpiCard.js: eliminate opacity stacking, apply solid bg-card with precision border, elevate JetBrains Mono metric hierarchy, and polish delta pill styling.",
+    "step_3": "Polish Dashboard.js: align 12-column bento rhythm in Overview, Finance, and Operations tabs; inject refined chart tooltips and clean empty-state visuals; update StatChips to tactile buttons.",
+    "step_4": "Refine Header.js and WorkspaceTabs.js: enhance contrast, verify z-index and backdrop-filter clarity, and ensure density and theme toggles deliver immediate tactile feedback.",
+    "step_5": "Elevate DataTable.js and ResourceManager.js: sharpen table headers, refine hover states and density modes, and polish card-grid view for responsive screens.",
+    "step_6": "Verify and validate: run unit and automated tests, verify test IDs remain intact, and verify no visual ghosting or layout breaks occur across light and dark modes."
+  },
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "Never generate AI slop: avoid generic rounded pill-heavy SaaS clones with washed-out gray text.",
+    "Ensure every number has tabular-nums and strict mono alignment without duplicate text overlays.",
+    "Always preserve all existing features: collapsible sidebar, density toggle, currency switcher, theme switch, tabs bar, and all test IDs.",
+    "Keep files in JavaScript (.js and .jsx), not TypeScript (.tsx), matching the project codebase.",
+    "All interactive elements must retain or include explicit data-testid attributes for testing."
+  ]
 }

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -20,49 +20,49 @@ body {
         --popover-foreground: 222 47% 11%;
         --primary: 221 83% 53%;
         --primary-foreground: 0 0% 100%;
-        --secondary: 210 40% 96%;
+        --secondary: 214 32% 95%;
         --secondary-foreground: 222 47% 11%;
-        --muted: 210 40% 96%;
-        --muted-foreground: 215 22% 38%;
+        --muted: 214 28% 94%;
+        --muted-foreground: 215 20% 40%;
         --accent: 214 32% 91%;
         --accent-foreground: 222 47% 11%;
         --destructive: 347 77% 50%;
         --destructive-foreground: 0 0% 100%;
-        --border: 214 32% 91%;
-        --input: 214 32% 91%;
+        --border: 214 26% 89%;
+        --input: 214 26% 89%;
         --ring: 221 83% 53%;
         --chart-1: 221 83% 53%;
-        --chart-2: 160 84% 39%;
+        --chart-2: 158 64% 42%;
         --chart-3: 38 92% 50%;
-        --chart-4: 258 90% 66%;
-        --chart-5: 350 89% 60%;
+        --chart-4: 262 83% 58%;
+        --chart-5: 350 84% 56%;
         --radius: 0.6rem;
     }
     .dark {
-        --background: 230 25% 5%;
+        --background: 228 26% 7%;
         --foreground: 210 40% 98%;
-        --card: 225 29% 11%;
+        --card: 226 24% 11%;
         --card-foreground: 210 40% 98%;
-        --popover: 224 30% 10%;
+        --popover: 226 24% 11%;
         --popover-foreground: 210 40% 98%;
         --primary: 217 91% 60%;
         --primary-foreground: 0 0% 100%;
-        --secondary: 224 30% 15%;
+        --secondary: 224 22% 16%;
         --secondary-foreground: 210 40% 98%;
-        --muted: 225 29% 13%;
-        --muted-foreground: 215 22% 72%;
-        --accent: 224 30% 16%;
+        --muted: 224 20% 14%;
+        --muted-foreground: 215 18% 70%;
+        --accent: 224 22% 17%;
         --accent-foreground: 210 40% 98%;
         --destructive: 350 89% 60%;
         --destructive-foreground: 0 0% 100%;
-        --border: 224 24% 18%;
-        --input: 224 24% 18%;
+        --border: 224 20% 19%;
+        --input: 224 20% 19%;
         --ring: 217 91% 60%;
         --chart-1: 217 91% 60%;
-        --chart-2: 160 84% 39%;
-        --chart-3: 38 92% 50%;
-        --chart-4: 258 90% 66%;
-        --chart-5: 350 89% 60%;
+        --chart-2: 160 84% 42%;
+        --chart-3: 42 94% 54%;
+        --chart-4: 262 88% 68%;
+        --chart-5: 352 87% 62%;
     }
 }
 
@@ -86,11 +86,15 @@ body {
 ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 6px; border: 2px solid hsl(var(--background)); }
 ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
 
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+/* Opacity-only entrance — never transform ancestors of recharts (prevents ghost/duplicate axis numbers) */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
-.animate-in-up { animation: fadeInUp 0.4s ease-out both; }
+.animate-in-up { animation: fadeIn 0.25s ease-out both; }
 
 /* Density: compact mode tightens table rows for information-dense views */
 [data-density="compact"] table td,
