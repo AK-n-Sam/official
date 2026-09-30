@@ -9,6 +9,7 @@ const STYLES = {
   sent: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   qualified: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   pending: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+  unpaid: "bg-amber-500/10 text-amber-500 border-amber-500/20",
   in_progress: "bg-amber-500/10 text-amber-500 border-amber-500/20",
   partially_paid: "bg-amber-500/10 text-amber-500 border-amber-500/20",
   proposal: "bg-violet-500/10 text-violet-500 border-violet-500/20",

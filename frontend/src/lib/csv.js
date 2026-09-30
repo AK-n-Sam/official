@@ -9,10 +9,12 @@ function cell(v) {
 }
 
 export function downloadCsv(filename, columns, rows) {
-  const lines = [
-    columns.map((c) => cell(c.label)).join(","),
-    ...rows.map((r) => columns.map((c) => cell(c.value(r))).join(",")),
-  ];
+  downloadRowsCsv(filename, [columns.map((c) => c.label), ...rows.map((r) => columns.map((c) => c.value(r)))]);
+}
+
+/** Download raw rows (arrays of cells, any length), e.g. a multi-section report. */
+export function downloadRowsCsv(filename, rows) {
+  const lines = rows.map((r) => r.map(cell).join(","));
   // Leading BOM so Excel opens UTF-8 (currency symbols, accents) correctly.
   const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);

@@ -43,13 +43,19 @@ export function WorkspaceTabs() {
     return [resolveTab(HOME)];
   });
 
-  useEffect(() => { localStorage.setItem(STORAGE, JSON.stringify(tabs)); }, [tabs]);
+  useEffect(() => { try { localStorage.setItem(STORAGE, JSON.stringify(tabs)); } catch { /* storage full or blocked */ } }, [tabs]);
 
+  // Each tab remembers its query string (search, filters), so switching back restores the same view.
+  const search = new URLSearchParams(location.search).get("new") ? "" : location.search;
   useEffect(() => {
     const tab = resolveTab(active);
     if (!tab) return;
-    setTabs((prev) => (prev.some((t) => t.path === active) ? prev : [...prev, tab]));
-  }, [active]);
+    setTabs((prev) => (prev.some((t) => t.path === active)
+      ? prev.map((t) => (t.path === active && (t.search || "") !== search ? { ...t, search } : t))
+      : [...prev, { ...tab, search }]));
+  }, [active, search]);
+
+  const go = (t) => navigate(t.path + (t.search || ""));
 
   // Detail pages report a readable title once their record loads (see useTabTitle).
   useEffect(() => {
@@ -66,7 +72,10 @@ export function WorkspaceTabs() {
     const remaining = tabs.filter((t) => t.path !== path);
     const safe = remaining.length ? remaining : [resolveTab(HOME)];
     setTabs(safe);
-    if (path === active) navigate((safe[Math.max(0, idx - 1)] || safe[0]).path);
+    if (path === active) {
+      const next = safe[Math.max(0, idx - 1)] || safe[0];
+      navigate(next.path + (next.search || ""));
+    }
   }, [tabs, active, navigate]);
 
   const closeOthers = () => {
@@ -90,8 +99,8 @@ export function WorkspaceTabs() {
               role="button"
               tabIndex={0}
               title={closable ? `${t.label} — middle-click to close` : t.label}
-              onClick={() => navigate(t.path)}
-              onKeyDown={(e) => { if (e.key === "Enter") navigate(t.path); }}
+              onClick={() => go(t)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(t); } }}
               onMouseDown={(e) => { if (e.button === 1) e.preventDefault(); }}
               onAuxClick={(e) => { if (e.button === 1 && closable) closeTab(t.path); }}
               data-testid={`tab-chip${tid(t.path)}`}

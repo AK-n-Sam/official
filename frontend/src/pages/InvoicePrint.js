@@ -11,6 +11,7 @@ const STAMP = {
   overdue: "border-rose-600 text-rose-600",
   cancelled: "border-slate-500 text-slate-500",
   partially_paid: "border-amber-600 text-amber-600",
+  draft: "border-slate-400 text-slate-400",
 };
 
 /**

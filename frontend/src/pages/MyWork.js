@@ -4,7 +4,7 @@ import { CheckSquare, Target, Activity, Users, FileText, CreditCard, AlertTriang
 import api, { formatApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useCurrency } from "@/context/CurrencyContext";
-import { formatDate } from "@/lib/format";
+import { formatDate, todayIso } from "@/lib/format";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const ACT_ICON = { invoice: FileText, payment: CreditCard, customer: Users };
 
-const isOverdue = (t) => t.due_date && t.due_date < new Date().toISOString().slice(0, 10);
+const isOverdue = (t) => t.due_date && t.due_date < todayIso();
 
 export default function MyWork() {
   const { user } = useAuth();
@@ -55,9 +55,9 @@ export default function MyWork() {
           <div className="max-h-[380px] divide-y divide-border/50 overflow-y-auto">
             {data.tasks.length === 0 ? <EmptyState icon={CheckSquare} title="No open tasks" description="You're all caught up." /> :
               data.tasks.map((t) => (
-                <button key={t.id} onClick={() => navigate("/tasks")} className="flex w-full items-start gap-3 px-5 py-3 text-left hover:bg-accent/40">
+                <button key={t.id} onClick={() => navigate(`/tasks?q=${encodeURIComponent(t.title)}`)} className="flex w-full items-start gap-3 px-5 py-3 text-left hover:bg-accent/40">
                   {isOverdue(t) ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" /> : <CheckSquare className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />}
-                  <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{t.title}</p><p className="text-xs text-muted-foreground">Due {formatDate(t.due_date)}{t.customer_name ? ` · ${t.customer_name}` : ""}</p></div>
+                  <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{t.title}</p><p className="text-xs text-muted-foreground">{t.due_date ? `Due ${formatDate(t.due_date)}` : "No due date"}{t.customer_name ? ` · ${t.customer_name}` : ""}</p></div>
                   <StatusBadge status={t.priority} />
                 </button>
               ))}
@@ -69,7 +69,7 @@ export default function MyWork() {
           <div className="max-h-[380px] divide-y divide-border/50 overflow-y-auto">
             {data.leads.length === 0 ? <EmptyState icon={Target} title="No active leads" description="Leads you own appear here." /> :
               data.leads.map((l) => (
-                <button key={l.id} onClick={() => navigate("/leads")} className="flex w-full items-center justify-between px-5 py-3 text-left hover:bg-accent/40">
+                <button key={l.id} onClick={() => navigate(`/leads?q=${encodeURIComponent(l.company || l.name)}`)} className="flex w-full items-center justify-between px-5 py-3 text-left hover:bg-accent/40">
                   <div className="min-w-0"><p className="truncate text-sm font-medium">{l.company || l.name}</p><p className="truncate text-xs text-muted-foreground">{l.name}</p></div>
                   <div className="flex items-center gap-3"><span className="font-mono text-sm font-semibold">{format(l.value || 0)}</span><StatusBadge status={l.stage} /></div>
                 </button>

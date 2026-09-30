@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Users, FileText, CreditCard, Receipt, Package, CheckSquare, Activity } from "lucide-react";
 import api from "@/lib/api";
 import { formatDate } from "@/lib/format";
+import { useCurrency } from "@/context/CurrencyContext";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -11,6 +12,7 @@ const TONE = { customer: "text-violet-500", invoice: "text-blue-500", payment: "
 
 export function ActivityFeed() {
   const navigate = useNavigate();
+  const { format } = useCurrency();
   const [items, setItems] = useState(null);
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export function ActivityFeed() {
               <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted ${TONE[a.type] || ""}`}><Icon className="h-4 w-4" /></span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium">{a.title}</span>
-                <span className="block truncate text-xs text-muted-foreground">{a.description}</span>
+                <span className="block truncate text-xs text-muted-foreground">{a.description}{a.amount ? ` · ${format(a.amount)}` : ""}</span>
               </span>
               <span className="shrink-0 text-[11px] text-muted-foreground">{formatDate(a.date)}</span>
             </button>

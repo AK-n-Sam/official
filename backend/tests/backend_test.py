@@ -229,6 +229,12 @@ class TestInvoices:
         assert r.status_code == 200
         assert any(i["id"] == inv["id"] for i in r.json())
 
+        # A paid invoice can't be deleted (it would erase the payment) until its payments are removed.
+        r = admin_client.delete(f"{API}/invoices/{inv['id']}")
+        assert r.status_code == 409
+        for p in admin_client.get(f"{API}/invoices/{inv['id']}").json()["payments"]:
+            assert admin_client.delete(f"{API}/payments/{p['id']}").status_code == 200
+
         # Delete
         r = admin_client.delete(f"{API}/invoices/{inv['id']}")
         assert r.status_code == 200
@@ -239,7 +245,7 @@ class TestStockMovements:
     def test_movement_updates_stock(self, admin_client):
         products = admin_client.get(f"{API}/products").json()
         assert products
-        p = products[0]
+        p = products[-1]  # the oldest (seeded) product; newer ones may belong to tests running in parallel
         starting = p["stock_quantity"]
 
         r = admin_client.post(f"{API}/stock-movements", json={

@@ -19,7 +19,9 @@ export default function AuthPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); setLoading(true);
+    setError("");
+    if (mode === "register" && form.password.length < 8) { setError("Use at least 8 characters for your password"); return; }
+    setLoading(true);
     try {
       if (mode === "login") await login(form.email, form.password);
       else await register({ name: form.name, email: form.email, password: form.password });
@@ -36,6 +38,9 @@ export default function AuthPage() {
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
   };
 
+  // Demo sign-in is opt-in per environment, so real deployments never ship credentials in the bundle.
+  const demo = process.env.REACT_APP_DEMO_EMAIL && process.env.REACT_APP_DEMO_PASSWORD
+    ? { email: process.env.REACT_APP_DEMO_EMAIL, password: process.env.REACT_APP_DEMO_PASSWORD } : null;
   const fill = (email, password) => setForm({ ...form, email, password });
 
   return (
@@ -87,15 +92,17 @@ export default function AuthPage() {
               <Label className="text-xs font-medium text-muted-foreground">Email</Label>
               <div className="relative mt-1.5">
                 <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@company.com" className="pl-9" required data-testid="auth-email" />
+                <Input type="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@company.com" className="pl-9" required data-testid="auth-email" />
               </div>
             </div>
             <div>
               <Label className="text-xs font-medium text-muted-foreground">Password</Label>
               <div className="relative mt-1.5">
                 <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="••••••••" className="pl-9" required data-testid="auth-password" />
+                <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="••••••••" className="pl-9" required
+                  minLength={mode === "register" ? 8 : undefined} autoComplete={mode === "login" ? "current-password" : "new-password"} data-testid="auth-password" />
               </div>
+              {mode === "register" && <p className="mt-1 text-xs text-muted-foreground">At least 8 characters.</p>}
             </div>
             {error && <p className="text-sm text-rose-500" data-testid="auth-error">{error}</p>}
             <Button type="submit" className="w-full" disabled={loading} data-testid="auth-submit">
@@ -104,8 +111,8 @@ export default function AuthPage() {
             </Button>
           </form>
 
-          {mode === "login" && (
-            <button type="button" onClick={() => fill("aniruddh.samarth@gmail.com", "Admin@12345")}
+          {mode === "login" && demo && (
+            <button type="button" onClick={() => fill(demo.email, demo.password)}
               className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border/70 py-2 text-xs text-muted-foreground hover:bg-accent" data-testid="demo-fill">
               <Building2 className="h-3.5 w-3.5" /> Use demo owner account
             </button>

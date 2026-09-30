@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Warehouse, ArrowUpCircle, ArrowDownCircle, Settings2, Package, Layers, Wallet, AlertTriangle, PackagePlus } from "lucide-react";
+import { Warehouse, ArrowUpCircle, ArrowDownCircle, Settings2, Package, Layers, Wallet, AlertTriangle, PackagePlus, Search, Loader2 } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { formatDate } from "@/lib/format";
@@ -19,7 +20,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function Inventory() {
-  const { data: products, loading, error, refetch } = useResource("/products", {});
+  const { data: allProducts, loading, error, refetch } = useResource("/products", {});
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const [search, setSearch] = useState("");
   const { data: movements, refetch: refetchMoves } = useResource("/stock-movements", {});
   const [open, setOpen] = useState(false);
   const [productId, setProductId] = useState("");
@@ -27,20 +31,27 @@ export default function Inventory() {
   const [quantity, setQuantity] = useState(1);
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
-  const [lowOnly, setLowOnly] = useState(false);
+  const [lowOnly, setLowOnly] = useState(() => params.get("low") === "1");
+  const [formErr, setFormErr] = useState("");
+  const lowParam = params.get("low");
+  useEffect(() => { if (lowParam === "1") setLowOnly(true); }, [lowParam]);
+  // Inactive products are no longer sold, so they don't need stock tracking.
+  const products = allProducts.filter((p) => p.status !== "inactive");
   const { format } = useCurrency();
 
   const isLow = (p) => p.stock_quantity <= p.reorder_level;
   const lowStock = products.filter(isLow);
   const totalUnits = products.reduce((s, p) => s + p.stock_quantity, 0);
   const stockValue = products.reduce((s, p) => s + p.stock_quantity * (p.cost || 0), 0);
-  const shown = lowOnly ? lowStock : products;
+  const q = search.trim().toLowerCase();
+  const shown = (lowOnly ? lowStock : products).filter((p) => !q || [p.name, p.sku, p.category, p.supplier_name].some((v) => (v || "").toLowerCase().includes(q)));
 
   const openMovement = (prefill = {}) => {
     setProductId(prefill.productId || "");
     setType(prefill.type || "in");
     setQuantity(prefill.quantity ?? 1);
     setReason(prefill.reason || "");
+    setFormErr("");
     setOpen(true);
   };
   // Suggest topping up to twice the minimum level, so the product doesn't land straight back on the list.
@@ -49,15 +60,20 @@ export default function Inventory() {
     quantity: Math.max(1, p.reorder_level * 2 - p.stock_quantity),
   });
 
-  const submit = async () => {
-    if (!productId) { toast.error("Select a product"); return; }
+  const selected = products.find((p) => p.id === productId);
+  const submit = async (e) => {
+    e?.preventDefault();
+    const qty = Number(quantity);
+    if (!productId) { setFormErr("Choose a product"); return; }
+    if (!Number.isInteger(qty) || qty < 0 || (type !== "adjustment" && qty === 0)) { setFormErr(type === "adjustment" ? "Enter the counted quantity (0 or more)" : "Enter a whole number above zero"); return; }
+    if (type === "out" && selected && qty > selected.stock_quantity) { setFormErr(`Only ${selected.stock_quantity} ${selected.unit || "unit"}(s) in stock`); return; }
     setSaving(true);
     try {
-      await api.post("/stock-movements", { product_id: productId, type, quantity: Number(quantity), reason });
-      toast.success("Stock movement recorded");
+      const { data } = await api.post("/stock-movements", { product_id: productId, type, quantity: qty, reason });
+      toast.success(`${selected?.name || "Stock"}: now ${data.new_stock} in stock`);
       setOpen(false); setProductId(""); setQuantity(1); setReason(""); setType("in");
       refetch(); refetchMoves();
-    } catch (e) { toast.error(formatApiError(e)); }
+    } catch (e2) { setFormErr(formatApiError(e2)); }
     finally { setSaving(false); }
   };
 
@@ -83,11 +99,15 @@ export default function Inventory() {
       ) : error ? (
         <ErrorState message={formatApiError(error)} onRetry={refetch} />
       ) : products.length === 0 ? (
-        <EmptyState icon={Warehouse} title="No products to track" description="Add products first to manage inventory." />
+        <EmptyState icon={Warehouse} title="No products to track" description="Add products first to manage inventory." actionLabel="Add a product" onAction={() => navigate("/products?new=1")} />
       ) : (
         <Card className="overflow-hidden border-border/80 bg-card/90">
-          <div className="flex items-center justify-between gap-3 border-b border-border/70 px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 px-5 py-4">
             <h3 className="font-heading text-base font-semibold">Stock Levels</h3>
+            <div className="relative order-last w-full sm:order-none sm:ml-auto sm:w-64">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Find a product..." className="h-8 pl-9" aria-label="Find a product" data-testid="inventory-search" />
+            </div>
             {lowStock.length > 0 && (
               <Button variant={lowOnly ? "secondary" : "ghost"} size="sm" className="h-8 text-xs" onClick={() => setLowOnly((v) => !v)} data-testid="inv-low-only">
                 {lowOnly ? "Show all products" : `Low stock only (${lowStock.length})`}
@@ -104,11 +124,14 @@ export default function Inventory() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {shown.length === 0 && (
+                  <TableRow><TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">No products match "{search}".</TableCell></TableRow>
+                )}
                 {shown.map((p) => {
                   const low = isLow(p);
                   return (
                     <TableRow key={p.id} data-testid={`inventory-row-${p.id}`}>
-                      <TableCell className="font-medium">{p.name}</TableCell>
+                      <TableCell className="font-medium"><button type="button" className="hover:underline" onClick={() => navigate(`/products?q=${encodeURIComponent(p.name)}`)}>{p.name}</button></TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">{p.sku}</TableCell>
                       <TableCell className={`font-mono font-semibold ${low ? "text-rose-500" : ""}`}>{p.stock_quantity} {p.unit}</TableCell>
                       <TableCell className="font-mono text-muted-foreground">{p.reorder_level}</TableCell>
@@ -164,7 +187,7 @@ export default function Inventory() {
           <div className="space-y-4">
             <div>
               <Label className="text-xs text-muted-foreground">Product</Label>
-              <Select value={productId} onValueChange={setProductId}>
+              <Select value={productId} onValueChange={(v) => { setProductId(v); setFormErr(""); }}>
                 <SelectTrigger className="mt-1.5" data-testid="movement-product"><SelectValue placeholder="Select product" /></SelectTrigger>
                 <SelectContent>{products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} ({p.stock_quantity})</SelectItem>)}</SelectContent>
               </Select>
@@ -176,18 +199,25 @@ export default function Inventory() {
                   <SelectContent>
                     <SelectItem value="in">Stock In</SelectItem>
                     <SelectItem value="out">Stock Out</SelectItem>
-                    <SelectItem value="adjustment">Adjustment (set to)</SelectItem>
+                    <SelectItem value="adjustment">Stock count (set to)</SelectItem>
                   </SelectContent>
                 </Select></div>
               <div><Label className="text-xs text-muted-foreground">Quantity</Label>
-                <Input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} className="mt-1.5" data-testid="movement-quantity" /></div>
+                <Input type="number" inputMode="numeric" min={0} step={1} value={quantity} onChange={(e) => { setQuantity(e.target.value); setFormErr(""); }} className="mt-1.5" data-testid="movement-quantity" /></div>
             </div>
             <div><Label className="text-xs text-muted-foreground">Reason</Label>
               <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Purchase order received" className="mt-1.5" data-testid="movement-reason" /></div>
+            {selected && (
+              <p className="text-xs text-muted-foreground" data-testid="movement-preview">
+                {selected.name}: {selected.stock_quantity} in stock now
+                {Number.isInteger(Number(quantity)) && quantity !== "" && ` → ${type === "in" ? selected.stock_quantity + Number(quantity) : type === "out" ? Math.max(0, selected.stock_quantity - Number(quantity)) : Number(quantity)} after this`}
+              </p>
+            )}
+            {formErr && <p className="text-sm text-rose-500" role="alert" data-testid="movement-error">{formErr}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={submit} disabled={saving} data-testid="movement-save">Record</Button>
+            <Button onClick={submit} disabled={saving} data-testid="movement-save">{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Record</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

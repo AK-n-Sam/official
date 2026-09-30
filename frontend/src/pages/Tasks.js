@@ -1,10 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Plus, LayoutGrid, List, Search, MoreHorizontal, AlertTriangle, Circle, CheckCircle2 } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { useCreateParam } from "@/hooks/useCreateParam";
-import { formatDate } from "@/lib/format";
+import { useRefOptions } from "@/hooks/useRefOptions";
+import { formatDate, todayIso } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -12,6 +14,7 @@ import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { DataTable } from "@/components/common/DataTable";
 import { EmptyState } from "@/components/common/EmptyState";
+import { ErrorState } from "@/components/common/States";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +32,7 @@ const FIELDS = [
   { name: "title", label: "Title", required: true, full: true },
   { name: "description", label: "Description", type: "textarea", full: true },
   { name: "assignee_id", label: "Assigned To", type: "member" },
-  { name: "customer_name", label: "Related Customer" },
+  { name: "customer_id", label: "Related Customer", type: "ref", endpoint: "/customers", nameField: "customer_name", emptyLabel: "No customer" },
   { name: "reference", label: "Reference" },
   { name: "priority", label: "Priority", type: "select", default: "medium", options: [
     { value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }] },
@@ -56,32 +59,46 @@ function CompleteToggle({ task, onToggle }) {
   );
 }
 
-const isOverdue = (t) => t.status !== "completed" && t.status !== "done" && t.due_date && t.due_date < new Date().toISOString().slice(0, 10);
+const isOverdue = (t) => t.status !== "completed" && t.status !== "done" && t.due_date && t.due_date < todayIso();
+const STATUS_FILTERS = ["all", "todo", "in_progress", "completed", "overdue"];
+const VIEW_KEY = "bmp_tasks_view";
 
 export default function Tasks() {
-  const { data, loading, refetch, setData } = useResource("/tasks", {});
+  const { data, loading, error, refetch, setData } = useResource("/tasks", {});
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
   const [dragId, setDragId] = useState(null);
   const [overCol, setOverCol] = useState(null);
   const [members, setMembers] = useState([]);
-  const [view, setView] = useState("board");
-  const [search, setSearch] = useState("");
+  const [view, setViewState] = useState(() => { try { return localStorage.getItem(VIEW_KEY) || "board"; } catch { return "board"; } });
+  const setView = (v) => { setViewState(v); try { localStorage.setItem(VIEW_KEY, v); } catch { /* ignore */ } };
+  const [search, setSearch] = useState(() => params.get("q") || "");
   const [priority, setPriority] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(() => (STATUS_FILTERS.includes(params.get("status")) ? params.get("status") : "all"));
+  const [prefill, setPrefill] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
 
-  useCreateParam(() => { setEditing(null); setModalOpen(true); });
+  // Links from the dashboard, search and notifications: /tasks?q=..., /tasks?status=overdue
+  const qParam = params.get("q");
+  const statusParam = params.get("status");
+  useEffect(() => { if (qParam != null) setSearch(qParam); }, [qParam]);
+  useEffect(() => { if (STATUS_FILTERS.includes(statusParam)) setStatusFilter(statusParam); }, [statusParam]);
+
+  // ?new=1&customer=<id> (from a customer's page) opens the form with that customer chosen.
+  useCreateParam(({ customer }) => { setEditing(null); setPrefill(customer ? { customer_id: customer } : null); setModalOpen(true); });
 
   useEffect(() => {
     api.get("/team").then(({ data }) => setMembers(data)).catch(() => {});
   }, []);
 
-  const fields = useMemo(() => FIELDS.map((f) => (
+  const memberFields = useMemo(() => FIELDS.map((f) => (
     f.name === "assignee_id"
       ? { ...f, options: members.map((m) => ({ value: m.id, label: m.name + (m.is_you ? " (you)" : "") })) }
       : f
   )), [members]);
+  const fields = useRefOptions(memberFields, modalOpen);
 
   const filtered = useMemo(() => data.filter((t) => {
     if (search && !t.title.toLowerCase().includes(search.toLowerCase()) && !(t.customer_name || "").toLowerCase().includes(search.toLowerCase())) return false;
@@ -92,8 +109,7 @@ export default function Tasks() {
   }), [data, search, priority, statusFilter]);
 
   const submit = async (payload) => {
-    const m = members.find((x) => x.id === payload.assignee_id);
-    payload.assignee = m ? m.name : "";
+    // The server fills in the assignee's and customer's names from their records.
     try {
       if (editing) { await api.put(`/tasks/${editing.id}`, payload); toast.success("Task updated"); }
       else { await api.post("/tasks", payload); toast.success("Task created"); }
@@ -178,11 +194,13 @@ export default function Tasks() {
         </Select>
       </div>
 
-      {view === "list" ? (
+      {error ? (
+        <ErrorState message={formatApiError(error)} onRetry={refetch} />
+      ) : view === "list" ? (
         loading ? <Skeleton className="h-64 rounded-xl" /> : filtered.length === 0 ? (
-          <EmptyState icon={List} title="No tasks match" description="Adjust filters or create a new task." />
+          <EmptyState icon={List} title={data.length ? "No tasks match" : "No tasks yet"} description={data.length ? "Adjust the search or filters." : "Create a task to track work for yourself or a teammate."} />
         ) : (
-          <DataTable columns={columns} rows={filtered} testId="tasks-table"
+          <DataTable columns={columns} rows={filtered} testId="tasks-table" onRowClick={(row) => { setEditing(row); setModalOpen(true); }}
             onEdit={(row) => { setEditing(row); setModalOpen(true); }} onDelete={(row) => setDeleting(row)} />
         )
       ) : (
@@ -217,14 +235,15 @@ export default function Tasks() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex min-w-0 items-start gap-2">
                           <CompleteToggle task={t} onToggle={toggleComplete} />
-                          <p className={cn("text-sm font-medium leading-snug", isDone(t) && "text-muted-foreground line-through")}>{t.title}</p>
+                          <button type="button" onClick={() => { setEditing(t); setModalOpen(true); }} data-testid={`task-open-${t.id}`}
+                            className={cn("text-left text-sm font-medium leading-snug hover:underline", isDone(t) && "text-muted-foreground line-through")}>{t.title}</button>
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" aria-label={`Actions for ${t.title}`}><MoreHorizontal className="h-4 w-4" /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {COLUMNS.filter((c) => c.key !== t.status).map((c) => (
+                            {COLUMNS.filter((c) => !c.match.includes(t.status)).map((c) => (
                               <DropdownMenuItem key={c.key} onClick={() => moveTo(t, c.key)} data-testid={`move-${t.id}-${c.key}`}>Move to {c.label}</DropdownMenuItem>
                             ))}
                             <DropdownMenuItem onClick={() => { setEditing(t); setModalOpen(true); }}>Edit</DropdownMenuItem>
@@ -232,7 +251,9 @@ export default function Tasks() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-                      {t.customer_name && <p className="mt-1 text-xs text-primary">{t.customer_name}</p>}
+                      {t.customer_name && (t.customer_id
+                        ? <button type="button" onClick={() => navigate(`/customers/${t.customer_id}`)} className="mt-1 block text-left text-xs text-primary hover:underline">{t.customer_name}</button>
+                        : <p className="mt-1 text-xs text-muted-foreground">{t.customer_name}</p>)}
                       {t.description && <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{t.description}</p>}
                       <div className="mt-3 flex items-center justify-between">
                         <StatusBadge status={t.priority} />
@@ -248,8 +269,8 @@ export default function Tasks() {
         </div>
       )}
 
-      <CrudModal open={modalOpen} onOpenChange={setModalOpen} title={editing ? "Edit Task" : "New Task"}
-        fields={fields} initial={editing} onSubmit={submit} submitLabel={editing ? "Save changes" : "Create Task"} />
+      <CrudModal open={modalOpen} onOpenChange={(o) => { setModalOpen(o); if (!o) setPrefill(null); }} title={editing ? "Edit Task" : "New Task"}
+        fields={fields} initial={editing || prefill} onSubmit={submit} submitLabel={editing ? "Save changes" : "Create Task"} />
       <ConfirmDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}
         title="Delete task?" description={`This will remove "${deleting?.title}".`} onConfirm={remove} />
     </div>

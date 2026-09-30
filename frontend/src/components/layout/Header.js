@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Bell, Sun, Moon, Menu, LogOut, User, Settings as SettingsIcon, AlertTriangle, Package, CheckSquare, Plus, PanelLeft, Rows3, ChevronRight, CircleHelp, LifeBuoy, Keyboard, Check } from "lucide-react";
 import api from "@/lib/api";
@@ -6,18 +6,16 @@ import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useLayout } from "@/context/LayoutContext";
 import { useCurrency } from "@/context/CurrencyContext";
-import { CURRENCIES } from "@/lib/format";
 import { CommandPalette, CREATE_ACTIONS, PALETTE_SHORTCUT } from "@/components/layout/CommandPalette";
 import { helpPathFor } from "@/modules/helpContent";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const NOTIF_ICON = { overdue: AlertTriangle, stock: Package, task: CheckSquare };
-const NOTIF_LINK = { overdue: (n) => `/invoices/${n.id}`, stock: () => "/inventory", task: () => "/tasks" };
+const NOTIF_LINK = { overdue: (n) => `/invoices/${n.id}`, stock: () => "/inventory?low=1", task: (n) => `/tasks?q=${encodeURIComponent(n.title)}` };
 
 const isTyping = (el) => el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName));
 
@@ -25,16 +23,19 @@ export function Header({ onMenuClick }) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { toggleSidebar, density, setDensity } = useLayout();
-  const { currency, setCurrency } = useCurrency();
+  const { format } = useCurrency();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const helpPath = helpPathFor(pathname);
   const [notifs, setNotifs] = useState([]);
   const [notifsOpen, setNotifsOpen] = useState(false);
 
-  useEffect(() => {
+  const loadNotifs = useCallback(() => {
     api.get("/notifications").then(({ data }) => setNotifs(data)).catch(() => {});
-  }, [user?.active_org_id]);
+  }, []);
+  // Load on sign-in / workspace switch, and refresh whenever the panel is opened.
+  useEffect(() => { loadNotifs(); }, [user?.active_org_id, loadNotifs]);
+  const toggleNotifs = (open) => { setNotifsOpen(open); if (open) loadNotifs(); };
 
   // "?" opens the guide for the current page (ignored while typing in a field).
   useEffect(() => {
@@ -52,11 +53,11 @@ export function Header({ onMenuClick }) {
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-border/70 bg-background/90 px-4 backdrop-blur-md sm:px-6">
-      <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuClick} data-testid="mobile-menu-button">
+      <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuClick} aria-label="Open menu" data-testid="mobile-menu-button">
         <Menu className="h-5 w-5" />
       </Button>
 
-      <Button variant="ghost" size="icon" className="hidden lg:flex" onClick={toggleSidebar} data-testid="sidebar-toggle-desktop">
+      <Button variant="ghost" size="icon" className="hidden lg:flex" onClick={toggleSidebar} aria-label="Collapse or expand sidebar" data-testid="sidebar-toggle-desktop">
         <PanelLeft className="h-5 w-5" />
       </Button>
 
@@ -83,30 +84,18 @@ export function Header({ onMenuClick }) {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Select value={currency} onValueChange={setCurrency}>
-          <SelectTrigger className="h-9 w-[88px] border-border/60 bg-card/50" data-testid="currency-selector">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.keys(CURRENCIES).map((code) => (
-              <SelectItem key={code} value={code} data-testid={`currency-opt-${code}`}>
-                {CURRENCIES[code].symbol} {code}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
 
         <Button variant="ghost" size="icon" onClick={() => navigate(helpPath)} data-testid="help-button" className="hidden h-9 w-9 sm:flex" title="Help for this page (?)" aria-label="Help for this page">
           <CircleHelp className="h-[18px] w-[18px]" />
         </Button>
 
-        <Button variant="ghost" size="icon" onClick={toggleTheme} data-testid="theme-toggle-button" className="h-9 w-9">
+        <Button variant="ghost" size="icon" onClick={toggleTheme} data-testid="theme-toggle-button" className="h-9 w-9" aria-label="Toggle light or dark theme">
           {theme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
         </Button>
 
-        <Popover open={notifsOpen} onOpenChange={setNotifsOpen}>
+        <Popover open={notifsOpen} onOpenChange={toggleNotifs}>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative h-9 w-9" data-testid="notifications-button">
+            <Button variant="ghost" size="icon" className="relative h-9 w-9" aria-label={`Notifications (${notifs.length})`} data-testid="notifications-button">
               <Bell className="h-[18px] w-[18px]" />
               {notifs.length > 0 && (
                 <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
@@ -118,7 +107,7 @@ export function Header({ onMenuClick }) {
           <PopoverContent className="w-80 p-0" align="end">
             <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
               <p className="text-sm font-semibold">Notifications</p>
-              <Badge variant="secondary" className="text-xs">{notifs.length} new</Badge>
+              <Badge variant="secondary" className="text-xs">{notifs.length}</Badge>
             </div>
             <div className="max-h-80 overflow-y-auto" data-testid="notifications-list">
               {notifs.length === 0 ? (
@@ -139,7 +128,7 @@ export function Header({ onMenuClick }) {
                       <NIcon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{n.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">{n.description}</p>
+                        <p className="truncate text-xs text-muted-foreground">{n.description}{n.amount != null ? ` · ${format(n.amount)}` : ""}</p>
                       </div>
                       {link && <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />}
                     </button>
@@ -152,7 +141,7 @@ export function Header({ onMenuClick }) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 rounded-full pl-1 outline-none" data-testid="user-menu-button">
+            <button className="flex items-center gap-2 rounded-full pl-1 outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Account menu" data-testid="user-menu-button">
               <Avatar className="h-8 w-8 border border-border/60">
                 <AvatarImage src={user?.picture} alt={user?.name} />
                 <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary">{initials}</AvatarFallback>

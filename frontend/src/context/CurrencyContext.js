@@ -1,31 +1,21 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { formatCurrency } from "@/lib/format";
+import { createContext, useContext, useMemo } from "react";
+import { formatCurrency, formatCompactCurrency, CURRENCIES } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 
 const CurrencyContext = createContext(null);
 export const useCurrency = () => useContext(CurrencyContext);
 
+/** Money is always shown in the active workspace's currency (set in Settings > Business). */
 export function CurrencyProvider({ children }) {
   const { user } = useAuth();
-  const [currency, setCurrencyState] = useState(
-    () => localStorage.getItem("bmp_currency") || user?.preferences?.currency || "USD"
-  );
+  const currency = CURRENCIES[user?.org_currency] ? user.org_currency : "USD";
 
-  useEffect(() => {
-    const stored = localStorage.getItem("bmp_currency");
-    if (!stored && user?.preferences?.currency) setCurrencyState(user.preferences.currency);
-  }, [user]);
+  const value = useMemo(() => ({
+    currency,
+    symbol: CURRENCIES[currency].symbol,
+    format: (amount) => formatCurrency(amount, currency),
+    formatCompact: (amount) => formatCompactCurrency(amount, currency),
+  }), [currency]);
 
-  const setCurrency = (c) => {
-    setCurrencyState(c);
-    localStorage.setItem("bmp_currency", c);
-  };
-
-  const format = (amount) => formatCurrency(amount, currency);
-
-  return (
-    <CurrencyContext.Provider value={{ currency, setCurrency, format }}>
-      {children}
-    </CurrencyContext.Provider>
-  );
+  return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
 }

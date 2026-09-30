@@ -7,17 +7,20 @@ export function useResource(endpoint, params = {}) {
   const [error, setError] = useState(null);
   const paramsRef = useRef(params);
   paramsRef.current = params;
+  // Only the newest request may update state, so a slow earlier search can't overwrite a newer one.
+  const latest = useRef(0);
 
   const fetchData = useCallback(async () => {
+    const id = ++latest.current;
     setLoading(true);
     setError(null);
     try {
       const { data } = await api.get(endpoint, { params: paramsRef.current });
-      setData(Array.isArray(data) ? data : []);
+      if (id === latest.current) setData(Array.isArray(data) ? data : []);
     } catch (e) {
-      setError(e);
+      if (id === latest.current) setError(e);
     } finally {
-      setLoading(false);
+      if (id === latest.current) setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint, JSON.stringify(params)]);

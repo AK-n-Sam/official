@@ -44,7 +44,7 @@ class TestGlobalSearch:
         # every result must have required fields
         for it in results:
             assert set(["type", "id", "title", "subtitle", "link"]).issubset(it.keys())
-            assert it["type"] in ("customer", "invoice", "product", "expense", "employee", "task")
+            assert it["type"] in ("customer", "invoice", "product", "expense", "employee", "task", "lead", "supplier")
         # find our customer
         cust_hits = [x for x in results if x["type"] == "customer" and x["id"] == target["id"]]
         assert cust_hits, f"customer {target['name']} not found in search"

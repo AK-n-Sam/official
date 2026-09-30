@@ -4,7 +4,7 @@ import { useCurrency } from "@/context/CurrencyContext";
 import { customersConfig } from "@/modules/resourceConfigs";
 
 export default function Customers() {
-  const { format } = useCurrency();
+  const { format, currency } = useCurrency();
   const navigate = useNavigate();
-  return <ResourceManager config={customersConfig(format)} onRowClick={(row) => navigate(`/customers/${row.id}`)} />;
+  return <ResourceManager config={customersConfig(format, { currency })} onRowClick={(row) => navigate(`/customers/${row.id}`)} />;
 }

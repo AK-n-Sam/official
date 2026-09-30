@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Search, Users, FileText, Package, Receipt, Briefcase, CheckSquare, Target, Plus, Loader2,
-  SunMoon, PanelLeft, Rows3, LifeBuoy, Keyboard,
+  SunMoon, PanelLeft, Rows3, LifeBuoy, Keyboard, Truck,
 } from "lucide-react";
 import api from "@/lib/api";
 import { NAV_SECTIONS } from "@/lib/constants";
@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Command, CommandInput, CommandList, CommandGroup, CommandItem, CommandEmpty } from "@/components/ui/command";
 
-const RESULT_ICONS = { customer: Users, invoice: FileText, product: Package, expense: Receipt, employee: Briefcase, task: CheckSquare };
+const RESULT_ICONS = { customer: Users, invoice: FileText, product: Package, expense: Receipt, employee: Briefcase, task: CheckSquare, lead: Target, supplier: Truck };
 
 export const CREATE_ACTIONS = [
   { label: "New Invoice", path: "/invoices?new=1", icon: FileText, id: "invoice" },

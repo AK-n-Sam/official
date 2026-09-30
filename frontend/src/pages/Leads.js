@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
-import { Plus, Target, UserPlus, MoreHorizontal, Trophy, Percent, TrendingUp, UserCheck } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Plus, Target, UserPlus, MoreHorizontal, Trophy, Percent, TrendingUp, UserCheck, Search, X } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { useCreateParam } from "@/hooks/useCreateParam";
@@ -11,6 +11,8 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { SummaryCard } from "@/components/common/SummaryCard";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { ErrorState } from "@/components/common/States";
+import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,7 +31,7 @@ const FIELDS = [
   { name: "company", label: "Company" },
   { name: "email", label: "Email", type: "email" },
   { name: "phone", label: "Phone" },
-  { name: "value", label: "Estimated Value (USD)", type: "number", min: 0, default: 0 },
+  { name: "value", label: "Estimated Value", type: "number", min: 0, default: 0 },
   { name: "owner_id", label: "Owner", type: "member" },
   { name: "stage", label: "Stage", type: "select", default: "lead", options: STAGES.map((s) => ({ value: s.key, label: s.label })) },
   { name: "source", label: "Source", type: "select", default: "Website", options: [
@@ -39,9 +41,15 @@ const FIELDS = [
 ];
 
 export default function Leads() {
-  const { format } = useCurrency();
+  const { format, currency } = useCurrency();
   const navigate = useNavigate();
-  const { data, loading, refetch, setData } = useResource("/leads", {});
+  const [params] = useSearchParams();
+  const { data: all, loading, error, refetch, setData } = useResource("/leads", {});
+  const [search, setSearch] = useState(() => params.get("q") || "");
+  const qParam = params.get("q");
+  useEffect(() => { if (qParam != null) setSearch(qParam); }, [qParam]);
+  const q = search.trim().toLowerCase();
+  const data = useMemo(() => (q ? all.filter((l) => [l.name, l.company, l.email, l.owner].some((v) => (v || "").toLowerCase().includes(q))) : all), [all, q]);
   const [dragId, setDragId] = useState(null);
   const [overStage, setOverStage] = useState(null);
   const [members, setMembers] = useState([]);
@@ -56,14 +64,13 @@ export default function Leads() {
   const fields = useMemo(() => FIELDS.map((f) => (
     f.name === "owner_id"
       ? { ...f, options: members.map((m) => ({ value: m.id, label: m.name + (m.is_you ? " (you)" : "") })) }
-      : f
-  )), [members]);
+      : f.name === "value" ? { ...f, label: `Estimated Value (${currency})` } : f
+  )), [members, currency]);
 
   useCreateParam(() => { setEditing(null); setModalOpen(true); });
 
   const submit = async (payload) => {
-    const m = members.find((x) => x.id === payload.owner_id);
-    payload.owner = m ? m.name : "";
+    // The server fills in the owner's name from the team member record.
     try {
       if (editing) { await api.put(`/leads/${editing.id}`, payload); toast.success("Lead updated"); }
       else { await api.post("/leads", payload); toast.success("Lead created"); }
@@ -73,7 +80,7 @@ export default function Leads() {
   const convert = async (lead) => {
     try {
       const { data: customer } = await api.post(`/leads/${lead.id}/convert`);
-      toast.success(`${lead.company || lead.name} converted to customer`, {
+      toast.success(customer.already_existed ? `Linked to existing customer ${customer.name}` : `${lead.company || lead.name} is now a customer`, {
         action: { label: "Open", onClick: () => navigate(`/customers/${customer.id}`) },
       });
       refetch();
@@ -81,7 +88,7 @@ export default function Leads() {
   };
   // Optimistic: the card moves immediately and snaps back if the save fails.
   const moveStage = async (lead, stage) => {
-    const previous = data;
+    const previous = all;
     setData((rows) => rows.map((l) => (l.id === lead.id ? { ...l, stage } : l)));
     try {
       await api.put(`/leads/${lead.id}`, { stage });
@@ -128,6 +135,16 @@ export default function Leads() {
         </div>
       )}
 
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 sm:max-w-xs">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search leads, companies, owners..." className="pl-9" aria-label="Search leads" data-testid="lead-search" />
+        </div>
+        {search && <Button variant="ghost" size="sm" className="h-9 text-muted-foreground" onClick={() => setSearch("")}><X className="mr-1 h-4 w-4" /> Clear</Button>}
+        {q && <span className="text-xs text-muted-foreground">{data.length} of {all.length} leads</span>}
+      </div>
+
+      {error ? <ErrorState message={formatApiError(error)} onRetry={refetch} /> : (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-5">
         {STAGES.map((stage) => {
           const leads = data.filter((l) => l.stage === stage.key);
@@ -161,12 +178,13 @@ export default function Leads() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold">{l.company || l.name}</p>
+                        <button type="button" onClick={() => { setEditing(l); setModalOpen(true); }} data-testid={`lead-open-${l.id}`}
+                          className="block max-w-full truncate text-left text-sm font-semibold hover:underline">{l.company || l.name}</button>
                         <p className="truncate text-xs text-muted-foreground">{l.name}</p>
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" aria-label={`Actions for ${l.company || l.name}`}><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           {STAGES.filter((s) => s.key !== l.stage).map((s) => (
@@ -199,6 +217,8 @@ export default function Leads() {
           );
         })}
       </div>
+
+      )}
 
       <CrudModal open={modalOpen} onOpenChange={setModalOpen} title={editing ? "Edit Lead" : "New Lead"}
         fields={fields} initial={editing} onSubmit={submit} submitLabel={editing ? "Save changes" : "Create Lead"} />

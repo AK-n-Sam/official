@@ -1,10 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Mail, Phone, Building2, MapPin, FileText, CreditCard, CheckSquare, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { ArrowLeft, Mail, Phone, Building2, MapPin, FileText, CreditCard, CheckSquare, Plus, Pencil, Target } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useTabTitle } from "@/hooks/useTabTitle";
 import { formatDate } from "@/lib/format";
+import { balanceOf, displayStatus, isPastDue } from "@/lib/invoices";
+import { customersConfig } from "@/modules/resourceConfigs";
+import { CrudModal } from "@/components/common/CrudModal";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { ErrorState } from "@/components/common/States";
 import { InvoiceModal } from "@/components/modules/InvoiceModal";
@@ -14,11 +18,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-function Kpi({ label, value, tone }) {
+function Kpi({ label, value, tone, sub }) {
   return (
     <Card className="border-border/70 bg-card/90 p-4">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
       <p className={`mt-1.5 font-mono text-2xl font-extrabold ${tone || ""}`}>{value}</p>
+      {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
     </Card>
   );
 }
@@ -26,7 +31,8 @@ function Kpi({ label, value, tone }) {
 export default function CustomerDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { format } = useCurrency();
+  const { format, currency } = useCurrency();
+  const [editOpen, setEditOpen] = useState(false);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -42,8 +48,19 @@ export default function CustomerDetail() {
   useEffect(load, [load]);
   useTabTitle(data?.customer?.name);
 
-  if (loading) return <div className="space-y-4"><Skeleton className="h-10 w-48" /><Skeleton className="h-40 rounded-xl" /></div>;
-  if (error) return <ErrorState message={formatApiError(error)} onRetry={load} />;
+  if (loading && !data) return <div className="space-y-4"><Skeleton className="h-10 w-48" /><Skeleton className="h-40 rounded-xl" /></div>;
+  if (error && !data) {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/customers")} className="-ml-2"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Customers</Button>
+        <ErrorState message={formatApiError(error)} onRetry={load} />
+      </div>
+    );
+  }
+  const saveCustomer = async (payload) => {
+    try { await api.put(`/customers/${id}`, payload); toast.success("Customer updated"); load(); }
+    catch (e) { toast.error(formatApiError(e)); throw e; }
+  };
 
   const c = data.customer;
   const initials = (c.name || "C").split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
@@ -68,8 +85,10 @@ export default function CustomerDetail() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={c.status} />
+          <Button size="sm" variant="outline" onClick={() => setEditOpen(true)} data-testid="customer-edit"><Pencil className="mr-1.5 h-4 w-4" /> Edit</Button>
+          <Button size="sm" variant="outline" onClick={() => navigate(`/tasks?new=1&customer=${c.id}`)} data-testid="customer-new-task"><CheckSquare className="mr-1.5 h-4 w-4" /> New Task</Button>
           <Button size="sm" onClick={() => setInvoiceOpen(true)} data-testid="customer-new-invoice">
             <Plus className="mr-1.5 h-4 w-4" /> New Invoice
           </Button>
@@ -77,10 +96,10 @@ export default function CustomerDetail() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Kpi label="Total Sales" value={format(data.total_sales)} tone="text-emerald-500" />
-        <Kpi label="Outstanding" value={format(data.outstanding)} tone="text-amber-500" />
-        <Kpi label="Total Paid" value={format(data.total_paid)} />
-        <Kpi label="Invoices" value={data.invoice_count} />
+        <Kpi label="Total Sales" value={format(data.total_sales)} tone="text-emerald-600 dark:text-emerald-500" sub="invoiced, excl. drafts" />
+        <Kpi label="Outstanding" value={format(data.outstanding)} tone={data.outstanding > 0 ? "text-amber-600 dark:text-amber-500" : ""} sub={data.overdue > 0 ? `${format(data.overdue)} overdue` : "nothing overdue"} />
+        <Kpi label="Total Paid" value={format(data.total_paid)} sub={`${data.payments.length} payment${data.payments.length === 1 ? "" : "s"}`} />
+        <Kpi label="Invoices" value={data.invoice_count} sub={data.invoices[0] ? `last ${formatDate(data.invoices[0].issue_date)}` : "none yet"} />
       </div>
 
       <Tabs defaultValue="invoices">
@@ -93,13 +112,16 @@ export default function CustomerDetail() {
 
         <TabsContent value="invoices">
           <Card className="border-border/70 bg-card/90">
-            {data.invoices.length === 0 ? <p className="px-5 py-8 text-center text-sm text-muted-foreground">No invoices.</p> :
+            {data.invoices.length === 0 ? <div className="px-5 py-8 text-center text-sm text-muted-foreground">No invoices yet. <button className="font-medium text-primary hover:underline" onClick={() => setInvoiceOpen(true)}>Create the first one</button></div> :
               <div className="divide-y divide-border/50">
                 {data.invoices.map((inv) => (
                   <div key={inv.id} className="flex cursor-pointer items-center justify-between px-5 py-3 hover:bg-accent/40" onClick={() => navigate(`/invoices/${inv.id}`)} data-testid={`customer-invoice-${inv.id}`}>
                     <div className="flex items-center gap-3"><FileText className="h-4 w-4 text-muted-foreground" />
                       <div><p className="font-mono text-sm font-medium">{inv.invoice_number}</p><p className="text-xs text-muted-foreground">{formatDate(inv.issue_date)}</p></div></div>
-                    <div className="flex items-center gap-3"><span className="font-mono text-sm font-semibold">{format(inv.total)}</span><StatusBadge status={inv.status} /></div>
+                    <div className="flex items-center gap-3">
+                      {balanceOf(inv) > 0 && inv.status !== "cancelled" && inv.status !== "draft" && <span className={`hidden font-mono text-xs sm:inline ${isPastDue(inv) ? "text-rose-500" : "text-muted-foreground"}`}>{format(balanceOf(inv))} due</span>}
+                      <span className="font-mono text-sm font-semibold">{format(inv.total)}</span><StatusBadge status={displayStatus(inv.status)} />
+                    </div>
                   </div>
                 ))}
               </div>}
@@ -123,12 +145,12 @@ export default function CustomerDetail() {
 
         <TabsContent value="tasks">
           <Card className="border-border/70 bg-card/90">
-            {data.tasks.length === 0 ? <p className="px-5 py-8 text-center text-sm text-muted-foreground">No related tasks.</p> :
+            {data.tasks.length === 0 ? <div className="px-5 py-8 text-center text-sm text-muted-foreground">No tasks for this customer. <button className="font-medium text-primary hover:underline" onClick={() => navigate(`/tasks?new=1&customer=${c.id}`)}>Add a task</button></div> :
               <div className="divide-y divide-border/50">
                 {data.tasks.map((t) => (
-                  <div key={t.id} className="flex items-center justify-between px-5 py-3">
+                  <div key={t.id} role="button" tabIndex={0} onClick={() => navigate(`/tasks?q=${encodeURIComponent(t.title)}`)} onKeyDown={(e) => e.key === "Enter" && navigate(`/tasks?q=${encodeURIComponent(t.title)}`)} className="flex cursor-pointer items-center justify-between px-5 py-3 hover:bg-accent/40">
                     <div className="flex items-center gap-3"><CheckSquare className="h-4 w-4 text-muted-foreground" />
-                      <div><p className="text-sm font-medium">{t.title}</p><p className="text-xs text-muted-foreground">Due {formatDate(t.due_date)}</p></div></div>
+                      <div><p className="text-sm font-medium">{t.title}</p><p className="text-xs text-muted-foreground">{t.due_date ? `Due ${formatDate(t.due_date)}` : "No due date"}{t.assignee ? ` · ${t.assignee}` : ""}</p></div></div>
                     <StatusBadge status={t.status} />
                   </div>
                 ))}
@@ -139,12 +161,16 @@ export default function CustomerDetail() {
         <TabsContent value="about">
           <Card className="border-border/70 bg-card/90 p-6 space-y-3 text-sm">
             <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" />{[c.address, c.city, c.country].filter(Boolean).join(", ") || "No address on file"}</p>
-            <div><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Notes</p><p className="mt-1 text-muted-foreground">{c.notes || "No notes."}</p></div>
+            {data.lead && <p className="flex items-center gap-2"><Target className="h-4 w-4 text-muted-foreground" />Came in as a lead{data.lead.source ? ` via ${data.lead.source}` : ""}</p>}
+            <p className="text-xs text-muted-foreground">Customer since {formatDate(c.created_at)}</p>
+            <div><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Notes</p><p className="mt-1 whitespace-pre-line text-muted-foreground">{c.notes || "No notes."}</p></div>
           </Card>
         </TabsContent>
       </Tabs>
 
       <InvoiceModal open={invoiceOpen} onOpenChange={setInvoiceOpen} defaultCustomerId={c.id} onSaved={load} />
+      <CrudModal open={editOpen} onOpenChange={setEditOpen} title={`Edit ${c.name}`} fields={customersConfig(format, { currency }).fields}
+        initial={c} onSubmit={saveCustomer} submitLabel="Save changes" />
     </div>
   );
 }

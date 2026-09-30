@@ -3,6 +3,6 @@ import { useCurrency } from "@/context/CurrencyContext";
 import { expensesConfig } from "@/modules/resourceConfigs";
 
 export default function Expenses() {
-  const { format } = useCurrency();
-  return <ResourceManager config={expensesConfig(format)} />;
+  const { format, currency } = useCurrency();
+  return <ResourceManager config={expensesConfig(format, { currency })} />;
 }
