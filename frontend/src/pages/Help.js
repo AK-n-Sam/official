@@ -133,22 +133,21 @@ export default function Help() {
     .map((g) => ({ group: g, items: sections.filter((s) => s.group === g) }))
     .filter((g) => g.items.length), [sections]);
 
-  const jumpTo = (id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    setActiveId(id);
-    navigate({ hash: id }, { replace: true });
-  };
+  const jumpTo = (id) => navigate({ hash: id }, { replace: true });
 
-  // Deep links such as /help#invoices (from the header help button or the `?` shortcut).
+  // Scroll to the topic in the URL hash on every navigation: deep links (header help button, `?`
+  // shortcut, palette), table-of-contents clicks, and repeat clicks on the same topic.
   useEffect(() => {
     const id = location.hash.slice(1);
     if (!id) return;
+    // A search may be hiding the requested topic; clear it so the topic renders before scrolling.
+    if (!document.getElementById(id)) setQuery("");
     const t = setTimeout(() => {
-      document.getElementById(id)?.scrollIntoView({ block: "start" });
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
       setActiveId(id);
     }, 50);
     return () => clearTimeout(t);
-  }, [location.hash]);
+  }, [location.key, location.hash]);
 
   // Highlight the table-of-contents entry for the section currently in view.
   useEffect(() => {
