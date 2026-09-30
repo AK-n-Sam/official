@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Plus, Target, UserPlus, MoreHorizontal } from "lucide-react";
+import { Plus, Target, UserPlus, MoreHorizontal, Trophy, Percent, TrendingUp } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
+import { useCreateParam } from "@/hooks/useCreateParam";
 import { useCurrency } from "@/context/CurrencyContext";
 import { PageHeader } from "@/components/common/PageHeader";
+import { SummaryCard } from "@/components/common/SummaryCard";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { Card } from "@/components/ui/card";
@@ -42,7 +43,6 @@ export default function Leads() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
-  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     api.get("/team").then(({ data }) => setMembers(data)).catch(() => {});
@@ -54,13 +54,7 @@ export default function Leads() {
       : f
   )), [members]);
 
-  useEffect(() => {
-    if (searchParams.get("new") === "1") {
-      setEditing(null); setModalOpen(true);
-      const p = new URLSearchParams(searchParams); p.delete("new"); setSearchParams(p, { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useCreateParam(() => { setEditing(null); setModalOpen(true); });
 
   const submit = async (payload) => {
     const m = members.find((x) => x.id === payload.owner_id);
@@ -85,6 +79,11 @@ export default function Leads() {
   };
 
   const stageTotal = (key) => data.filter((l) => l.stage === key).reduce((s, l) => s + (l.value || 0), 0);
+  const openDeals = data.filter((l) => !["won", "lost"].includes(l.stage));
+  const openValue = openDeals.reduce((s, l) => s + (l.value || 0), 0);
+  const wonCount = data.filter((l) => l.stage === "won").length;
+  const lostCount = data.filter((l) => l.stage === "lost").length;
+  const closedCount = wonCount + lostCount;
 
   return (
     <div className="space-y-6 animate-in-up">
@@ -93,6 +92,15 @@ export default function Leads() {
           <Plus className="mr-2 h-4 w-4" /> New Lead
         </Button>
       </PageHeader>
+
+      {!loading && (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-testid="pipeline-summary">
+          <SummaryCard label="Open pipeline" value={format(openValue)} sub={`${openDeals.length} open deal${openDeals.length === 1 ? "" : "s"}`} icon={Target} tone="text-primary" />
+          <SummaryCard label="Won" value={format(stageTotal("won"))} sub={`${wonCount} deal${wonCount === 1 ? "" : "s"} closed`} icon={Trophy} tone="text-emerald-500" />
+          <SummaryCard label="Win rate" value={closedCount ? `${Math.round((wonCount / closedCount) * 100)}%` : "—"} sub={`${wonCount} won · ${lostCount} lost`} icon={Percent} />
+          <SummaryCard label="Avg. open deal" value={format(openDeals.length ? openValue / openDeals.length : 0)} sub="Lead, qualified & proposal" icon={TrendingUp} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-5">
         {STAGES.map((stage) => {

@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { AiInsightsPlaceholder } from "@/components/dashboard/AiInsightsPlaceholder";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
+import { WelcomeBanner } from "@/components/dashboard/WelcomeBanner";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { ErrorState } from "@/components/common/States";
 import { Icon } from "@/components/common/Icon";
@@ -85,6 +86,8 @@ export default function Dashboard() {
       <PageHeader title={`${greetWord}, ${firstName} 👋`} subtitle="Here's how your business is doing today.">
         <Button variant="outline" onClick={() => navigate("/invoices?new=1")} data-testid="dash-new-invoice"><Plus className="mr-2 h-4 w-4" /> New Invoice</Button>
       </PageHeader>
+
+      <WelcomeBanner />
 
       {/* Primary money KPIs — the four numbers that matter most */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

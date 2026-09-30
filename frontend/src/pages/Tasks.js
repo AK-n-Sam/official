@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Plus, LayoutGrid, List, Search, MoreHorizontal, AlertTriangle } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
+import { useCreateParam } from "@/hooks/useCreateParam";
 import { formatDate } from "@/lib/format";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -49,15 +49,8 @@ export default function Tasks() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
-  const [searchParams, setSearchParams] = useSearchParams();
 
-  useEffect(() => {
-    if (searchParams.get("new") === "1") {
-      setEditing(null); setModalOpen(true);
-      const p = new URLSearchParams(searchParams); p.delete("new"); setSearchParams(p, { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useCreateParam(() => { setEditing(null); setModalOpen(true); });
 
   useEffect(() => {
     api.get("/team").then(({ data }) => setMembers(data)).catch(() => {});

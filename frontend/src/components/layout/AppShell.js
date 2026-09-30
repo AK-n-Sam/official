@@ -22,6 +22,7 @@ import EmployeeDetail from "@/pages/EmployeeDetail";
 import Tasks from "@/pages/Tasks";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
+import Help from "@/pages/Help";
 
 export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -63,6 +64,7 @@ export function AppShell() {
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/help" element={<Help />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </div>

@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Search, Bell, Sun, Moon, Menu, LogOut, User, Settings as SettingsIcon, AlertTriangle, Package, CheckSquare, Plus, FileText, Users, Receipt, CheckSquare as TaskIcon, Target, PanelLeft, Rows3, Rows2 } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Bell, Sun, Moon, Menu, LogOut, User, Settings as SettingsIcon, AlertTriangle, Package, CheckSquare, Plus, PanelLeft, Rows3, ChevronRight, CircleHelp, LifeBuoy, Keyboard, Check } from "lucide-react";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useLayout } from "@/context/LayoutContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { CURRENCIES } from "@/lib/format";
-import { GlobalSearch } from "@/components/layout/GlobalSearch";
+import { CommandPalette, CREATE_ACTIONS, PALETTE_SHORTCUT } from "@/components/layout/CommandPalette";
+import { helpPathFor } from "@/modules/helpContent";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,6 +17,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const NOTIF_ICON = { overdue: AlertTriangle, stock: Package, task: CheckSquare };
+const NOTIF_LINK = { overdue: (n) => `/invoices/${n.id}`, stock: () => "/inventory", task: () => "/tasks" };
+
+const isTyping = (el) => el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName));
 
 export function Header({ onMenuClick }) {
   const { user, logout } = useAuth();
@@ -24,11 +27,26 @@ export function Header({ onMenuClick }) {
   const { toggleSidebar, density, setDensity } = useLayout();
   const { currency, setCurrency } = useCurrency();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const helpPath = helpPathFor(pathname);
   const [notifs, setNotifs] = useState([]);
+  const [notifsOpen, setNotifsOpen] = useState(false);
 
   useEffect(() => {
     api.get("/notifications").then(({ data }) => setNotifs(data)).catch(() => {});
   }, [user?.active_org_id]);
+
+  // "?" opens the guide for the current page (ignored while typing in a field).
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey && !isTyping(e.target)) {
+        e.preventDefault();
+        navigate(helpPath);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [navigate, helpPath]);
 
   const initials = (user?.name || "U").split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
 
@@ -42,7 +60,7 @@ export function Header({ onMenuClick }) {
         <PanelLeft className="h-5 w-5" />
       </Button>
 
-      <GlobalSearch />
+      <CommandPalette />
 
       <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
         <DropdownMenu>
@@ -51,15 +69,17 @@ export function Header({ onMenuClick }) {
               <Plus className="h-4 w-4" /><span className="hidden sm:inline">Create</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel>Quick Create</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuLabel className="flex items-center justify-between">
+              Quick Create
+              <span className="font-mono text-[10px] font-normal text-muted-foreground">{PALETTE_SHORTCUT}</span>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate("/invoices?new=1")} data-testid="quick-create-invoice"><FileText className="mr-2 h-4 w-4" /> Invoice</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/customers?new=1")} data-testid="quick-create-customer"><Users className="mr-2 h-4 w-4" /> Customer</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/expenses?new=1")} data-testid="quick-create-expense"><Receipt className="mr-2 h-4 w-4" /> Expense</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/products?new=1")} data-testid="quick-create-product"><Package className="mr-2 h-4 w-4" /> Product</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/tasks?new=1")} data-testid="quick-create-task"><TaskIcon className="mr-2 h-4 w-4" /> Task</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/leads?new=1")} data-testid="quick-create-lead"><Target className="mr-2 h-4 w-4" /> Lead</DropdownMenuItem>
+            {CREATE_ACTIONS.map((a) => (
+              <DropdownMenuItem key={a.id} onClick={() => navigate(a.path)} data-testid={`quick-create-${a.id}`}>
+                <a.icon className="mr-2 h-4 w-4" /> {a.label.replace(/^New /, "")}
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -76,15 +96,15 @@ export function Header({ onMenuClick }) {
           </SelectContent>
         </Select>
 
-        <Button variant="ghost" size="icon" onClick={() => setDensity(density === "compact" ? "comfortable" : "compact")} data-testid="density-toggle-button" className="hidden h-9 w-9 sm:flex" title={density === "compact" ? "Comfortable view" : "Compact view"}>
-          {density === "compact" ? <Rows3 className="h-[18px] w-[18px]" /> : <Rows2 className="h-[18px] w-[18px]" />}
+        <Button variant="ghost" size="icon" onClick={() => navigate(helpPath)} data-testid="help-button" className="hidden h-9 w-9 sm:flex" title="Help for this page (?)" aria-label="Help for this page">
+          <CircleHelp className="h-[18px] w-[18px]" />
         </Button>
 
         <Button variant="ghost" size="icon" onClick={toggleTheme} data-testid="theme-toggle-button" className="h-9 w-9">
           {theme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
         </Button>
 
-        <Popover>
+        <Popover open={notifsOpen} onOpenChange={setNotifsOpen}>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon" className="relative h-9 w-9" data-testid="notifications-button">
               <Bell className="h-[18px] w-[18px]" />
@@ -106,14 +126,23 @@ export function Header({ onMenuClick }) {
               ) : (
                 notifs.map((n) => {
                   const NIcon = NOTIF_ICON[n.type] || Bell;
+                  const link = NOTIF_LINK[n.type]?.(n);
                   return (
-                    <div key={`${n.type}-${n.id}`} className="flex gap-3 border-b border-border/50 px-4 py-3 last:border-0 hover:bg-accent/50">
+                    <button
+                      key={`${n.type}-${n.id}`}
+                      type="button"
+                      disabled={!link}
+                      onClick={() => { setNotifsOpen(false); navigate(link); }}
+                      data-testid={`notification-${n.type}-${n.id}`}
+                      className="group flex w-full gap-3 border-b border-border/50 px-4 py-3 text-left last:border-0 hover:bg-accent/50 disabled:cursor-default"
+                    >
                       <NIcon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{n.title}</p>
                         <p className="truncate text-xs text-muted-foreground">{n.description}</p>
                       </div>
-                    </div>
+                      {link && <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />}
+                    </button>
                   );
                 })
               )}
@@ -136,11 +165,25 @@ export function Header({ onMenuClick }) {
               <p className="truncate text-xs font-normal text-muted-foreground">{user?.email}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate("/settings")} data-testid="menu-profile">
+            <DropdownMenuItem onClick={() => navigate("/settings?tab=profile")} data-testid="menu-profile">
               <User className="mr-2 h-4 w-4" /> Profile
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate("/settings")} data-testid="menu-settings">
               <SettingsIcon className="mr-2 h-4 w-4" /> Settings
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={(e) => { e.preventDefault(); setDensity(density === "compact" ? "comfortable" : "compact"); }}
+              data-testid="density-toggle-button"
+            >
+              <Rows3 className="mr-2 h-4 w-4" /> Compact rows
+              {density === "compact" && <Check className="ml-auto h-4 w-4 text-primary" />}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate("/help")} data-testid="menu-help">
+              <LifeBuoy className="mr-2 h-4 w-4" /> Help Center
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/help#shortcuts")} data-testid="menu-shortcuts">
+              <Keyboard className="mr-2 h-4 w-4" /> Keyboard shortcuts
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={logout} className="text-rose-500 focus:text-rose-500" data-testid="logout-button">

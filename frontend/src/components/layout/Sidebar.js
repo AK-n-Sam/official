@@ -35,11 +35,11 @@ export function Sidebar({ onNavigate, collapsed = false }) {
         </div>
       )}
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 overflow-y-auto px-3 py-3">
         {NAV_SECTIONS.map((section) => (
-          <div key={section.label} className="mb-5">
+          <div key={section.label} className={collapsed ? "mb-2 border-b border-border/40 pb-2 last:border-0" : "mb-3.5"}>
             {!collapsed && (
-              <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">
+              <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">
                 {section.label}
               </p>
             )}
@@ -53,7 +53,7 @@ export function Sidebar({ onNavigate, collapsed = false }) {
                   data-testid={`sidebar-nav-${item.name.toLowerCase()}`}
                   className={({ isActive }) =>
                     cn(
-                      "flex items-center gap-3 rounded-lg border-l-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+                      "flex items-center gap-3 rounded-lg border-l-2 border-transparent px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
                       collapsed && "justify-center px-0",
                       isActive && "border-primary bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
                     )
@@ -68,13 +68,7 @@ export function Sidebar({ onNavigate, collapsed = false }) {
         ))}
       </nav>
 
-      <div className="border-t border-border/70 p-3">
-        {!collapsed && (
-          <div className="mb-3 rounded-lg bg-gradient-to-br from-primary/15 to-violet-500/10 p-3">
-            <p className="text-xs font-semibold">AI Insights</p>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">Predictive analytics coming soon to your dashboard.</p>
-          </div>
-        )}
+      <div className="border-t border-border/70 p-2">
         <button
           onClick={toggleSidebar}
           data-testid="sidebar-collapse-toggle"

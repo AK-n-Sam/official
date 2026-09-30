@@ -40,6 +40,14 @@ Auth & workspaces · App shell (sidebar, header, workspace switcher, notificatio
 - **Readability**: raised light-theme `--muted-foreground` contrast (47%→38% L) and dark-theme (65%→72%), bumped low-opacity `/70` label text to `/80` in sidebar section headers and resource cards.
 - **Verified**: backend 6/6 iteration-6 tests + curl (people picker → my-work, member scoping, reassign counts, 403/400, admins_see_all persist); frontend 29/30 UI checks green (1 test-selector nit, not a bug). `admins_see_all` reset to OFF across all workspaces post-test.
 
+## Iteration 7 — Workflow, Help Center & Layout (2026-09-30)
+- **Command palette** (`CommandPalette.js`, replaces `GlobalSearch`): `Ctrl/⌘+K` or `/` — record search (`/api/search`), Create actions, Go-to pages, Help and Preferences. Header shows a search trigger with the shortcut hint.
+- **Help Center** (`/help`, `pages/Help.js`, content in `modules/helpContent.js`): searchable guides for every module, statuses, roles, settings, keyboard shortcuts and FAQ; sticky scroll-spy table of contents; deep links (`/help#invoices`). Header `?` button and the `?` key open the topic for the current page (`helpPathFor`). Dismissible getting-started banner on the Dashboard.
+- **Invoices**: summary cards (Outstanding / Overdue / Drafts / Collected) that filter the list, tab counts, new **Unpaid** tab, legacy `pending` shown under Sent, one-click row "next step" (Mark sent / Record payment), past-due dates in red, client-side status filtering. `InvoiceModal`: create statuses limited to Draft/Sent/Paid (default Sent), status not editable after creation, line-item **discounts** preserved on edit, notes field, defaults from Settings > Invoicing, optional pre-selected customer (New Invoice on Customer Detail).
+- **Layout**: compact sidebar (all items fit, promo card removed, Help nav item); tabs get record names via `useTabTitle`, middle-click close, close-others/close-all menu, invalid routes no longer open tabs; sortable columns in `DataTable`; Leads pipeline summary (open value, won, win rate, avg deal); density toggle moved to the account menu; Settings `?tab=` deep links.
+- **Fixes**: `?new=1` Quick Create now works when already on the target page (`useCreateParam`); notifications are clickable.
+- Verified: 16/16 headless-browser E2E checks for the workflow changes; ESLint (react-app + hooks) clean; esbuild full bundle clean; Help page server-render smoke test.
+
 ## Backlog / Remaining (prioritized)
 - **P1**: Global search wiring (currently placeholder input); real AI insights via LLM (structured, not yet wired); invoice PDF export.
 - **P2**: Suppliers↔Products/PO linkage; employee-to-task assignment dropdowns; report date-range filters; per-org base-currency accounting (amounts currently stored USD, display-converted).

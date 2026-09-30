@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Mail, Phone, Building2, Calendar } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useTabTitle } from "@/hooks/useTabTitle";
 import { formatDate } from "@/lib/format";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { ErrorState } from "@/components/common/States";
@@ -35,6 +36,7 @@ export default function EmployeeDetail() {
       .catch((e) => setError(e)).finally(() => setLoading(false));
   }, [id]);
   useEffect(load, [load]);
+  useTabTitle(emp?.name);
 
   if (loading) return <div className="space-y-4"><Skeleton className="h-10 w-48" /><Skeleton className="h-64 rounded-xl" /></div>;
   if (error) return <ErrorState message={formatApiError(error)} onRetry={load} />;

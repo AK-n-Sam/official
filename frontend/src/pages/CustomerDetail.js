@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Mail, Phone, Building2, MapPin, FileText, CreditCard, CheckSquare } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Building2, MapPin, FileText, CreditCard, CheckSquare, Plus } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useTabTitle } from "@/hooks/useTabTitle";
 import { formatDate } from "@/lib/format";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { ErrorState } from "@/components/common/States";
+import { InvoiceModal } from "@/components/modules/InvoiceModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +30,7 @@ export default function CustomerDetail() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -37,6 +40,7 @@ export default function CustomerDetail() {
       .finally(() => setLoading(false));
   }, [id]);
   useEffect(load, [load]);
+  useTabTitle(data?.customer?.name);
 
   if (loading) return <div className="space-y-4"><Skeleton className="h-10 w-48" /><Skeleton className="h-40 rounded-xl" /></div>;
   if (error) return <ErrorState message={formatApiError(error)} onRetry={load} />;
@@ -64,7 +68,12 @@ export default function CustomerDetail() {
             </div>
           </div>
         </div>
-        <StatusBadge status={c.status} />
+        <div className="flex items-center gap-3">
+          <StatusBadge status={c.status} />
+          <Button size="sm" onClick={() => setInvoiceOpen(true)} data-testid="customer-new-invoice">
+            <Plus className="mr-1.5 h-4 w-4" /> New Invoice
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -134,6 +143,8 @@ export default function CustomerDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <InvoiceModal open={invoiceOpen} onOpenChange={setInvoiceOpen} defaultCustomerId={c.id} onSaved={load} />
     </div>
   );
 }

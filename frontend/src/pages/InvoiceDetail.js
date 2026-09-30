@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Send, DollarSign, XCircle, Clock, Pencil } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useTabTitle } from "@/hooks/useTabTitle";
 import { formatDate } from "@/lib/format";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { ErrorState } from "@/components/common/States";
@@ -30,6 +31,7 @@ export default function InvoiceDetail() {
       .catch((e) => setError(e)).finally(() => setLoading(false));
   }, [id]);
   useEffect(load, [load]);
+  useTabTitle(inv?.invoice_number);
 
   const setStatus = async (status) => {
     try { await api.post(`/invoices/${id}/status`, { status }); toast.success(`Invoice marked ${status.replace(/_/g, " ")}`); load(); }

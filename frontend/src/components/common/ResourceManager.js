@@ -1,5 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Plus, Search, LayoutGrid, List, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
@@ -16,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useCreateParam } from "@/hooks/useCreateParam";
 
 function ResourceCards({ columns, rows, onEdit, onDelete, onRowClick, singular }) {
   const [titleCol, ...rest] = columns;
@@ -69,15 +69,8 @@ export function ResourceManager({ config, onRowClick }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
-  const [searchParams, setSearchParams] = useSearchParams();
 
-  useEffect(() => {
-    if (searchParams.get("new") === "1") {
-      setEditing(null); setModalOpen(true);
-      const p = new URLSearchParams(searchParams); p.delete("new"); setSearchParams(p, { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useCreateParam(() => { setEditing(null); setModalOpen(true); });
 
   const setViewPersist = (v) => { setView(v); localStorage.setItem("bmp_resource_view", v); };
 

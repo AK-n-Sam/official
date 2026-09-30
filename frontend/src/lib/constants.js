@@ -41,6 +41,7 @@ export const NAV_SECTIONS = [
     items: [
       { name: "Reports", path: "/reports", icon: "BarChart3" },
       { name: "Settings", path: "/settings", icon: "Sliders" },
+      { name: "Help", path: "/help", icon: "LifeBuoy" },
     ],
   },
 ];

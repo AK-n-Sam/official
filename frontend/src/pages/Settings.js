@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import api, { formatApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -27,8 +28,18 @@ function Row({ label, children }) {
   );
 }
 
+const SETTINGS_TABS = ["business", "team", "profile", "preferences", "invoicing"];
+
 export default function Settings() {
   const { user, refresh } = useAuth();
+  // `?tab=` deep links (help topics, the account menu) pick the tab, even when already on this page.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const [tab, setTab] = useState(SETTINGS_TABS.includes(tabParam) ? tabParam : "business");
+  useEffect(() => {
+    if (SETTINGS_TABS.includes(tabParam)) setTab(tabParam);
+  }, [tabParam]);
+  const changeTab = (t) => { setTab(t); setSearchParams(t === "business" ? {} : { tab: t }, { replace: true }); };
   const { setCurrency } = useCurrency();
   const { pref, setThemePref } = useTheme();
   const [org, setOrg] = useState(null);
@@ -75,7 +86,7 @@ export default function Settings() {
     <div className="space-y-6 animate-in-up">
       <PageHeader title="Settings" subtitle="Manage your business, profile and preferences." />
 
-      <Tabs defaultValue="business">
+      <Tabs value={tab} onValueChange={changeTab}>
         <TabsList data-testid="settings-tabs">
           <TabsTrigger value="business" data-testid="tab-business">Business</TabsTrigger>
           <TabsTrigger value="team" data-testid="tab-team">Team</TabsTrigger>
