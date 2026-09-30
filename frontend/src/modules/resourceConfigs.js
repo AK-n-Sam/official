@@ -15,6 +15,11 @@ export const customersConfig = (fmt) => ({
   icon: Users,
   searchPlaceholder: "Search by name, email, company...",
   filters: [{ name: "status", label: "Status", options: STATUS_OPTS }],
+  exportExtra: [
+    { key: "total_sales", label: "Total Sales (USD)" },
+    { key: "outstanding", label: "Outstanding (USD)" },
+    { key: "invoice_count", label: "Invoices" },
+  ],
   columns: [
     { key: "name", label: "Name", render: (r) => (
       <div><p className="font-medium">{r.name}</p><p className="text-xs text-muted-foreground">{r.email || "—"}</p></div>

@@ -1,13 +1,14 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Plus, Search, FileText, DollarSign, Send, Clock, XCircle, AlertTriangle, FilePen, Wallet } from "lucide-react";
+import { Plus, Search, FileText, DollarSign, Send, Clock, XCircle, AlertTriangle, FilePen, Wallet, Copy, Printer, Download } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useCreateParam } from "@/hooks/useCreateParam";
 import { useCurrency } from "@/context/CurrencyContext";
 import { formatDate } from "@/lib/format";
+import { downloadCsv, csvFilename } from "@/lib/csv";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SummaryCard } from "@/components/common/SummaryCard";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -47,11 +48,14 @@ export default function Invoices() {
   const debounced = useDebounce(search, 300);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [template, setTemplate] = useState(null);
   const [prefillCustomer, setPrefillCustomer] = useState("");
   const [deleting, setDeleting] = useState(null);
   const [payFor, setPayFor] = useState(null);
 
-  const openCreate = (customerId = "") => { setEditing(null); setPrefillCustomer(customerId); setModalOpen(true); };
+  const openCreate = (customerId = "") => { setEditing(null); setTemplate(null); setPrefillCustomer(customerId); setModalOpen(true); };
+  const openDuplicate = (inv) => { setEditing(null); setTemplate(inv); setPrefillCustomer(""); setModalOpen(true); };
+  const openPrint = (inv) => window.open(`/print/invoices/${inv.id}?autoprint=1`, "_blank", "noopener");
   useCreateParam(({ customer }) => openCreate(customer || ""));
 
   // Load every invoice once (per search) and filter by status locally, so tab counts and
@@ -82,6 +86,22 @@ export default function Invoices() {
     catch (e) { toast.error(formatApiError(e)); }
   };
   const toggleStatus = (s) => setStatus((cur) => (cur === s ? "all" : s));
+
+  const exportCsv = () => {
+    downloadCsv(csvFilename(status === "all" ? "invoices" : `invoices ${status.replace(/_/g, " ")}`), [
+      { label: "Invoice", value: (r) => r.invoice_number },
+      { label: "Customer", value: (r) => r.customer_name },
+      { label: "Issue Date", value: (r) => r.issue_date },
+      { label: "Due Date", value: (r) => r.due_date },
+      { label: "Status", value: (r) => r.status },
+      { label: "Subtotal (USD)", value: (r) => r.subtotal },
+      { label: "Tax (USD)", value: (r) => r.tax_amount },
+      { label: "Total (USD)", value: (r) => r.total },
+      { label: "Paid (USD)", value: (r) => r.amount_paid || 0 },
+      { label: "Balance (USD)", value: (r) => +balanceOf(r).toFixed(2) },
+    ], rows);
+    toast.success(`Exported ${rows.length} invoice${rows.length === 1 ? "" : "s"}`);
+  };
 
   const columns = [
     { key: "invoice_number", label: "Invoice", render: (r) => <span className="font-mono font-medium">{r.invoice_number}</span> },
@@ -148,9 +168,15 @@ export default function Invoices() {
             ))}
           </TabsList>
         </Tabs>
-        <div className="relative lg:max-w-xs lg:flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search number or customer..." className="pl-9" data-testid="invoice-search" />
+        <div className="flex items-center gap-2 lg:max-w-sm lg:flex-1">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search number or customer..." className="pl-9" data-testid="invoice-search" />
+          </div>
+          <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={exportCsv} disabled={loading || rows.length === 0}
+            title="Export the listed invoices to CSV" aria-label="Export CSV" data-testid="invoice-export">
+            <Download className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
@@ -171,7 +197,7 @@ export default function Invoices() {
           rows={rows}
           testId="invoices-table"
           onRowClick={(row) => navigate(`/invoices/${row.id}`)}
-          onEdit={(row) => { setEditing(row); setModalOpen(true); }}
+          onEdit={(row) => { setEditing(row); setTemplate(null); setModalOpen(true); }}
           onDelete={(row) => setDeleting(row)}
           rowActions={(row) => (
             <>
@@ -195,6 +221,12 @@ export default function Invoices() {
                   <Clock className="mr-2 h-4 w-4" /> Mark overdue
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem onClick={() => openDuplicate(row)} data-testid={`duplicate-${row.id}`}>
+                <Copy className="mr-2 h-4 w-4" /> Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openPrint(row)} data-testid={`print-${row.id}`}>
+                <Printer className="mr-2 h-4 w-4" /> Print / PDF
+              </DropdownMenuItem>
               {row.status !== "cancelled" && (
                 <DropdownMenuItem onClick={() => setInvStatus(row, "cancelled")} className="text-rose-500 focus:text-rose-500" data-testid={`cancel-${row.id}`}>
                   <XCircle className="mr-2 h-4 w-4" /> Cancel
@@ -206,7 +238,7 @@ export default function Invoices() {
         />
       )}
 
-      <InvoiceModal open={modalOpen} onOpenChange={setModalOpen} initial={editing} defaultCustomerId={prefillCustomer} onSaved={refetch} />
+      <InvoiceModal open={modalOpen} onOpenChange={setModalOpen} initial={editing} template={template} defaultCustomerId={prefillCustomer} onSaved={() => refetch()} />
       <RecordPaymentModal open={!!payFor} onOpenChange={(o) => !o && setPayFor(null)} invoice={payFor} onSaved={refetch} />
       <ConfirmDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}
         title="Delete invoice?" description={`This will remove ${deleting?.invoice_number}.`} onConfirm={handleDelete} />

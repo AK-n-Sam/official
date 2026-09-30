@@ -23,7 +23,9 @@ const CREATE_STATUSES = [
 const lineTotal = (it) => (Number(it.quantity) || 0) * (Number(it.unit_price) || 0) - (Number(it.discount) || 0);
 const isoDate = (d) => d.toISOString().slice(0, 10);
 
-export function InvoiceModal({ open, onOpenChange, initial, defaultCustomerId, onSaved }) {
+// `initial` edits an existing invoice; `template` starts a new one from a copy of another invoice
+// (customer, items, tax and notes; fresh dates and number). `onSaved` receives the saved invoice.
+export function InvoiceModal({ open, onOpenChange, initial, template, defaultCustomerId, onSaved }) {
   const { format } = useCurrency();
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -51,25 +53,29 @@ export function InvoiceModal({ open, onOpenChange, initial, defaultCustomerId, o
       setItems(initial.items?.length ? initial.items.map((i) => ({ ...emptyItem(), ...i })) : [emptyItem()]);
       return;
     }
-    // New invoice: start from the workspace's invoicing defaults (Settings > Invoicing).
+    // New invoice: start from the workspace's invoicing defaults (Settings > Invoicing),
+    // or from the invoice being duplicated.
     const today = new Date();
-    setCustomerId(defaultCustomerId || "");
+    setCustomerId(template?.customer_id || defaultCustomerId || "");
     setIssueDate(isoDate(today));
     setDueDate(isoDate(new Date(today.getTime() + 30 * 864e5)));
     setStatusVal("sent");
-    setTaxRate(8);
-    setNotes("");
-    setItems([emptyItem()]);
+    setTaxRate(template ? +((template.tax_rate || 0) * 100).toFixed(4) : 8);
+    setNotes(template?.notes || "");
+    setItems(template?.items?.length
+      ? template.items.map(({ product_id, description, quantity, unit_price, discount }) => ({ ...emptyItem(), product_id, description, quantity, unit_price, discount: discount || 0 }))
+      : [emptyItem()]);
     let cancelled = false;
     api.get("/organizations/current").then(({ data: org }) => {
       if (cancelled) return;
       const dueDays = Number(org.invoice_due_days) || 30;
       setDueDate(isoDate(new Date(today.getTime() + dueDays * 864e5)));
+      if (template) return;
       setTaxRate(+((org.invoice_tax_rate || 0) * 100).toFixed(4));
       setNotes(org.invoice_notes || "");
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, [open, initial, defaultCustomerId]);
+  }, [open, initial, template, defaultCustomerId]);
 
   const updateItem = (idx, field, value) => {
     setItems((its) => its.map((it, i) => {
@@ -104,9 +110,11 @@ export function InvoiceModal({ open, onOpenChange, initial, defaultCustomerId, o
     if (!initial) payload.status = statusVal;
     setSaving(true);
     try {
-      if (initial) { await api.put(`/invoices/${initial.id}`, payload); toast.success("Invoice updated"); }
-      else { await api.post("/invoices", payload); toast.success("Invoice created"); }
-      onSaved?.();
+      const { data: saved } = initial
+        ? await api.put(`/invoices/${initial.id}`, payload)
+        : await api.post("/invoices", payload);
+      toast.success(initial ? "Invoice updated" : saved?.invoice_number ? `Invoice ${saved.invoice_number} created` : "Invoice created");
+      onSaved?.(saved);
       onOpenChange(false);
     } catch (e) { toast.error(formatApiError(e)); }
     finally { setSaving(false); }
@@ -118,7 +126,9 @@ export function InvoiceModal({ open, onOpenChange, initial, defaultCustomerId, o
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-3xl" data-testid="invoice-modal">
         <DialogHeader>
-          <DialogTitle className="text-xl">{initial ? `Edit ${initial.invoice_number || "Invoice"}` : "New Invoice"}</DialogTitle>
+          <DialogTitle className="text-xl">
+            {initial ? `Edit ${initial.invoice_number || "Invoice"}` : template ? `Duplicate ${template.invoice_number}` : "New Invoice"}
+          </DialogTitle>
           <DialogDescription>Select a customer, add line items, and totals calculate automatically.</DialogDescription>
         </DialogHeader>
 

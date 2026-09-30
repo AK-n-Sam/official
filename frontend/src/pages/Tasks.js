@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
-import { Plus, LayoutGrid, List, Search, MoreHorizontal, AlertTriangle } from "lucide-react";
+import { Plus, LayoutGrid, List, Search, MoreHorizontal, AlertTriangle, Circle, CheckCircle2 } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { useCreateParam } from "@/hooks/useCreateParam";
 import { formatDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { CrudModal } from "@/components/common/CrudModal";
@@ -37,10 +38,30 @@ const FIELDS = [
   { name: "due_date", label: "Due Date", type: "date" },
 ];
 
+const isDone = (t) => t.status === "completed" || t.status === "done";
+
+function CompleteToggle({ task, onToggle }) {
+  const done = isDone(task);
+  return (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); onToggle(task); }}
+      aria-label={done ? "Mark as not done" : "Mark as done"}
+      title={done ? "Mark as not done" : "Mark as done"}
+      data-testid={`complete-toggle-${task.id}`}
+      className={cn("mt-0.5 shrink-0 rounded-full transition-colors", done ? "text-emerald-500" : "text-muted-foreground/60 hover:text-emerald-500")}
+    >
+      {done ? <CheckCircle2 className="h-[18px] w-[18px]" /> : <Circle className="h-[18px] w-[18px]" />}
+    </button>
+  );
+}
+
 const isOverdue = (t) => t.status !== "completed" && t.status !== "done" && t.due_date && t.due_date < new Date().toISOString().slice(0, 10);
 
 export default function Tasks() {
-  const { data, loading, refetch } = useResource("/tasks", {});
+  const { data, loading, refetch, setData } = useResource("/tasks", {});
+  const [dragId, setDragId] = useState(null);
+  const [overCol, setOverCol] = useState(null);
   const [members, setMembers] = useState([]);
   const [view, setView] = useState("board");
   const [search, setSearch] = useState("");
@@ -79,9 +100,23 @@ export default function Tasks() {
       refetch();
     } catch (e) { toast.error(formatApiError(e)); throw e; }
   };
+  // Optimistic: the card moves immediately and snaps back if the save fails.
   const moveTo = async (task, status) => {
-    try { await api.put(`/tasks/${task.id}`, { status }); refetch(); }
-    catch (e) { toast.error(formatApiError(e)); }
+    const previous = data;
+    setData((rows) => rows.map((t) => (t.id === task.id ? { ...t, status } : t)));
+    try { await api.put(`/tasks/${task.id}`, { status }); }
+    catch (e) { setData(previous); toast.error(formatApiError(e)); }
+  };
+  const toggleComplete = (task) => moveTo(task, isDone(task) ? "todo" : "completed");
+
+  const dropOn = (col) => (e) => {
+    e.preventDefault();
+    setOverCol(null);
+    const task = data.find((t) => t.id === e.dataTransfer.getData("text/plain"));
+    if (task && !col.match.includes(task.status)) {
+      moveTo(task, col.key);
+      toast.success(`Moved to ${col.label}`, { description: task.title });
+    }
   };
   const remove = async () => {
     try { await api.delete(`/tasks/${deleting.id}`); toast.success("Task deleted"); setDeleting(null); refetch(); }
@@ -92,9 +127,13 @@ export default function Tasks() {
 
   const columns = [
     { key: "title", label: "Task", render: (r) => (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2.5">
+        <CompleteToggle task={r} onToggle={toggleComplete} />
         {isOverdue(r) && <AlertTriangle className="h-3.5 w-3.5 text-rose-500" />}
-        <div><p className="font-medium">{r.title}</p>{r.customer_name && <p className="text-xs text-muted-foreground">{r.customer_name}</p>}</div>
+        <div>
+          <p className={cn("font-medium", isDone(r) && "text-muted-foreground line-through")}>{r.title}</p>
+          {r.customer_name && <p className="text-xs text-muted-foreground">{r.customer_name}</p>}
+        </div>
       </div>
     ) },
     { key: "assignee", label: "Assignee", render: (r) => r.assignee || "—" },
@@ -151,18 +190,35 @@ export default function Tasks() {
           {COLUMNS.map((col) => {
             const tasks = filtered.filter((t) => col.match.includes(t.status));
             return (
-              <div key={col.key} className="space-y-3" data-testid={`task-column-${col.key}`}>
+              <div
+                key={col.key}
+                data-testid={`task-column-${col.key}`}
+                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (overCol !== col.key) setOverCol(col.key); }}
+                onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setOverCol(null); }}
+                onDrop={dropOn(col)}
+                className={cn("space-y-3 rounded-xl p-1.5 transition-colors", dragId && "bg-muted/40", overCol === col.key && "bg-primary/10 ring-2 ring-primary/40")}
+              >
                 <div className="flex items-center justify-between px-1">
                   <h3 className="text-sm font-semibold">{col.label}</h3>
                   <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">{tasks.length}</span>
                 </div>
                 <div className="space-y-2.5">
                   {loading ? <Skeleton className="h-24 rounded-xl" /> : tasks.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-border/60 py-8 text-center text-xs text-muted-foreground">No tasks</div>
+                    <div className="rounded-xl border border-dashed border-border/60 py-8 text-center text-xs text-muted-foreground">{dragId ? "Drop here" : "No tasks"}</div>
                   ) : tasks.map((t) => (
-                    <Card key={t.id} className="border-border/70 bg-card/90 p-4" data-testid={`task-card-${t.id}`}>
+                    <Card
+                      key={t.id}
+                      draggable
+                      onDragStart={(e) => { e.dataTransfer.setData("text/plain", t.id); e.dataTransfer.effectAllowed = "move"; setDragId(t.id); }}
+                      onDragEnd={() => { setDragId(null); setOverCol(null); }}
+                      className={cn("cursor-grab border-border/70 bg-card/90 p-4 active:cursor-grabbing", dragId === t.id && "opacity-50")}
+                      data-testid={`task-card-${t.id}`}
+                    >
                       <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-medium leading-snug">{t.title}</p>
+                        <div className="flex min-w-0 items-start gap-2">
+                          <CompleteToggle task={t} onToggle={toggleComplete} />
+                          <p className={cn("text-sm font-medium leading-snug", isDone(t) && "text-muted-foreground line-through")}>{t.title}</p>
+                        </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button>

@@ -65,6 +65,7 @@ export const HELP_SECTIONS = [
         "Click any column header to sort; click again to reverse, and a third time to return to the default order.",
         "Customers, Products, Expenses, Suppliers and Employees can switch between a **table** and a **card grid** with the toggle next to the filters.",
         "Choose **Compact rows** from your account menu to fit more rows on screen.",
+        "**Export CSV** downloads what's currently listed (your search and filters applied) for Customers, Products, Expenses, Suppliers, Employees and Invoices. Amounts are exported in US dollars, the currency they're stored in.",
       ] },
       { p: "**Quick create** — the blue **Create** button in the header opens the new-item form for invoices, customers, expenses, products, tasks and leads, even if you're already on that page." },
     ],
@@ -85,7 +86,7 @@ export const HELP_SECTIONS = [
         "Pick the **customer**. Issue date is today; the due date, tax rate and notes come from **Settings > Invoicing**.",
         "Choose the starting **status**: Draft (not sent yet), Sent (awaiting payment) or Paid (payment already received).",
         "Add **line items**. Choosing a product fills in its name and price; or type a custom item. Each line has quantity, unit price and an optional **discount** (an amount taken off that line).",
-        "Check the subtotal, tax and total, then **Create Invoice**. Invoice numbers are generated automatically from your prefix (e.g. ACM-1021).",
+        "Check the subtotal, tax and total, then **Create Invoice**. Invoice numbers are generated automatically from your prefix (e.g. ACM-1021) and are never reused, even after an invoice is deleted.",
       ] },
       { p: "**Invoice statuses**" },
       { statuses: [
@@ -93,7 +94,7 @@ export const HELP_SECTIONS = [
         ["sent", "Issued to the customer and awaiting payment. Older invoices may show **Pending**, which means the same thing and is listed under the Sent tab."],
         ["partially_paid", "Some payments recorded, balance remaining."],
         ["paid", "Fully paid. Reached automatically when payments cover the total, or with **Mark paid**."],
-        ["overdue", "Flagged as late. Use **Mark overdue** from the row menu; past-due dates also show in red on the list."],
+        ["overdue", "Set **automatically** when a sent invoice passes its due date (or manually with **Mark overdue**). Moving the due date into the future makes it current again. Partially paid invoices keep their status, with the past-due date shown in red."],
         ["cancelled", "Voided. Excluded from outstanding totals."],
       ] },
       { p: "**The Invoices page**" },
@@ -101,10 +102,16 @@ export const HELP_SECTIONS = [
         "The four cards at the top show **Outstanding**, **Overdue**, **Drafts** and **Collected**. Click a card to filter the list; click it again to clear.",
         "Status tabs show a count for each status. **Unpaid** combines sent, partially paid and overdue invoices.",
         "Each row has a one-click next step: **Mark sent** for drafts and **Record payment** for unpaid invoices. The `…` menu has every other action (mark paid, mark overdue, cancel, edit, delete).",
-        "Click a row to open the invoice: line items, totals, payment history and all status actions.",
+        "Click a row to open the invoice: line items, totals, notes, payment history and all status actions.",
+        "The download button next to the search exports the invoices in the current tab to CSV.",
+      ] },
+      { p: "**Print, PDF and duplicates**" },
+      { list: [
+        "**Print / PDF** (on the invoice page or in the row menu) opens a clean, printable invoice with your business details, the customer's billing details, line items, totals and notes. Choose **Save as PDF** in the print dialog to get a PDF named after the invoice number.",
+        "**Duplicate** starts a new invoice with the same customer, line items, tax rate and notes, with today's date and a fresh due date. Handy for repeat orders and monthly billing.",
       ] },
       { note: "Once created, an invoice's status can only change through its actions (Record payment, Mark sent, Cancel…). Editing changes the customer, dates, items, tax and notes. This keeps payments and stock consistent." },
-      { tip: "Stock is deducted for product lines the first time an invoice is **sent or paid** (never for drafts, and never twice). Each deduction shows up on the Inventory page as a stock-out movement." },
+      { tip: "Stock is deducted for product lines the first time an invoice is **sent or paid** (never for drafts, and never twice), and **returned** if the invoice is cancelled. Both show up on the Inventory page as stock movements." },
     ],
   },
   {
@@ -194,9 +201,10 @@ export const HELP_SECTIONS = [
       ] },
       { list: [
         "The summary at the top shows your open pipeline value, won value and win rate. Each column shows its count and total value.",
-        "Move a lead with its `…` menu > **Move to …**.",
+        "**Drag a card** to another column to change its stage, or use its `…` menu > **Move to …**.",
+        "Dropping a lead on **Won** offers a one-click **Convert to customer**.",
         "Assign an **owner** from your team; owners see their leads on **My Work**.",
-        "**Convert to customer** creates a customer from the lead's details and marks the lead as Won.",
+        "**Convert to customer** creates a customer from the lead's details and marks the lead as Won. Converted leads show a **Customer** tag that opens the customer's page.",
       ] },
       { note: "Converting doesn't check for an existing customer with the same email, so check the Customers list first to avoid duplicates." },
     ],
@@ -223,8 +231,11 @@ export const HELP_SECTIONS = [
         ["Adjustment", "Sets stock to exactly the quantity entered, after a stock count."],
       ] },
       { list: [
-        "When stock falls to or below a product's **minimum stock level** it's flagged as low stock on Inventory, in notifications and on the dashboard.",
-        "Sending or paying an invoice deducts stock for its product lines automatically (see Invoices).",
+        "The summary shows products tracked, units in stock, **stock value** (units × purchase price) and how many products are low.",
+        "When stock falls to or below a product's **minimum stock level** it's flagged as low stock on Inventory, in notifications and on the dashboard. Click the **Low stock** card (or **Low stock only**) to list just those products.",
+        "**Restock** on a low-stock row opens a Stock In already filled in, suggesting enough to reach twice the minimum level. Adjust the quantity and record it.",
+        "In the movements log, **+** is stock in, **−** is stock out and **=** is an adjustment to an exact count.",
+        "Sending or paying an invoice deducts stock for its product lines automatically, and cancelling it puts the stock back (see Invoices).",
       ] },
     ],
   },
@@ -238,7 +249,8 @@ export const HELP_SECTIONS = [
     blocks: [
       { list: [
         "Tasks have a title, description, assignee, related customer, reference, priority (low/medium/high), status and due date.",
-        "Switch between the **board** (To Do, In Progress, Completed) and a **list**. Move a card with its `…` menu.",
+        "Switch between the **board** (To Do, In Progress, Completed) and a **list**. **Drag a card** between columns, or use its `…` menu.",
+        "Click the **circle** next to a task to mark it done (click again to reopen it), on the board or in the list.",
         "Search and filter by priority or status. Choose **Overdue** to see open tasks past their due date.",
         "**My Work** is your personal home: open tasks assigned to (or created by) you, leads you own, and your recent activity.",
       ] },
@@ -335,7 +347,19 @@ export const FAQ = [
   },
   {
     q: "Why did my stock go down when I created an invoice?",
-    a: "Invoices created as Sent or Paid deduct stock for product lines immediately. Create it as a **Draft** if you're not ready; stock is deducted when you mark it sent.",
+    a: "Invoices created as Sent or Paid deduct stock for product lines immediately. Create it as a **Draft** if you're not ready; stock is deducted when you mark it sent. Cancelling the invoice returns the stock.",
+  },
+  {
+    q: "How do I send a customer a PDF of an invoice?",
+    a: "Open the invoice and click **Print / PDF**, then choose **Save as PDF** in the print dialog. Attach the file to your email.",
+  },
+  {
+    q: "Why did an invoice change to Overdue on its own?",
+    a: "Sent invoices become **Overdue** automatically once their due date passes. If you agreed new terms, edit the invoice and move the due date; it becomes current again.",
+  },
+  {
+    q: "Can I get my data into Excel or Google Sheets?",
+    a: "Yes. Use **Export CSV** on Customers, Products, Expenses, Suppliers or Employees, or the download button on Invoices. The file opens directly in Excel or Sheets.",
   },
   {
     q: "A teammate can't see customers or invoices I created.",

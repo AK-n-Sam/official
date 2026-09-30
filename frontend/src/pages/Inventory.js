@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Warehouse, ArrowUpCircle, ArrowDownCircle, Settings2 } from "lucide-react";
+import { Warehouse, ArrowUpCircle, ArrowDownCircle, Settings2, Package, Layers, Wallet, AlertTriangle, PackagePlus } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { formatDate } from "@/lib/format";
+import { useCurrency } from "@/context/CurrencyContext";
+import { SummaryCard } from "@/components/common/SummaryCard";
 import { PageHeader } from "@/components/common/PageHeader";
 import { TableSkeleton, ErrorState } from "@/components/common/States";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -25,9 +27,27 @@ export default function Inventory() {
   const [quantity, setQuantity] = useState(1);
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
+  const [lowOnly, setLowOnly] = useState(false);
+  const { format } = useCurrency();
 
-  const lowStock = products.filter((p) => p.stock_quantity <= p.reorder_level);
+  const isLow = (p) => p.stock_quantity <= p.reorder_level;
+  const lowStock = products.filter(isLow);
   const totalUnits = products.reduce((s, p) => s + p.stock_quantity, 0);
+  const stockValue = products.reduce((s, p) => s + p.stock_quantity * (p.cost || 0), 0);
+  const shown = lowOnly ? lowStock : products;
+
+  const openMovement = (prefill = {}) => {
+    setProductId(prefill.productId || "");
+    setType(prefill.type || "in");
+    setQuantity(prefill.quantity ?? 1);
+    setReason(prefill.reason || "");
+    setOpen(true);
+  };
+  // Suggest topping up to twice the minimum level, so the product doesn't land straight back on the list.
+  const openRestock = (p) => openMovement({
+    productId: p.id, type: "in", reason: "Restock",
+    quantity: Math.max(1, p.reorder_level * 2 - p.stock_quantity),
+  });
 
   const submit = async () => {
     if (!productId) { toast.error("Select a product"); return; }
@@ -44,24 +64,18 @@ export default function Inventory() {
   return (
     <div className="space-y-6 animate-in-up">
       <PageHeader title="Inventory" subtitle="Monitor stock levels and record movements.">
-        <Button onClick={() => setOpen(true)} data-testid="add-stock-movement-button">
+        <Button onClick={() => openMovement()} data-testid="add-stock-movement-button">
           <Settings2 className="mr-2 h-4 w-4" /> Record Movement
         </Button>
       </PageHeader>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card className="border-border/70 bg-card/90 p-5" data-testid="inv-total-skus">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total SKUs</p>
-          <p className="mt-2 font-mono text-3xl font-extrabold">{products.length}</p>
-        </Card>
-        <Card className="border-border/70 bg-card/90 p-5" data-testid="inv-total-units">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Units in Stock</p>
-          <p className="mt-2 font-mono text-3xl font-extrabold">{totalUnits}</p>
-        </Card>
-        <Card className="border-border/70 bg-card/90 p-5" data-testid="inv-low-stock">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Low Stock Alerts</p>
-          <p className="mt-2 font-mono text-3xl font-extrabold text-rose-500">{lowStock.length}</p>
-        </Card>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <SummaryCard label="Products" value={products.length} sub="SKUs tracked" icon={Package} testId="inv-total-skus" />
+        <SummaryCard label="Units in stock" value={totalUnits.toLocaleString()} sub="across all products" icon={Layers} testId="inv-total-units" />
+        <SummaryCard label="Stock value" value={format(stockValue)} sub="at purchase price" icon={Wallet} tone="text-primary" testId="inv-stock-value" />
+        <SummaryCard label="Low stock" value={lowStock.length} sub={lowStock.length ? (lowOnly ? "Showing low stock only" : "Click to show only these") : "All stocked"}
+          icon={AlertTriangle} tone={lowStock.length ? "text-rose-500" : undefined} active={lowOnly}
+          onClick={lowStock.length ? () => setLowOnly((v) => !v) : undefined} testId="inv-low-stock" />
       </div>
 
       {loading ? (
@@ -72,28 +86,42 @@ export default function Inventory() {
         <EmptyState icon={Warehouse} title="No products to track" description="Add products first to manage inventory." />
       ) : (
         <Card className="overflow-hidden border-border/80 bg-card/90">
-          <div className="border-b border-border/70 px-5 py-4"><h3 className="font-heading text-base font-semibold">Stock Levels</h3></div>
+          <div className="flex items-center justify-between gap-3 border-b border-border/70 px-5 py-4">
+            <h3 className="font-heading text-base font-semibold">Stock Levels</h3>
+            {lowStock.length > 0 && (
+              <Button variant={lowOnly ? "secondary" : "ghost"} size="sm" className="h-8 text-xs" onClick={() => setLowOnly((v) => !v)} data-testid="inv-low-only">
+                {lowOnly ? "Show all products" : `Low stock only (${lowStock.length})`}
+              </Button>
+            )}
+          </div>
           <div className="overflow-x-auto">
             <Table data-testid="inventory-table">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  {["Product", "SKU", "In Stock", "Reorder At", "Status"].map((h) => (
+                  {["Product", "SKU", "In Stock", "Reorder At", "Value", "Status"].map((h) => (
                     <TableHead key={h} className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{h}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((p) => {
-                  const low = p.stock_quantity <= p.reorder_level;
+                {shown.map((p) => {
+                  const low = isLow(p);
                   return (
                     <TableRow key={p.id} data-testid={`inventory-row-${p.id}`}>
                       <TableCell className="font-medium">{p.name}</TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">{p.sku}</TableCell>
                       <TableCell className={`font-mono font-semibold ${low ? "text-rose-500" : ""}`}>{p.stock_quantity} {p.unit}</TableCell>
                       <TableCell className="font-mono text-muted-foreground">{p.reorder_level}</TableCell>
+                      <TableCell className="font-mono text-muted-foreground">{format(p.stock_quantity * (p.cost || 0))}</TableCell>
                       <TableCell>
-                        {low ? <Badge className="bg-rose-500/10 text-rose-500 border-rose-500/20">Reorder</Badge>
-                             : <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">In Stock</Badge>}
+                        {low ? (
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-rose-500/10 text-rose-500 border-rose-500/20">Reorder</Badge>
+                            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => openRestock(p)} data-testid={`restock-${p.id}`}>
+                              <PackagePlus className="mr-1 h-3.5 w-3.5" /> Restock
+                            </Button>
+                          </div>
+                        ) : <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">In Stock</Badge>}
                       </TableCell>
                     </TableRow>
                   );
@@ -112,14 +140,18 @@ export default function Inventory() {
           ) : movements.slice(0, 12).map((m) => (
             <div key={m.id} className="flex items-center justify-between px-5 py-3">
               <div className="flex items-center gap-3">
-                {m.type === "in" ? <ArrowUpCircle className="h-5 w-5 text-emerald-500" /> : <ArrowDownCircle className="h-5 w-5 text-rose-500" />}
+                {m.type === "in" ? <ArrowUpCircle className="h-5 w-5 text-emerald-500" />
+                  : m.type === "out" ? <ArrowDownCircle className="h-5 w-5 text-rose-500" />
+                  : <Settings2 className="h-5 w-5 text-blue-500" />}
                 <div>
                   <p className="text-sm font-medium">{m.product_name}</p>
                   <p className="text-xs text-muted-foreground">{m.reason || m.type} · {formatDate(m.date)}</p>
                 </div>
               </div>
-              <span className={`font-mono text-sm font-semibold ${m.type === "in" ? "text-emerald-500" : "text-rose-500"}`}>
-                {m.type === "in" ? "+" : "−"}{m.quantity}
+              {/* An adjustment sets stock to an exact count rather than adding or removing. */}
+              <span className={`font-mono text-sm font-semibold ${m.type === "in" ? "text-emerald-500" : m.type === "out" ? "text-rose-500" : "text-blue-500"}`}
+                title={m.type === "adjustment" ? "Stock set to this count" : undefined}>
+                {m.type === "in" ? "+" : m.type === "out" ? "−" : "= "}{m.quantity}
               </span>
             </div>
           ))}
@@ -128,7 +160,7 @@ export default function Inventory() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent data-testid="stock-movement-modal">
-          <DialogHeader><DialogTitle>Record Stock Movement</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{reason === "Restock" ? "Restock product" : "Record Stock Movement"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div>
               <Label className="text-xs text-muted-foreground">Product</Label>

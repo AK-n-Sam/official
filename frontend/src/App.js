@@ -8,6 +8,7 @@ import { LayoutProvider } from "@/context/LayoutContext";
 import { AppShell } from "@/components/layout/AppShell";
 import AuthPage from "@/pages/AuthPage";
 import AuthCallback from "@/pages/AuthCallback";
+import InvoicePrint from "@/pages/InvoicePrint";
 import { Toaster } from "@/components/ui/sonner";
 
 function FullLoader() {
@@ -28,6 +29,10 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <AuthPage />} />
+      <Route
+        path="/print/invoices/:id"
+        element={user ? <CurrencyProvider><InvoicePrint /></CurrencyProvider> : <Navigate to="/login" replace />}
+      />
       <Route
         path="/*"
         element={user ? <CurrencyProvider><LayoutProvider><AppShell /></LayoutProvider></CurrencyProvider> : <Navigate to="/login" replace />}

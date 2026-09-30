@@ -102,3 +102,16 @@ body {
     padding-top: 0.4rem;
     padding-bottom: 0.4rem;
 }
+
+/* Printing (e.g. /print/invoices/:id): A4 pages with modest margins, no app background */
+@page {
+    size: A4;
+    margin: 14mm;
+}
+
+@media print {
+    html,
+    body {
+        background: #fff !important;
+    }
+}

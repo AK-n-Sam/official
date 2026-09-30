@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { Plus, Search, LayoutGrid, List, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, LayoutGrid, List, MoreHorizontal, Pencil, Trash2, Download } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useCreateParam } from "@/hooks/useCreateParam";
+import { downloadCsv, csvFilename } from "@/lib/csv";
 
 function ResourceCards({ columns, rows, onEdit, onDelete, onRowClick, singular }) {
   const [titleCol, ...rest] = columns;
@@ -115,6 +116,18 @@ export function ResourceManager({ config, onRowClick }) {
 
   const hasFilters = search || Object.values(filterState).some((v) => v && v !== "all");
 
+  // Exports what's currently listed (search + filters applied): every form field, any computed
+  // columns the config names in `exportExtra`, and the creation date. Amounts are raw USD values.
+  const exportCsv = () => {
+    const cols = [
+      ...fields.map((f) => ({ label: f.label, value: (r) => r[f.name] })),
+      ...(config.exportExtra || []).map((x) => ({ label: x.label, value: (r) => r[x.key] })),
+      { label: "Created", value: (r) => (r.created_at || "").slice(0, 10) },
+    ];
+    downloadCsv(csvFilename(title), cols, data);
+    toast.success(`Exported ${data.length} ${data.length === 1 ? singular.toLowerCase() : title.toLowerCase()}`);
+  };
+
   return (
     <div className="space-y-6 animate-in-up">
       <PageHeader title={title} subtitle={subtitle}>
@@ -147,7 +160,10 @@ export function ResourceManager({ config, onRowClick }) {
             </SelectContent>
           </Select>
         ))}
-        <div className="flex rounded-lg border border-border/70 p-0.5 sm:ml-auto">
+        <Button variant="outline" size="sm" className="h-9 sm:ml-auto" onClick={exportCsv} disabled={loading || data.length === 0} data-testid="resource-export">
+          <Download className="mr-1.5 h-4 w-4" /> Export CSV
+        </Button>
+        <div className="flex rounded-lg border border-border/70 p-0.5">
           <Button variant={view === "table" ? "secondary" : "ghost"} size="sm" className="h-8" onClick={() => setViewPersist("table")} data-testid="resource-view-table"><List className="h-4 w-4" /></Button>
           <Button variant={view === "grid" ? "secondary" : "ghost"} size="sm" className="h-8" onClick={() => setViewPersist("grid")} data-testid="resource-view-grid"><LayoutGrid className="h-4 w-4" /></Button>
         </div>

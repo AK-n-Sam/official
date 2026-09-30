@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Send, DollarSign, XCircle, Clock, Pencil } from "lucide-react";
+import { ArrowLeft, Send, DollarSign, XCircle, Clock, Pencil, Copy, Printer } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useTabTitle } from "@/hooks/useTabTitle";
@@ -24,6 +24,7 @@ export default function InvoiceDetail() {
   const [error, setError] = useState(null);
   const [payOpen, setPayOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -61,6 +62,8 @@ export default function InvoiceDetail() {
           <p className="mt-1 text-xs text-muted-foreground">Issued {formatDate(inv.issue_date)} · Due {formatDate(inv.due_date)}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => window.open(`/print/invoices/${id}?autoprint=1`, "_blank", "noopener")} data-testid="invoice-print"><Printer className="mr-1.5 h-4 w-4" /> Print / PDF</Button>
+          <Button variant="outline" size="sm" onClick={() => setDuplicateOpen(true)} data-testid="invoice-duplicate"><Copy className="mr-1.5 h-4 w-4" /> Duplicate</Button>
           <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} data-testid="invoice-edit"><Pencil className="mr-1.5 h-4 w-4" /> Edit</Button>
           {inv.status === "draft" && <Button variant="outline" size="sm" onClick={() => setStatus("sent")} data-testid="invoice-send"><Send className="mr-1.5 h-4 w-4" /> Mark Sent</Button>}
           {!["paid", "cancelled"].includes(inv.status) && <Button variant="outline" size="sm" onClick={() => setStatus("overdue")} data-testid="invoice-overdue"><Clock className="mr-1.5 h-4 w-4" /> Overdue</Button>}
@@ -101,6 +104,12 @@ export default function InvoiceDetail() {
             <div className="flex justify-between text-emerald-500"><span>Paid</span><span className="font-mono">{format(inv.amount_paid || 0)}</span></div>
             <div className="flex justify-between font-semibold text-amber-500"><span>Balance Due</span><span className="font-mono" data-testid="invoice-balance">{format(balance)}</span></div>
           </div>
+          {inv.notes && (
+            <div className="border-t border-border/70 px-5 py-4" data-testid="invoice-notes-view">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Notes</p>
+              <p className="mt-1 whitespace-pre-line text-sm">{inv.notes}</p>
+            </div>
+          )}
         </Card>
 
         <Card className="border-border/70 bg-card/90">
@@ -122,7 +131,9 @@ export default function InvoiceDetail() {
       </div>
 
       <RecordPaymentModal open={payOpen} onOpenChange={setPayOpen} invoice={inv} onSaved={load} />
-      <InvoiceModal open={editOpen} onOpenChange={setEditOpen} initial={inv} onSaved={load} />
+      <InvoiceModal open={editOpen} onOpenChange={setEditOpen} initial={inv} onSaved={() => load()} />
+      <InvoiceModal open={duplicateOpen} onOpenChange={setDuplicateOpen} template={inv}
+        onSaved={(created) => created?.id && navigate(`/invoices/${created.id}`)} />
     </div>
   );
 }

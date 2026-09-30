@@ -7,6 +7,7 @@ from collections import defaultdict
 
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, Request, Body
 from starlette.middleware.cors import CORSMiddleware
+from pymongo import ReturnDocument
 
 from database import db, now_iso
 from models import (
@@ -71,6 +72,48 @@ def _invoice_status(total, amount_paid, requested):
     return requested or "pending"
 
 
+async def refresh_overdue(org_id: str):
+    """Flag sent invoices whose due date has passed, so nobody has to do it by hand.
+    Partially paid invoices keep their status; the list highlights their past-due date instead."""
+    await db.invoices.update_many(
+        {"org_id": org_id, "status": {"$in": ["sent", "pending"]}, "due_date": {"$lt": now_iso()[:10], "$gt": ""}},
+        {"$set": {"status": "overdue", "updated_at": now_iso()}},
+    )
+
+
+async def next_invoice_number(org: dict) -> str:
+    """Allocate the next number from a per-workspace counter, so numbers are never reused after a delete."""
+    if "invoice_seq" not in org:
+        highest = 1000
+        async for i in db.invoices.find({"org_id": org["id"]}, {"_id": 0, "invoice_number": 1}):
+            tail = str(i.get("invoice_number", "")).rsplit("-", 1)[-1]
+            if tail.isdigit():
+                highest = max(highest, int(tail))
+        await db.organizations.update_one({"id": org["id"], "invoice_seq": {"$exists": False}}, {"$set": {"invoice_seq": highest}})
+    updated = await db.organizations.find_one_and_update(
+        {"id": org["id"]}, {"$inc": {"invoice_seq": 1}}, return_document=ReturnDocument.AFTER
+    )
+    return f"{org.get('invoice_prefix') or 'INV'}-{updated['invoice_seq']}"
+
+
+async def _restore_inventory(org_id, items, invoice_number):
+    """Put stock back for a cancelled invoice whose items had already been deducted."""
+    for it in items:
+        pid = it.get("product_id")
+        qty = int(it.get("quantity", 0))
+        if not pid or qty <= 0:
+            continue
+        product = await db.products.find_one({"id": pid, "org_id": org_id}, {"_id": 0})
+        if not product:
+            continue
+        await db.products.update_one({"id": pid}, {"$set": {"stock_quantity": product["stock_quantity"] + qty, "updated_at": now_iso()}})
+        await db.stock_movements.insert_one({
+            "id": str(uuid.uuid4()), "org_id": org_id, "product_id": pid, "product_name": product["name"],
+            "type": "in", "quantity": qty, "reason": f"Invoice {invoice_number} cancelled",
+            "date": now_iso()[:10], "created_at": now_iso(),
+        })
+
+
 async def _deduct_inventory(org_id, items, invoice_number):
     for it in items:
         pid = it.get("product_id")
@@ -93,6 +136,7 @@ async def _deduct_inventory(org_id, items, invoice_number):
 
 @inv.get("")
 async def list_invoices(request: Request, user: dict = Depends(get_current_user)):
+    await refresh_overdue(user["active_org_id"])
     q = {"org_id": user["active_org_id"], **member_filter(user)}
     status = request.query_params.get("status")
     if status and status != "all":
@@ -111,13 +155,12 @@ async def create_invoice(payload: InvoiceCreate, user: dict = Depends(get_curren
     if not data.get("customer_name") and data.get("customer_id"):
         c = await db.customers.find_one({"id": data["customer_id"], "org_id": user["active_org_id"]}, {"_id": 0})
         data["customer_name"] = c["name"] if c else ""
-    count = await db.invoices.count_documents({"org_id": user["active_org_id"]})
     items, subtotal, tax_amount, total = _compute_invoice(data)
     amount_paid = total if data["status"] == "paid" else 0.0
     status = _invoice_status(total, amount_paid, data["status"])
     doc = {
         "id": str(uuid.uuid4()), "org_id": user["active_org_id"],
-        "invoice_number": f"{org.get('invoice_prefix', 'INV')}-{1001 + count}",
+        "invoice_number": await next_invoice_number(org),
         "customer_id": data["customer_id"], "customer_name": data["customer_name"],
         "issue_date": data["issue_date"], "due_date": data["due_date"], "status": status,
         "items": items, "subtotal": subtotal, "tax_rate": data["tax_rate"], "tax_amount": tax_amount,
@@ -138,6 +181,7 @@ async def create_invoice(payload: InvoiceCreate, user: dict = Depends(get_curren
 
 @inv.get("/{invoice_id}")
 async def get_invoice(invoice_id: str, user: dict = Depends(get_current_user)):
+    await refresh_overdue(user["active_org_id"])
     invoice = await db.invoices.find_one({"id": invoice_id, "org_id": user["active_org_id"], **member_filter(user)}, {"_id": 0})
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
@@ -165,6 +209,10 @@ async def set_invoice_status(invoice_id: str, payload: dict = Body(...), user: d
     if new_status in ("sent", "paid") and not invoice.get("inventory_deducted"):
         await _deduct_inventory(user["active_org_id"], invoice.get("items", []), invoice["invoice_number"])
         updates["inventory_deducted"] = True
+    # Cancelling returns any deducted stock (and allows a later re-send to deduct it again)
+    if new_status == "cancelled" and invoice.get("inventory_deducted"):
+        await _restore_inventory(user["active_org_id"], invoice.get("items", []), invoice["invoice_number"])
+        updates["inventory_deducted"] = False
     await db.invoices.update_one({"id": invoice_id}, {"$set": updates})
     return await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
 
@@ -180,6 +228,9 @@ async def update_invoice(invoice_id: str, payload: dict = Body(...), user: dict 
         payload.update({"items": items, "subtotal": subtotal, "tax_amount": tax_amount, "total": total})
     for k in ("id", "org_id", "_id", "created_at"):
         payload.pop(k, None)
+    # Moving an overdue invoice's due date into the future makes it current again.
+    if existing.get("status") == "overdue" and payload.get("due_date", "") >= now_iso()[:10]:
+        payload["status"] = "partially_paid" if existing.get("amount_paid", 0) > 0 else "sent"
     payload["updated_at"] = now_iso()
     await db.invoices.update_one({"id": invoice_id}, {"$set": payload})
     return await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
@@ -280,6 +331,7 @@ async def create_customer(payload: CustomerCreate, user: dict = Depends(get_curr
 @cust.get("/{customer_id}/history")
 async def customer_history(customer_id: str, user: dict = Depends(get_current_user)):
     org_id = user["active_org_id"]
+    await refresh_overdue(org_id)
     customer = await db.customers.find_one({"id": customer_id, "org_id": org_id, **member_filter(user)}, {"_id": 0})
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -401,6 +453,7 @@ async def create_movement(payload: StockMovementCreate, user: dict = Depends(get
 @api.get("/dashboard/stats", tags=["dashboard"])
 async def dashboard_stats(user: dict = Depends(get_current_user)):
     org_id = user["active_org_id"]
+    await refresh_overdue(org_id)
     mf = member_filter(user)
     invoices = await db.invoices.find({"org_id": org_id, **mf}, {"_id": 0}).to_list(5000)
     expenses = await db.expenses.find({"org_id": org_id, **mf}, {"_id": 0}).to_list(5000)
@@ -493,6 +546,7 @@ async def dashboard_stats(user: dict = Depends(get_current_user)):
 @api.get("/notifications", tags=["dashboard"])
 async def notifications(user: dict = Depends(get_current_user)):
     org_id = user["active_org_id"]
+    await refresh_overdue(org_id)
     items = []
     overdue = await db.invoices.find({"org_id": org_id, "status": "overdue"}, {"_id": 0}).to_list(50)
     for i in overdue[:5]:
