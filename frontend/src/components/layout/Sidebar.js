@@ -1,19 +1,44 @@
-import { NavLink } from "react-router-dom";
-import { NAV_SECTIONS } from "@/lib/constants";
+import { Link, useLocation } from "react-router-dom";
+import { NAV, NAV_FOOTER, isActivePath } from "@/lib/constants";
 import { Icon } from "@/components/common/Icon";
 import { WorkspaceSwitcher } from "@/components/layout/WorkspaceSwitcher";
 import { useLayout } from "@/context/LayoutContext";
+import { usePermissions } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 import { Zap, PanelLeftClose, PanelLeft } from "lucide-react";
 
+function NavItem({ item, collapsed, onNavigate, pathname }) {
+  const active = isActivePath(item, pathname);
+  return (
+    <Link
+      to={item.path}
+      onClick={onNavigate}
+      title={collapsed ? item.name : undefined}
+      aria-current={active ? "page" : undefined}
+      data-testid={`sidebar-nav-${item.name.toLowerCase()}`}
+      className={cn(
+        "flex items-center gap-3 rounded-lg border-l-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+        collapsed && "justify-center px-0",
+        active && "border-primary bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
+      )}
+    >
+      <Icon name={item.icon} className="h-[18px] w-[18px] shrink-0" />
+      {!collapsed && item.name}
+    </Link>
+  );
+}
+
 export function Sidebar({ onNavigate, collapsed = false }) {
   const { toggleSidebar } = useLayout();
+  const { pathname } = useLocation();
+  const { isManager } = usePermissions();
+  const nav = NAV.filter((item) => !item.managerOnly || isManager);
 
   return (
     <aside
       className={cn(
         "flex h-full shrink-0 flex-col border-r border-border/70 bg-card/60 backdrop-blur-md transition-[width] duration-200",
-        collapsed ? "w-[68px]" : "w-64"
+        collapsed ? "w-[68px]" : "w-60"
       )}
       data-testid="app-sidebar"
     >
@@ -35,40 +60,12 @@ export function Sidebar({ onNavigate, collapsed = false }) {
         </div>
       )}
 
-      <nav className="flex-1 overflow-y-auto px-3 py-3">
-        {NAV_SECTIONS.map((section) => (
-          <div key={section.label} className={collapsed ? "mb-2 border-b border-border/40 pb-2 last:border-0" : "mb-3.5"}>
-            {!collapsed && (
-              <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">
-                {section.label}
-              </p>
-            )}
-            <div className="space-y-0.5">
-              {section.items.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={onNavigate}
-                  title={collapsed ? item.name : undefined}
-                  data-testid={`sidebar-nav-${item.name.toLowerCase()}`}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center gap-3 rounded-lg border-l-2 border-transparent px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-                      collapsed && "justify-center px-0",
-                      isActive && "border-primary bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
-                    )
-                  }
-                >
-                  <Icon name={item.icon} className="h-[18px] w-[18px] shrink-0" />
-                  {!collapsed && item.name}
-                </NavLink>
-              ))}
-            </div>
-          </div>
-        ))}
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label="Main">
+        {nav.map((item) => <NavItem key={item.path} item={item} collapsed={collapsed} onNavigate={onNavigate} pathname={pathname} />)}
       </nav>
 
-      <div className="border-t border-border/70 p-2">
+      <div className="space-y-1 border-t border-border/70 px-3 py-2">
+        {NAV_FOOTER.map((item) => <NavItem key={item.path} item={item} collapsed={collapsed} onNavigate={onNavigate} pathname={pathname} />)}
         <button
           onClick={toggleSidebar}
           data-testid="sidebar-collapse-toggle"

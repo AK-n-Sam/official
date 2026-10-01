@@ -20,6 +20,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TeamTab } from "@/components/settings/TeamTab";
+import { AutomationTab } from "@/components/automation/AutomationTab";
+import { IntegrationsTab } from "@/components/automation/IntegrationsTab";
 
 function Row({ label, htmlFor, help, children }) {
   return (
@@ -39,7 +41,7 @@ function ReadOnlyNote() {
   );
 }
 
-const SETTINGS_TABS = ["business", "team", "profile", "preferences", "invoicing"];
+const SETTINGS_TABS = ["business", "team", "profile", "preferences", "invoicing", "automation", "integrations"];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function ChangePassword() {
@@ -137,13 +139,15 @@ export default function Settings() {
 
   return (
     <div className="space-y-6 animate-in-up">
-      <PageHeader title="Settings" subtitle="Your business, team, profile and preferences." />
+      <PageHeader title="Settings" subtitle={isManager ? "Your business, team, automation and preferences." : "Your business, team, profile and preferences."} />
 
       <Tabs value={tab} onValueChange={changeTab}>
         <TabsList data-testid="settings-tabs" className="h-auto flex-wrap">
           <TabsTrigger value="business" data-testid="tab-business">Business</TabsTrigger>
           <TabsTrigger value="team" data-testid="tab-team">Team</TabsTrigger>
           <TabsTrigger value="invoicing" data-testid="tab-invoicing">Invoicing</TabsTrigger>
+          {isManager && <TabsTrigger value="automation" data-testid="tab-automation">Automation</TabsTrigger>}
+          {isManager && <TabsTrigger value="integrations" data-testid="tab-integrations">Integrations</TabsTrigger>}
           <TabsTrigger value="profile" data-testid="tab-profile">Profile</TabsTrigger>
           <TabsTrigger value="preferences" data-testid="tab-preferences">Preferences</TabsTrigger>
         </TabsList>
@@ -193,6 +197,9 @@ export default function Settings() {
         <TabsContent value="team">
           <TeamTab />
         </TabsContent>
+
+        {isManager && <TabsContent value="automation"><AutomationTab /></TabsContent>}
+        {isManager && <TabsContent value="integrations"><IntegrationsTab /></TabsContent>}
 
         <TabsContent value="invoicing">
           {orgError ? <ErrorState message={formatApiError(orgError)} onRetry={loadOrg} /> : !org ? <Skeleton className="h-60 rounded-xl" /> : (

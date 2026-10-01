@@ -93,3 +93,6 @@ credentials.json
 *.key
 .credentials
 frontend/node_modules/.cache/default-development/6.pack
+
+# Documented settings with no secrets
+!.env.example

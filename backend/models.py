@@ -337,6 +337,88 @@ class StockMovementCreate(_Base):
         return self
 
 
+class NewCustomerInput(_Base):
+    name: str = Field(min_length=1, max_length=200)
+    email: Optional[str] = ""
+    phone: Optional[str] = Field(default="", max_length=40)
+
+    @field_validator("email")
+    @classmethod
+    def check_email(cls, v):
+        return _check_email(v)
+
+
+class SaleInput(_Base):
+    """One business action: who bought what, and how it was paid. The server creates or reuses the
+    customer, issues the invoice, records the payment and moves the stock."""
+    customer_id: Optional[str] = ""
+    new_customer: Optional[NewCustomerInput] = None
+    items: List[InvoiceItem] = Field(min_length=1)
+    payment: Literal["paid", "unpaid", "partial", "draft"] = "paid"
+    amount_paid: Optional[float] = None
+    method: PaymentMethod = "card"
+    issue_date: Optional[str] = ""
+    due_date: Optional[str] = ""
+    tax_rate: Optional[float] = Field(default=None, ge=0, le=1)
+    notes: Optional[str] = Field(default=None, max_length=2000)
+
+    @field_validator("issue_date", "due_date")
+    @classmethod
+    def check_dates(cls, v):
+        return _check_date(v)
+
+    @model_validator(mode="after")
+    def _has_customer(self):
+        if not self.customer_id and not self.new_customer:
+            raise ValueError("Choose a customer or enter a new customer's name")
+        return self
+
+
+class PurchaseItem(_Base):
+    product_id: str = Field(min_length=1)
+    quantity: int = Field(gt=0)
+    unit_cost: float = Field(default=0, ge=0)
+
+
+class PurchaseInput(_Base):
+    """Buying stock: adds it to inventory and records what it cost, in one step."""
+    items: List[PurchaseItem] = Field(min_length=1)
+    supplier_id: Optional[str] = ""
+    paid: bool = True
+    method: PaymentMethod = "bank_transfer"
+    date: Optional[str] = ""
+    update_cost: bool = True
+    notes: Optional[str] = Field(default="", max_length=1000)
+
+    @field_validator("date")
+    @classmethod
+    def check_date(cls, v):
+        return _check_date(v)
+
+
+class ReceivePaymentInput(_Base):
+    """Money received from a customer, spread over their unpaid invoices (oldest due first)."""
+    amount: float
+    method: PaymentMethod = "bank_transfer"
+    date: Optional[str] = ""
+    notes: Optional[str] = Field(default="", max_length=1000)
+    invoice_ids: List[str] = []
+
+    @field_validator("date")
+    @classmethod
+    def check_date(cls, v):
+        return _check_date(v)
+
+
+class NoteInput(_Base):
+    text: str = Field(min_length=1, max_length=2000)
+
+
+class SnoozeInput(_Base):
+    key: str = Field(min_length=3, max_length=200)
+    days: int = Field(default=3, ge=1, le=90)
+
+
 class PaymentInput(_Base):
     amount: float  # must be > 0; checked in the handler (400)
     method: PaymentMethod = "bank_transfer"

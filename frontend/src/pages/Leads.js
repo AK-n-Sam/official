@@ -8,6 +8,7 @@ import { useCreateParam } from "@/hooks/useCreateParam";
 import { useCurrency } from "@/context/CurrencyContext";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/common/PageHeader";
+import { SectionSwitch } from "@/components/layout/SectionSwitch";
 import { SummaryCard } from "@/components/common/SummaryCard";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
@@ -120,7 +121,8 @@ export default function Leads() {
 
   return (
     <div className="space-y-6 animate-in-up">
-      <PageHeader title="Sales Pipeline" subtitle="Track leads from first contact to won deals.">
+      <SectionSwitch section="customers" />
+      <PageHeader title="Pipeline" subtitle="Deals you are working on, from first contact to won. Won deals become customers.">
         <Button onClick={() => { setEditing(null); setModalOpen(true); }} data-testid="create-lead-button">
           <Plus className="mr-2 h-4 w-4" /> New Lead
         </Button>

@@ -18,12 +18,16 @@ from models import (
     CustomerCreate, SupplierCreate, ProductCreate, ExpenseCreate, EmployeeCreate,
     TaskCreate, InvoiceCreate, InvoiceUpdate, StockMovementCreate, PaymentInput, PaymentCreate, LeadCreate,
     OrganizationUpdate, ProfileUpdate, PreferencesUpdate, SwitchOrgInput, InviteInput, ReassignInput, RoleUpdateInput,
+    SaleInput, PurchaseInput, ReceivePaymentInput, NoteInput, SnoozeInput,
 )
 from crud import (
     make_crud, is_privileged, can_manage_team, member_filter, all_of, text_match, validated_update, validation_error,
 )
 from auth import router as auth_router, get_current_user, hash_password, verify_password, workspace_role
 from seed import create_user_workspaces
+from bank import router as bank_router, review_summary as bank_review_summary, ensure_indexes as bank_indexes
+from automation import core as automation, rules as automation_rules  # noqa: F401  (rules register themselves)
+from automation.api import router as automation_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("bmp")
@@ -49,6 +53,14 @@ def days_ago(n: int) -> str:
 
 def money(v) -> str:
     return f"{float(v or 0):,.2f}"
+
+
+async def emit_event(org_id, event_type, data=None, actor=""):
+    """Record a business event and let automation react to it. Never fails the request that caused it."""
+    try:
+        await automation.emit(org_id, event_type, data, actor)
+    except Exception:
+        logger.exception("event %s failed", event_type)
 
 
 def balance_of(inv: dict) -> float:
@@ -167,13 +179,19 @@ def _payment_status(total: float, paid: float, current: str) -> str:
     return "sent"
 
 
-async def refresh_overdue(org_id: str):
+async def refresh_overdue(org_id: str) -> int:
     """Flag sent invoices whose due date has passed, so nobody has to do it by hand.
-    Partially paid invoices keep their status; the list highlights their past-due date instead."""
-    await db.invoices.update_many(
-        {"org_id": org_id, "status": {"$in": ["sent", "pending"]}, "due_date": {"$lt": today_str(), "$gt": ""}},
-        {"$set": {"status": "overdue", "updated_at": now_iso()}},
-    )
+    Partially paid invoices keep their status; the list highlights their past-due date instead.
+    Each invoice is flipped individually so the "invoice_overdue" event fires exactly once."""
+    due = {"org_id": org_id, "status": {"$in": ["sent", "pending"]}, "due_date": {"$lt": today_str(), "$gt": ""}}
+    flipped = 0
+    for i in await db.invoices.find(due, {"_id": 0, "id": 1, "invoice_number": 1, "customer_name": 1, "total": 1, "amount_paid": 1, "due_date": 1}).to_list(5000):
+        res = await db.invoices.update_one({**due, "id": i["id"]}, {"$set": {"status": "overdue", "updated_at": now_iso()}})
+        if res.modified_count:
+            flipped += 1
+            await emit_event(org_id, "invoice_overdue", {"invoice_id": i["id"], "invoice_number": i["invoice_number"],
+                                                         "customer_name": i.get("customer_name", ""), "balance": balance_of(i), "due_date": i["due_date"]})
+    return flipped
 
 
 async def next_invoice_number(org: dict) -> str:
@@ -212,9 +230,10 @@ async def _move_stock(org_id, deltas: dict, reason: str, user_id: str = ""):
             continue
         product = await db.products.find_one_and_update(
             {"id": pid, "org_id": org_id}, {"$inc": {"stock_quantity": delta}, "$set": {"updated_at": now_iso()}},
-            projection={"_id": 0, "name": 1, "stock_quantity": 1, "unit": 1}, return_document=ReturnDocument.AFTER)
+            projection={"_id": 0, "name": 1, "stock_quantity": 1, "unit": 1, "reorder_level": 1, "status": 1}, return_document=ReturnDocument.AFTER)
         if not product:
             continue
+        await _check_low_stock(org_id, pid, product, product["stock_quantity"] - delta, max(product["stock_quantity"], 0))
         actual = delta
         if product["stock_quantity"] < 0:
             short = -product["stock_quantity"]
@@ -229,6 +248,13 @@ async def _move_stock(org_id, deltas: dict, reason: str, user_id: str = ""):
                 "date": today_str(), "created_by": user_id, "created_at": now_iso(),
             })
     return warnings, applied
+
+
+async def _check_low_stock(org_id, pid, product, before, after):
+    """Raise "inventory_low" when stock drops to the reorder level (once per crossing, not on every sale below it)."""
+    level = int(product.get("reorder_level") or 0)
+    if product.get("status", "active") != "inactive" and before > level >= after:
+        await emit_event(org_id, "inventory_low", {"product_id": pid, "name": product["name"], "stock": after, "reorder_level": level})
 
 
 def _deducted_map(invoice) -> dict:
@@ -293,13 +319,25 @@ async def list_invoices(request: Request, user: dict = Depends(get_current_user)
 
 @inv.post("")
 async def create_invoice(payload: InvoiceCreate, user: dict = Depends(get_current_user)):
-    org_id = user["active_org_id"]
     data = payload.model_dump()
     customer = await _find_customer(user, data["customer_id"])
+    status = "sent" if data["status"] == "pending" else data["status"]
+    doc = await _issue_invoice(user, customer, data, "draft" if status == "draft" else "sent")
+    if status == "paid" and doc["total"] > 0:
+        doc["amount_paid"] = doc["total"]
+        doc["status"] = "paid"
+        await db.invoices.update_one({"id": doc["id"]}, {"$set": {"amount_paid": doc["total"], "status": "paid"}})
+        await _record_payment(user["active_org_id"], doc, doc["total"], "bank_transfer", data["issue_date"], "Recorded when the invoice was created as paid", user["id"])
+    return doc
+
+
+async def _issue_invoice(user, customer, data, status):
+    """Create an invoice (draft or sent) and, unless it's a draft, take its goods off the shelf.
+    `data` carries items, tax_rate, issue_date, due_date and notes."""
+    org_id = user["active_org_id"]
     org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
     items = await _clean_items(org_id, data["items"])
     items, subtotal, tax_amount, total = _compute_invoice(items, data["tax_rate"])
-    status = "sent" if data["status"] == "pending" else data["status"]
     doc = {
         "id": str(uuid.uuid4()), "org_id": org_id,
         "invoice_number": await next_invoice_number(org),
@@ -319,11 +357,9 @@ async def create_invoice(payload: InvoiceCreate, user: dict = Depends(get_curren
         warnings, deducted = await _deduct_inventory(org_id, items, doc["invoice_number"], user["id"])
         doc["stock_deducted"] = deducted
         await db.invoices.update_one({"id": doc["id"]}, {"$set": {"stock_deducted": deducted}})
-    if status == "paid" and total > 0:
-        doc["amount_paid"] = total
-        await db.invoices.update_one({"id": doc["id"]}, {"$set": {"amount_paid": total}})
-        await _record_payment(org_id, doc, total, "bank_transfer", data["issue_date"], "Recorded when the invoice was created as paid", user["id"])
     doc["stock_warnings"] = warnings
+    await emit_event(org_id, "invoice_created", {"invoice_id": doc["id"], "invoice_number": doc["invoice_number"], "customer_id": customer["id"],
+                                                 "total": total, "status": status}, user["id"])
     return doc
 
 
@@ -383,6 +419,11 @@ async def set_invoice_status(invoice_id: str, payload: dict = Body(...), user: d
     await db.invoices.update_one({"id": invoice_id, "org_id": org_id}, {"$set": updates})
     doc = await db.invoices.find_one({"id": invoice_id, "org_id": org_id}, {"_id": 0})
     doc["stock_warnings"] = warnings
+    ref = {"invoice_id": invoice_id, "invoice_number": number, "customer_name": invoice.get("customer_name", "")}
+    if new_status == "paid" and balance > 0:
+        await emit_event(org_id, "payment_received", {**ref, "amount": balance, "paid_in_full": True}, user["id"])
+    elif new_status == "cancelled" and current != "cancelled":
+        await emit_event(org_id, "invoice_cancelled", ref, user["id"])
     return doc
 
 
@@ -454,6 +495,7 @@ async def delete_invoice(invoice_id: str, user: dict = Depends(get_current_user)
         await _restore_inventory(org_id, invoice, f"Invoice {invoice['invoice_number']} deleted", user["id"])
     await db.invoices.delete_one({"id": invoice_id, "org_id": org_id})
     await db.payments.delete_many({"invoice_id": invoice_id, "org_id": org_id})
+    await emit_event(org_id, "invoice_deleted", {"invoice_id": invoice_id, "invoice_number": invoice["invoice_number"]}, user["id"])
     return {"success": True}
 
 
@@ -496,6 +538,8 @@ async def _apply_payment(user, invoice, amount, method, date_, notes=""):
         updates.update({"inventory_deducted": True, "stock_deducted": deducted})
     await db.invoices.update_one({"id": invoice["id"], "org_id": org_id}, {"$set": updates})
     await _record_payment(org_id, updated, amount, method, date_, notes, user["id"])
+    await emit_event(org_id, "payment_received", {"invoice_id": invoice["id"], "invoice_number": updated["invoice_number"], "amount": amount,
+                                                  "customer_name": updated.get("customer_name", ""), "paid_in_full": updates["status"] == "paid"}, user["id"])
     return await db.invoices.find_one({"id": invoice["id"], "org_id": org_id}, {"_id": 0})
 
 
@@ -503,6 +547,73 @@ async def _apply_payment(user, invoice, amount, method, date_, notes=""):
 async def pay_invoice(invoice_id: str, payload: PaymentInput, user: dict = Depends(get_current_user)):
     invoice = await _get_invoice(user, invoice_id)
     return await _apply_payment(user, invoice, payload.amount, payload.method, payload.date)
+
+
+CURRENCY_SYMBOLS = {"USD": "$", "EUR": "€", "GBP": "£", "INR": "₹"}
+
+
+def money_in(org, v) -> str:
+    """Amount with the workspace's currency symbol, for text the user sends or reads."""
+    return f"{CURRENCY_SYMBOLS.get((org or {}).get('currency') or 'USD', '')}{float(v or 0):,.2f}"
+
+
+def nice_date(iso: str) -> str:
+    try:
+        d = date.fromisoformat(iso[:10])
+    except (TypeError, ValueError):
+        return iso or ""
+    return f"{d.strftime('%b')} {d.day}, {d.year}"
+
+
+def _reminder_message(org, invoice, customer):
+    """A ready-to-send payment reminder, worded for how late the invoice is."""
+    balance = money_in(org, balance_of(invoice))
+    first = ((customer or {}).get("name") or invoice.get("customer_name") or "").split(" ")[0] or "there"
+    late = (date.fromisoformat(today_str()) - date.fromisoformat(invoice["due_date"][:10])).days if invoice.get("due_date") else 0
+    number, due = invoice["invoice_number"], nice_date(invoice.get("due_date", ""))
+    if late > 0:
+        subject = f"Payment reminder: invoice {number} is overdue"
+        opening = f"I hope you're well. Our records show that invoice {number} was due on {due} ({late} day{'s' if late != 1 else ''} ago), and {balance} is still outstanding."
+        ask = "Could you let me know when we can expect payment?"
+    else:
+        subject = f"Friendly reminder: invoice {number} is due {'today' if late == 0 else 'on ' + due}"
+        opening = f"Just a friendly reminder that invoice {number} for {balance} is due {'today' if late == 0 else 'on ' + due}."
+        ask = "Please let me know if you need anything from us before then."
+    body = (f"Hi {first},\n\n{opening} {ask}\n\nIf you've already paid, please ignore this message, and thank you.\n\n"
+            f"Kind regards,\n{(org or {}).get('name', '')}")
+    return {"subject": subject, "body": body}
+
+
+async def _snooze(user, key, days):
+    until = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
+    await db.snoozes.update_one({"org_id": user["active_org_id"], "user_id": user["id"], "key": key},
+                                {"$set": {"until": until}}, upsert=True)
+    return until
+
+
+@inv.get("/{invoice_id}/reminder")
+async def preview_reminder(invoice_id: str, user: dict = Depends(get_current_user)):
+    """The reminder text for an unpaid invoice (nothing is recorded until it's sent)."""
+    org_id = user["active_org_id"]
+    invoice = await _get_invoice(user, invoice_id)
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0, "name": 1, "currency": 1})
+    customer = await db.customers.find_one({"id": invoice.get("customer_id"), "org_id": org_id}, {"_id": 0, "name": 1, "email": 1})
+    reminders = invoice.get("reminders") or []
+    return {**_reminder_message(org, invoice, customer), "to": (customer or {}).get("email", ""),
+            "reminder_count": len(reminders), "last_reminded": reminders[-1]["at"] if reminders else ""}
+
+
+@inv.post("/{invoice_id}/remind")
+async def record_reminder(invoice_id: str, user: dict = Depends(get_current_user)):
+    """Log that the customer was chased, and take the invoice off Today for three days."""
+    invoice = await _get_invoice(user, invoice_id)
+    if invoice["status"] not in UNPAID or balance_of(invoice) <= 0:
+        raise HTTPException(status_code=400, detail=f"{invoice['invoice_number']} has nothing left to collect.")
+    reminder = {"at": now_iso(), "by": user["id"], "by_name": user.get("name", "")}
+    await db.invoices.update_one({"id": invoice_id, "org_id": user["active_org_id"]}, {"$push": {"reminders": reminder}})
+    for kind in ("overdue_invoice", "due_soon_invoice"):
+        await _snooze(user, f"{kind}:{invoice_id}", 3)
+    return {"reminder_count": len(invoice.get("reminders") or []) + 1, "last_reminded": reminder["at"]}
 
 
 api.include_router(inv)
@@ -567,6 +678,7 @@ async def create_customer(payload: CustomerCreate, user: dict = Depends(get_curr
     doc.update({"id": str(uuid.uuid4()), "org_id": user["active_org_id"], "created_by": user["id"], "created_at": now_iso(), "updated_at": now_iso()})
     await db.customers.insert_one(doc)
     doc.pop("_id", None)
+    await emit_event(user["active_org_id"], "customer_created", {"customer_id": doc["id"], "name": doc["name"]}, user["id"])
     return doc
 
 
@@ -580,10 +692,14 @@ async def customer_history(customer_id: str, user: dict = Depends(get_current_us
     invoices = await db.invoices.find({"org_id": org_id, "customer_id": customer_id}, {"_id": 0}).sort("created_at", -1).to_list(1000)
     payments = await db.payments.find({"org_id": org_id, "customer_id": customer_id}, {"_id": 0}).sort("created_at", -1).to_list(1000)
     tasks = await db.tasks.find({"org_id": org_id, "customer_id": customer_id}, {"_id": 0}).sort("created_at", -1).to_list(500)
-    lead = await db.leads.find_one({"org_id": org_id, "customer_id": customer_id}, {"_id": 0, "id": 1, "company": 1, "source": 1, "value": 1})
+    lead = await db.leads.find_one({"org_id": org_id, "customer_id": customer_id}, {"_id": 0, "id": 1, "company": 1, "source": 1, "value": 1, "created_at": 1})
+    notes = await db.customer_notes.find({"org_id": org_id, "customer_id": customer_id}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    reminders = sorted(({**r, "invoice_id": i["id"], "invoice_number": i["invoice_number"]} for i in invoices for r in (i.get("reminders") or [])),
+                       key=lambda r: r["at"], reverse=True)
     unpaid = [i for i in invoices if i["status"] in UNPAID]
     return {
         "customer": customer, "invoices": invoices, "payments": payments, "tasks": tasks, "lead": lead,
+        "notes": notes, "reminders": reminders,
         "total_sales": round(sum(i["total"] for i in invoices if i["status"] not in NOT_BILLED), 2),
         "outstanding": round(sum(balance_of(i) for i in unpaid), 2),
         "overdue": round(sum(balance_of(i) for i in unpaid if i.get("due_date", "") and i["due_date"] < today_str()), 2),
@@ -629,6 +745,69 @@ async def delete_customer(customer_id: str, user: dict = Depends(get_current_use
     await db.customers.delete_one({"id": customer_id, "org_id": org_id})
     await db.tasks.update_many({"org_id": org_id, "customer_id": customer_id}, {"$set": {"customer_id": ""}})
     await db.leads.update_many({"org_id": org_id, "customer_id": customer_id}, {"$set": {"customer_id": ""}})
+    await db.customer_notes.delete_many({"org_id": org_id, "customer_id": customer_id})
+    return {"success": True}
+
+
+async def _visible_customer(user, customer_id):
+    customer = await db.customers.find_one(all_of({"id": customer_id, "org_id": user["active_org_id"]}, member_filter(user)), {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return customer
+
+
+@cust.post("/{customer_id}/payments")
+async def receive_customer_payment(customer_id: str, payload: ReceivePaymentInput, user: dict = Depends(get_current_user)):
+    """A customer paid a lump sum: apply it to their unpaid invoices, oldest due date first
+    (or the invoices named first), so nobody has to split the money by hand."""
+    org_id = user["active_org_id"]
+    customer = await _visible_customer(user, customer_id)
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0, "name": 1, "currency": 1})
+    amount = round(float(payload.amount), 2)
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Enter a payment amount greater than zero")
+    await refresh_overdue(org_id)
+    open_invoices = [i for i in await db.invoices.find(
+        all_of({"org_id": org_id, "customer_id": customer_id, "status": {"$in": list(UNPAID)}}, member_filter(user)),
+        {"_id": 0}).to_list(1000) if balance_of(i) > 0]
+    if not open_invoices:
+        raise HTTPException(status_code=400, detail=f"{customer['name']} has no unpaid invoices.")
+    chosen = {iid: n for n, iid in enumerate(payload.invoice_ids)}
+    open_invoices.sort(key=lambda i: (chosen.get(i["id"], len(chosen)), i.get("due_date") or i.get("issue_date") or "", i.get("issue_date") or ""))
+    outstanding = round(sum(balance_of(i) for i in open_invoices), 2)
+    if amount > outstanding + 0.005:
+        raise HTTPException(status_code=400, detail=f"{customer['name']} owes {money_in(org, outstanding)} in total, less than {money_in(org, amount)}. Check the amount.")
+    remaining, allocations = amount, []
+    for invoice in open_invoices:
+        if remaining <= 0.005:
+            break
+        part = round(min(remaining, balance_of(invoice)), 2)
+        note = payload.notes or (f"Part of {money_in(org, amount)} received" if part < amount else "")
+        updated = await _apply_payment(user, invoice, part, payload.method, payload.date, note)
+        allocations.append({"invoice_id": invoice["id"], "invoice_number": invoice["invoice_number"], "applied": part,
+                            "status": updated["status"], "balance": balance_of(updated)})
+        remaining = round(remaining - part, 2)
+    return {"amount": amount, "allocations": allocations, "outstanding": round(outstanding - amount, 2)}
+
+
+@cust.post("/{customer_id}/notes")
+async def add_customer_note(customer_id: str, payload: NoteInput, user: dict = Depends(get_current_user)):
+    await _visible_customer(user, customer_id)
+    doc = {"id": str(uuid.uuid4()), "org_id": user["active_org_id"], "customer_id": customer_id, "text": payload.text,
+           "created_by": user["id"], "created_by_name": user.get("name", ""), "created_at": now_iso()}
+    await db.customer_notes.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@cust.delete("/{customer_id}/notes/{note_id}")
+async def delete_customer_note(customer_id: str, note_id: str, user: dict = Depends(get_current_user)):
+    note = await db.customer_notes.find_one({"id": note_id, "customer_id": customer_id, "org_id": user["active_org_id"]}, {"_id": 0})
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    if note["created_by"] != user["id"] and not can_manage_team(user):
+        raise HTTPException(status_code=403, detail="Only the note's author, owners and admins can delete it")
+    await db.customer_notes.delete_one({"id": note_id, "org_id": user["active_org_id"]})
     return {"success": True}
 
 
@@ -660,6 +839,7 @@ async def convert_lead(lead_id: str, user: dict = Depends(get_current_user)):
         await db.customers.insert_one(customer)
         customer.pop("_id", None)
     await db.leads.update_one({"id": lead_id, "org_id": org_id}, {"$set": {"stage": "won", "customer_id": customer["id"], "updated_at": now_iso()}})
+    await emit_event(org_id, "lead_converted", {"lead_id": lead_id, "customer_id": customer["id"], "name": customer["name"], "new_customer": not already}, user["id"])
     return {**customer, "already_existed": already}
 
 
@@ -690,22 +870,288 @@ async def delete_payment(payment_id: str, user: dict = Depends(get_current_user)
     """Undo a payment that was recorded by mistake (owners/admins). The invoice balance reopens."""
     if not can_manage_team(user):
         raise HTTPException(status_code=403, detail="Only owners and admins can remove payments")
-    org_id = user["active_org_id"]
-    payment = await db.payments.find_one({"id": payment_id, "org_id": org_id}, {"_id": 0})
+    payment = await db.payments.find_one({"id": payment_id, "org_id": user["active_org_id"]}, {"_id": 0})
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
+    if payment.get("bank_txn_id"):
+        # Keep the bank feed honest: the transaction goes back to "to review".
+        await db.bank_transactions.update_one({"id": payment["bank_txn_id"], "org_id": user["active_org_id"]},
+                                              {"$set": {"status": "unmatched", "match": None}})
+    invoice = await _remove_payment(user["active_org_id"], payment)
+    await emit_event(user["active_org_id"], "payment_removed", {"invoice_id": payment["invoice_id"], "invoice_number": payment.get("invoice_number", ""),
+                                                                "amount": payment["amount"]}, user["id"])
+    return {"success": True, "invoice": invoice}
+
+
+async def _remove_payment(org_id, payment):
+    """Take a payment off its invoice and reopen the balance."""
     invoice = await db.invoices.find_one_and_update(
         {"id": payment["invoice_id"], "org_id": org_id},
         {"$inc": {"amount_paid": -payment["amount"]}, "$set": {"updated_at": now_iso()}},
         projection={"_id": 0}, return_document=ReturnDocument.AFTER)
-    await db.payments.delete_one({"id": payment_id, "org_id": org_id})
+    await db.payments.delete_one({"id": payment["id"], "org_id": org_id})
     if invoice:
         paid = max(0.0, round(invoice.get("amount_paid", 0), 2))
         status = _payment_status(invoice["total"], paid, "sent" if invoice["status"] in ("paid", "partially_paid") else invoice["status"])
         await db.invoices.update_one({"id": invoice["id"], "org_id": org_id}, {"$set": {"amount_paid": paid, "status": status}})
         await refresh_overdue(org_id)
         invoice = await db.invoices.find_one({"id": invoice["id"], "org_id": org_id}, {"_id": 0})
-    return {"success": True, "invoice": invoice}
+    return invoice
+
+
+# ---------------- Business actions: one step, every consequence handled ----------------
+async def _customer_for_sale(user, data):
+    """Use the chosen customer, or reuse one that matches the typed email/name, or create it."""
+    if data.get("customer_id"):
+        return await _find_customer(user, data["customer_id"]), False
+    org_id = user["active_org_id"]
+    nc = data["new_customer"]
+    scope = member_filter(user)
+    match = None
+    if nc.get("email"):
+        match = await db.customers.find_one(all_of({"org_id": org_id, "email": nc["email"]}, scope), {"_id": 0, "id": 1, "name": 1})
+    if not match:
+        match = await db.customers.find_one(all_of({"org_id": org_id, "name": {"$regex": f"^{re.escape(nc['name'])}$", "$options": "i"}}, scope),
+                                            {"_id": 0, "id": 1, "name": 1})
+    if match:
+        return match, False
+    await _check_duplicate_customer(org_id, nc.get("email", ""))
+    doc = CustomerCreate(name=nc["name"], email=nc.get("email", ""), phone=nc.get("phone", "")).model_dump()
+    doc.update({"id": str(uuid.uuid4()), "org_id": org_id, "created_by": user["id"], "created_at": now_iso(), "updated_at": now_iso()})
+    await db.customers.insert_one(doc)
+    await emit_event(org_id, "customer_created", {"customer_id": doc["id"], "name": doc["name"], "source": "sale"}, user["id"])
+    return {"id": doc["id"], "name": doc["name"]}, True
+
+
+@api.post("/actions/sale", tags=["actions"])
+async def make_sale(payload: SaleInput, user: dict = Depends(get_current_user)):
+    """Record a sale: customer (existing or new), invoice, payment and stock, in one call."""
+    data = payload.model_dump()
+    org = await db.organizations.find_one({"id": user["active_org_id"]}, {"_id": 0})
+    issue = data["issue_date"] or today_str()
+    if data["payment"] == "paid" and not data["due_date"]:
+        due = issue  # paid on the spot: nothing to wait for
+    else:
+        due = data["due_date"] or (date.fromisoformat(issue) + timedelta(days=int(org.get("invoice_due_days") or 0))).isoformat()
+    if due < issue:
+        raise HTTPException(status_code=422, detail="The due date can't be before the sale date")
+    tax_rate = data["tax_rate"] if data["tax_rate"] is not None else float(org.get("invoice_tax_rate") or 0)
+    notes = data["notes"] if data["notes"] is not None else org.get("invoice_notes", "")
+    total = _compute_invoice(data["items"], tax_rate)[3]
+    paid_now = {"paid": total, "unpaid": 0.0, "draft": 0.0}.get(data["payment"])
+    if data["payment"] == "partial":
+        paid_now = round(float(data["amount_paid"] or 0), 2)
+        if not (0 < paid_now < total - 0.005):
+            raise HTTPException(status_code=400, detail=f"For a part payment, enter an amount above zero and below the total ({money_in(org, total)})")
+
+    customer, created = await _customer_for_sale(user, data)
+    invoice = await _issue_invoice(user, customer, {"items": data["items"], "tax_rate": tax_rate, "issue_date": issue, "due_date": due, "notes": notes},
+                                   "draft" if data["payment"] == "draft" else "sent")
+    warnings = invoice["stock_warnings"]
+    if paid_now > 0:
+        invoice = await _apply_payment(user, invoice, paid_now, data["method"], issue, "Paid at the time of sale")
+    invoice["stock_warnings"] = warnings
+    invoice["balance"] = balance_of(invoice)
+    return {"invoice": invoice, "customer": customer, "customer_created": created}
+
+
+@api.post("/actions/purchase", tags=["actions"])
+async def buy_stock(payload: PurchaseInput, user: dict = Depends(get_current_user)):
+    """Bought stock: it goes onto the shelf and its cost is recorded as an expense, in one step
+    (previously a stock movement plus a separately typed expense with the same numbers)."""
+    org_id = user["active_org_id"]
+    ids = [it.product_id for it in payload.items]
+    products = {p["id"]: p for p in await db.products.find({"org_id": org_id, "id": {"$in": ids}}, {"_id": 0}).to_list(500)}
+    if len(products) != len(set(ids)):
+        raise HTTPException(status_code=400, detail="A product on this purchase no longer exists")
+    supplier_id = payload.supplier_id or next((products[i].get("supplier_id") for i in ids if products[i].get("supplier_id")), "")
+    supplier = None
+    if supplier_id:
+        supplier = await db.suppliers.find_one({"id": supplier_id, "org_id": org_id}, {"_id": 0, "id": 1, "name": 1})
+        if not supplier:
+            raise HTTPException(status_code=400, detail="The selected supplier no longer exists")
+    vendor = supplier["name"] if supplier else ""
+    when = payload.date or today_str()
+    lines, total = [], 0.0
+    for it in payload.items:
+        p = products[it.product_id]
+        updates = {"updated_at": now_iso()}
+        if payload.update_cost and it.unit_cost > 0 and abs(it.unit_cost - float(p.get("cost") or 0)) > 0.0001:
+            updates["cost"] = it.unit_cost
+        updated = await db.products.find_one_and_update(
+            {"id": p["id"], "org_id": org_id}, {"$inc": {"stock_quantity": it.quantity}, "$set": updates},
+            projection={"_id": 0, "stock_quantity": 1}, return_document=ReturnDocument.AFTER)
+        await db.stock_movements.insert_one({
+            "id": str(uuid.uuid4()), "org_id": org_id, "product_id": p["id"], "product_name": p["name"], "type": "in",
+            "quantity": it.quantity, "previous_quantity": updated["stock_quantity"] - it.quantity,
+            "reason": f"Bought from {vendor}" if vendor else "Stock purchase", "date": when,
+            "created_by": user["id"], "created_at": now_iso(),
+        })
+        total += it.quantity * it.unit_cost
+        lines.append({"product_id": p["id"], "name": p["name"], "quantity": it.quantity, "unit_cost": it.unit_cost, "new_stock": updated["stock_quantity"]})
+    expense = None
+    if total > 0:
+        expense = {
+            "id": str(uuid.uuid4()), "org_id": org_id, "category": "Stock purchases", "vendor": vendor, "supplier_id": supplier_id,
+            "description": (", ".join(f"{l['quantity']} × {l['name']}" for l in lines) + (f". {payload.notes}" if payload.notes else ""))[:2000],
+            "amount": round(total, 2), "date": when, "status": "paid" if payload.paid else "pending",
+            "payment_method": payload.method, "created_by": user["id"], "created_at": now_iso(), "updated_at": now_iso(),
+        }
+        await db.expenses.insert_one(expense)
+        expense.pop("_id", None)
+    await emit_event(org_id, "stock_purchased", {"total": round(total, 2), "supplier": vendor, "lines": len(lines)}, user["id"])
+    return {"items": lines, "expense": expense, "total": round(total, 2), "supplier_name": vendor}
+
+
+# ---------------- Today: what needs doing, resolvable in place ----------------
+SEVERITY_RANK = {"high": 0, "medium": 1, "low": 2}
+
+
+@api.get("/today", tags=["today"])
+async def today_view(user: dict = Depends(get_current_user)):
+    """Concrete things that need the user's attention across the business, most urgent first.
+    Each item carries what the frontend needs to resolve it in one step. Snoozed items are hidden."""
+    org_id, uid = user["active_org_id"], user["id"]
+    await refresh_overdue(org_id)
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0, "name": 1, "currency": 1})
+    today = today_str()
+    t = date.fromisoformat(today)
+    soon = (t + timedelta(days=3)).isoformat()
+    week_start = (t - timedelta(days=t.weekday())).isoformat()
+    snoozed = {s["key"] for s in await db.snoozes.find({"org_id": org_id, "user_id": uid, "until": {"$gt": now_iso()}}, {"_id": 0, "key": 1}).to_list(2000)}
+    mf = member_filter(user)
+    items = []
+
+    def add(kind, ref_id, severity, title, detail, amount=0.0, **context):
+        key = f"{kind}:{ref_id}"
+        if key not in snoozed:
+            items.append({"key": key, "kind": kind, "severity": severity, "title": title, "detail": detail, "amount": round(amount or 0, 2), "context": context})
+
+    def days_between(a, b):
+        return (date.fromisoformat(b[:10]) - date.fromisoformat(a[:10])).days
+
+    open_invoices = await db.invoices.find(all_of({"org_id": org_id, "status": {"$in": list(UNPAID) + ["draft"]}}, mf), {"_id": 0, "items": 0}).to_list(5000)
+    outstanding = overdue_amount = 0.0
+    for i in open_invoices:
+        bal = balance_of(i)
+        reminders = i.get("reminders") or []
+        last = reminders[-1]["at"][:10] if reminders else ""
+        ctx = {"invoice_id": i["id"], "invoice_number": i["invoice_number"], "customer_id": i.get("customer_id", ""),
+               "customer_name": i.get("customer_name", ""), "balance": bal, "total": i["total"], "due_date": i.get("due_date", ""),
+               "reminder_count": len(reminders), "last_reminded": last}
+        if i["status"] == "draft":
+            add("draft_invoice", i["id"], "low", f"Send {i['invoice_number']} to {i.get('customer_name', '')}",
+                f"Draft for {money_in(org, i['total'])}, started {nice_date(i.get('created_at', ''))}", i["total"], **ctx)
+            continue
+        if bal <= 0:
+            continue
+        outstanding += bal
+        due = i.get("due_date") or ""
+        chased = f" · reminded {len(reminders)}×, last {nice_date(last)}" if reminders else " · not reminded yet"
+        if due and due < today:
+            overdue_amount += bal
+            late = days_between(due, today)
+            add("overdue_invoice", i["id"], "high", f"{i.get('customer_name', '')} owes {money_in(org, bal)}",
+                f"{i['invoice_number']} · {late} day{'s' if late != 1 else ''} overdue{chased}", bal, days_late=late, **ctx)
+        elif due and due <= soon:
+            when = "today" if due == today else f"in {days_between(today, due)} day{'s' if days_between(today, due) != 1 else ''}"
+            add("due_soon_invoice", i["id"], "medium", f"{i['invoice_number']} is due {when}",
+                f"{i.get('customer_name', '')} · {money_in(org, bal)} to collect{chased if reminders else ''}", bal, **ctx)
+
+    for p in await db.products.find({"org_id": org_id, "status": {"$ne": "inactive"}, "$expr": {"$lte": ["$stock_quantity", "$reorder_level"]}}, {"_id": 0}).to_list(500):
+        suggested = max(1, int(p.get("reorder_level") or 0) * 2 - int(p["stock_quantity"]))
+        add("low_stock", p["id"], "high" if p["stock_quantity"] <= 0 else "medium",
+            f"{'Out of' if p['stock_quantity'] <= 0 else 'Low on'} {p['name']}",
+            f"{p['stock_quantity']} left · reorder at {p.get('reorder_level', 0)}" + (f" · usually from {p['supplier_name']}" if p.get("supplier_name") else ""),
+            suggested * float(p.get("cost") or 0), product_id=p["id"], name=p["name"], stock=p["stock_quantity"], suggested_qty=suggested,
+            unit_cost=float(p.get("cost") or 0), supplier_id=p.get("supplier_id", ""), supplier_name=p.get("supplier_name", ""))
+
+    for e in await db.expenses.find(all_of({"org_id": org_id, "status": "pending"}, mf), {"_id": 0}).sort("date", 1).to_list(200):
+        age = days_between(e.get("date") or today, today)
+        add("unpaid_expense", e["id"], "medium" if age > 30 else "low", f"Pay {e.get('vendor') or e['category']}",
+            f"{e['category']} · {money_in(org, e['amount'])} · recorded {nice_date(e.get('date', ''))}", e["amount"],
+            expense_id=e["id"], category=e["category"], vendor=e.get("vendor", ""))
+
+    my_tasks = {"org_id": org_id, "status": {"$nin": ["done", "completed"]}, "due_date": {"$gt": "", "$lte": today},
+                "$or": [{"assignee_id": uid}, {"assignee_id": {"$in": ["", None]}, "created_by": uid}]}
+    by_invoice = {it["context"]["invoice_id"]: it for it in items if it["kind"] == "overdue_invoice"}
+    for task in await db.tasks.find(my_tasks, {"_id": 0}).sort("due_date", 1).to_list(200):
+        linked = by_invoice.get((task.get("automation") or {}).get("invoice_id"))
+        if linked:
+            # The automatic follow-up and the overdue invoice are the same job: show it once.
+            linked["context"]["followup_task_id"] = task["id"]
+            linked["detail"] += " · follow-up: call them"
+            continue
+        overdue = task["due_date"] < today
+        add("task", task["id"], "high" if overdue else "medium", task["title"],
+            ("Overdue since " + nice_date(task["due_date"]) if overdue else "Due today") + (f" · {task['customer_name']}" if task.get("customer_name") else ""),
+            task_id=task["id"], due_date=task["due_date"], customer_id=task.get("customer_id", ""), overdue=overdue)
+
+    for lead in await db.leads.find(all_of({"org_id": org_id, "stage": "won", "customer_id": {"$in": ["", None]}}, member_filter(user, LEAD_SCOPE)), {"_id": 0}).to_list(100):
+        add("won_lead", lead["id"], "low", f"Turn {lead.get('company') or lead['name']} into a customer",
+            f"Deal won · {money_in(org, lead.get('value', 0))}", lead.get("value", 0), lead_id=lead["id"], name=lead.get("company") or lead["name"])
+
+    # Regular customers who have gone quiet: at least three orders, and a gap well past their usual rhythm.
+    active = {c["id"]: c["name"] for c in await db.customers.find(all_of({"org_id": org_id, "status": {"$ne": "inactive"}}, mf), {"_id": 0, "id": 1, "name": 1}).to_list(5000)}
+    order_dates = defaultdict(list)
+    async for i in db.invoices.find(all_of({"org_id": org_id, "status": {"$nin": list(NOT_BILLED)}}, mf), {"_id": 0, "customer_id": 1, "issue_date": 1}):
+        if i.get("customer_id") in active and i.get("issue_date"):
+            order_dates[i["customer_id"]].append(i["issue_date"][:10])
+    for cid, dates in order_dates.items():
+        dates = sorted(set(dates))
+        if len(dates) < 3:
+            continue
+        gaps = [days_between(a, b) for a, b in zip(dates, dates[1:])]
+        usual = max(1, round(sum(gaps) / len(gaps)))
+        since = days_between(dates[-1], today)
+        if since > max(45, 2 * usual):
+            add("quiet_customer", cid, "low", f"Check in with {active[cid]}",
+                f"Usually orders every ~{usual} days · last order {since} days ago", customer_id=cid, name=active[cid])
+
+    bank = await bank_review_summary(user)
+    if bank:
+        parts = [f"{money_in(org, bank['money_in'])} in" if bank["money_in"] else "", f"{money_in(org, bank['money_out'])} out" if bank["money_out"] else ""]
+        add("bank_review", "all", "medium", f"Confirm {bank['count']} bank transaction{'s' if bank['count'] != 1 else ''}",
+            " · ".join(p for p in parts if p) + " · most are matched for you", bank["money_in"] + bank["money_out"], count=bank["count"])
+
+    automation_view = None
+    if can_manage_team(user):
+        for a in await db.approvals.find({"org_id": org_id, "status": {"$in": ["pending", "failed"]}}, {"_id": 0}).sort("created_at", 1).to_list(50):
+            failed = a["status"] == "failed"
+            add("approval", a["id"], "high" if failed else "medium", a["title"], a["detail"] + (f" · didn't go through: {a['error']}" if failed else " · prepared for you"),
+                a.get("amount", 0), approval_id=a["id"], approval_kind=a["kind"], failed=failed)
+        for j in await db.jobs.find({"org_id": org_id, "status": "failed"}, {"_id": 0, "id": 1, "label": 1, "error": 1, "updated_at": 1}).sort("updated_at", -1).to_list(10):
+            add("automation_failed", j["id"], "medium", f"{j['label']} needs attention",
+                "It failed several times and stopped. Retry it, or check Settings > Automation.", job_id=j["id"])
+        since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+        done = await db.automation_log.find({"org_id": org_id, "status": "done", "trigger": {"$ne": "user"}, "at": {"$gte": since}},
+                                            {"_id": 0, "message": 1, "rule": 1, "at": 1}).sort("at", -1).to_list(50)
+        busy = await db.jobs.count_documents({"org_id": org_id, "status": {"$in": ["queued", "running"]}})
+        automation_view = {"done_count": len(done), "recent": done[:5], "processing": busy}
+
+    items.sort(key=lambda x: (SEVERITY_RANK[x["severity"]], -x["amount"]))
+    payments_week = await db.payments.find(all_of({"org_id": org_id, "date": {"$gte": week_start}}, mf), {"_id": 0, "amount": 1}).to_list(5000)
+    sold_week = await db.invoices.find(all_of({"org_id": org_id, "issue_date": {"$gte": week_start}, "status": {"$nin": list(NOT_BILLED)}}, mf), {"_id": 0, "total": 1}).to_list(5000)
+    return {
+        "date": today,
+        "summary": {
+            "money_in_week": round(sum(p["amount"] for p in payments_week), 2),
+            "sales_week": round(sum(i["total"] for i in sold_week), 2), "sales_week_count": len(sold_week),
+            "outstanding": round(outstanding, 2), "overdue": round(overdue_amount, 2),
+        },
+        "items": items[:50], "total": len(items), "snoozed": len(snoozed), "automation": automation_view,
+    }
+
+
+@api.post("/today/snooze", tags=["today"])
+async def snooze_item(payload: SnoozeInput, user: dict = Depends(get_current_user)):
+    return {"key": payload.key, "until": await _snooze(user, payload.key, payload.days)}
+
+
+@api.delete("/today/snooze/{key}", tags=["today"])
+async def unsnooze_item(key: str, user: dict = Depends(get_current_user)):
+    await db.snoozes.delete_one({"org_id": user["active_org_id"], "user_id": user["id"], "key": key})
+    return {"success": True}
 
 
 # ---------------- Inventory / Stock movements ----------------
@@ -740,6 +1186,7 @@ async def create_movement(payload: StockMovementCreate, user: dict = Depends(get
         updated = await db.products.find_one_and_update(
             {"id": product["id"], "org_id": org_id}, {"$set": {"stock_quantity": qty, "updated_at": now_iso()}},
             projection={"_id": 0, "stock_quantity": 1}, return_document=ReturnDocument.AFTER)
+    await _check_low_stock(org_id, product["id"], product, int(product["stock_quantity"]), int(updated["stock_quantity"]))
     doc = {
         "id": str(uuid.uuid4()), "org_id": org_id, "product_id": product["id"],
         "product_name": product["name"], "type": payload.type, "quantity": qty,
@@ -1307,6 +1754,8 @@ async def update_preferences(payload: PreferencesUpdate, user: dict = Depends(ge
 
 app.include_router(auth_router)
 app.include_router(api)
+app.include_router(bank_router)
+app.include_router(automation_router)
 
 
 @app.exception_handler(Exception)
@@ -1344,6 +1793,16 @@ async def _ensure_indexes():
     await db.stock_movements.create_index([("org_id", 1), ("product_id", 1)])
     await db.customers.create_index([("org_id", 1), ("email", 1)])
     await db.products.create_index([("org_id", 1), ("supplier_id", 1)])
+    await db.snoozes.create_index([("org_id", 1), ("user_id", 1), ("key", 1)], unique=True)
+    await db.customer_notes.create_index([("org_id", 1), ("customer_id", 1)])
+    await db.tasks.create_index([("org_id", 1), ("automation.invoice_id", 1)])
+    await db.recurring.create_index([("active", 1), ("next_date", 1)])
+    await db.recurring.create_index([("org_id", 1), ("source_id", 1)])
+    await db.approvals.create_index([("org_id", 1), ("status", 1)])
+    await db.approvals.create_index("dedupe_key", unique=True, partialFilterExpression={"dedupe_key": {"$type": "string"}})
+    await db.invoices.create_index([("org_id", 1), ("recurring_id", 1), ("recurring_period", 1)])
+    await bank_indexes()
+    await automation.ensure_indexes()
 
 
 async def _migrate_workspace_roles():
@@ -1368,6 +1827,7 @@ async def startup():
     await _ensure_indexes()
     await _migrate_workspace_roles()
     await _seed_admin()
+    automation.runner.start()
 
 
 async def _seed_admin():
@@ -1392,5 +1852,6 @@ async def _seed_admin():
 
 @app.on_event("shutdown")
 async def shutdown():
+    await automation.runner.shutdown()
     from database import client
     client.close()

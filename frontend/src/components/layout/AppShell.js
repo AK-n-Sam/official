@@ -8,8 +8,10 @@ import { Header } from "@/components/layout/Header";
 import { WorkspaceTabs } from "@/components/layout/WorkspaceTabs";
 import { useLayout } from "@/context/LayoutContext";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { ActionsProvider } from "@/components/actions/ActionsProvider";
+import Today from "@/pages/Today";
+import Bank from "@/pages/Bank";
 import Dashboard from "@/pages/Dashboard";
-import MyWork from "@/pages/MyWork";
 import Sales from "@/pages/Sales";
 import Leads from "@/pages/Leads";
 import Customers from "@/pages/Customers";
@@ -47,6 +49,7 @@ export function AppShell() {
   const { sidebarCollapsed, density } = useLayout();
 
   return (
+    <ActionsProvider>
     <div className="flex h-screen overflow-hidden bg-background">
       <div className="hidden lg:block">
         <Sidebar collapsed={sidebarCollapsed} />
@@ -65,10 +68,14 @@ export function AppShell() {
         <main className="flex-1 overflow-y-auto">
           <div className={`mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ${density === "compact" ? "py-3" : "py-6"}`}>
             <Routes>
-              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route index element={<Navigate to="/today" replace />} />
+              <Route path="/today" element={<Today />} />
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/my-work" element={<MyWork />} />
-              <Route path="/sales" element={<Sales />} />
+              {/* My Work became part of Today; Sales was renamed Payments. Old links still work. */}
+              <Route path="/my-work" element={<Navigate to="/today" replace />} />
+              <Route path="/payments" element={<Sales />} />
+              <Route path="/bank" element={<Bank />} />
+              <Route path="/sales" element={<Navigate to="/payments" replace />} />
               <Route path="/leads" element={<Leads />} />
               <Route path="/customers" element={<Customers />} />
               <Route path="/customers/:id" element={<CustomerDetail />} />
@@ -84,11 +91,12 @@ export function AppShell() {
               <Route path="/reports" element={<Reports />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/help" element={<Help />} />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              <Route path="*" element={<Navigate to="/today" replace />} />
             </Routes>
           </div>
         </main>
       </div>
     </div>
+    </ActionsProvider>
   );
 }

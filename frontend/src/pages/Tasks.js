@@ -6,9 +6,11 @@ import api, { formatApiError } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { useCreateParam } from "@/hooks/useCreateParam";
 import { useRefOptions } from "@/hooks/useRefOptions";
+import { useDataChanged } from "@/hooks/useDataChanged";
 import { formatDate, todayIso } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/common/PageHeader";
+import { SectionSwitch } from "@/components/layout/SectionSwitch";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
@@ -65,6 +67,7 @@ const VIEW_KEY = "bmp_tasks_view";
 
 export default function Tasks() {
   const { data, loading, error, refetch, setData } = useResource("/tasks", {});
+  useDataChanged(refetch);
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const [dragId, setDragId] = useState(null);
@@ -160,6 +163,7 @@ export default function Tasks() {
 
   return (
     <div className="space-y-6 animate-in-up">
+      <SectionSwitch section="team" />
       <PageHeader title="Tasks" subtitle={overdueCount > 0 ? `${overdueCount} task(s) overdue and need attention.` : "Organize your team's work across stages."}>
         <div className="flex items-center gap-2">
           <div className="flex rounded-lg border border-border/70 p-0.5">

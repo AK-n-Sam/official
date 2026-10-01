@@ -166,8 +166,8 @@ export const suppliersConfig = () => ({
 });
 
 export const employeesConfig = (fmt, { currency, isManager } = {}) => ({
-  title: "Employees",
-  subtitle: isManager ? "Your team members, their roles and pay." : "Your team members and their roles.",
+  title: "People",
+  subtitle: isManager ? "Staff records: roles, departments and pay. (Who can sign in is managed in Settings > Team.)" : "Staff records: roles and departments.",
   endpoint: "/employees",
   singular: "Employee",
   icon: Briefcase,

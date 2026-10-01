@@ -8,6 +8,7 @@ import { useCurrency } from "@/context/CurrencyContext";
 import { formatDate } from "@/lib/format";
 import { downloadRowsCsv, csvFilename } from "@/lib/csv";
 import { PageHeader } from "@/components/common/PageHeader";
+import { SectionSwitch } from "@/components/layout/SectionSwitch";
 import { ErrorState } from "@/components/common/States";
 import { DateRangePicker, RANGE_PRESETS } from "@/components/common/DateRangePicker";
 import { AgingBar } from "@/components/dashboard/Receivables";
@@ -100,9 +101,12 @@ export default function Reports() {
   };
 
   const header = (
-    <PageHeader title="Reports" subtitle="Profit and loss, cash and receivables for any period.">
-      <Button variant="outline" size="sm" onClick={exportCsv} disabled={!data || loading} data-testid="report-export"><Download className="mr-1.5 h-4 w-4" /> Export CSV</Button>
-    </PageHeader>
+    <>
+      <SectionSwitch section="insights" />
+      <PageHeader title="Reports" subtitle="Profit and loss, cash and receivables for any period.">
+        <Button variant="outline" size="sm" onClick={exportCsv} disabled={!data || loading} data-testid="report-export"><Download className="mr-1.5 h-4 w-4" /> Export CSV</Button>
+      </PageHeader>
+    </>
   );
 
   const d = data;

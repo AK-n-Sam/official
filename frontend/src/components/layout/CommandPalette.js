@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Search, Users, FileText, Package, Receipt, Briefcase, CheckSquare, Target, Plus, Loader2,
-  SunMoon, PanelLeft, Rows3, LifeBuoy, Keyboard, Truck,
+  Search, Users, FileText, Package, Receipt, Briefcase, CheckSquare, Target, Loader2,
+  SunMoon, PanelLeft, Rows3, LifeBuoy, Keyboard, Truck, ShoppingCart, HandCoins, PackagePlus,
 } from "lucide-react";
 import api from "@/lib/api";
-import { NAV_SECTIONS } from "@/lib/constants";
+import { ALL_PAGES } from "@/lib/constants";
+import { useActions } from "@/components/actions/ActionsProvider";
 import { helpPathFor } from "@/modules/helpContent";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useTheme } from "@/context/ThemeContext";
@@ -17,16 +18,27 @@ import { Command, CommandInput, CommandList, CommandGroup, CommandItem, CommandE
 
 const RESULT_ICONS = { customer: Users, invoice: FileText, product: Package, expense: Receipt, employee: Briefcase, task: CheckSquare, lead: Target, supplier: Truck };
 
-export const CREATE_ACTIONS = [
-  { label: "New Invoice", path: "/invoices?new=1", icon: FileText, id: "invoice" },
-  { label: "New Customer", path: "/customers?new=1", icon: Users, id: "customer" },
-  { label: "New Expense", path: "/expenses?new=1", icon: Receipt, id: "expense" },
-  { label: "New Product", path: "/products?new=1", icon: Package, id: "product" },
-  { label: "New Task", path: "/tasks?new=1", icon: CheckSquare, id: "task" },
-  { label: "New Lead", path: "/leads?new=1", icon: Target, id: "lead" },
-];
+/**
+ * The things an owner does, in business terms. The first three are one-step actions that update
+ * every connected record (customer, invoice, payment, stock, expense); the rest open a form.
+ */
+export function useBusinessActions() {
+  const actions = useActions();
+  const navigate = useNavigate();
+  return useMemo(() => [
+    { id: "sale", label: "Make a sale", icon: ShoppingCart, run: () => actions.sell(), keywords: "sell order receipt" },
+    { id: "get-paid", label: "Get paid", icon: HandCoins, run: () => actions.getPaid(), keywords: "payment receive money collect" },
+    { id: "buy-stock", label: "Buy stock", icon: PackagePlus, run: () => actions.buyStock(), keywords: "restock purchase inventory order" },
+    { id: "invoice", label: "New invoice", icon: FileText, run: () => actions.sell({ mode: "invoice" }), keywords: "bill" },
+    { id: "expense", label: "Record an expense", icon: Receipt, run: () => navigate("/expenses?new=1"), keywords: "cost spend bill" },
+    { id: "follow-up", label: "Follow up", icon: CheckSquare, run: () => actions.followUp(), keywords: "task remind todo call" },
+    { id: "customer", label: "Add a customer", icon: Users, run: () => navigate("/customers?new=1"), keywords: "client" },
+    { id: "lead", label: "Add a lead", icon: Target, run: () => navigate("/leads?new=1"), keywords: "prospect deal pipeline" },
+    { id: "product", label: "Add a product", icon: Package, run: () => navigate("/products?new=1"), keywords: "item service" },
+  ], [actions, navigate]);
+}
 
-const PAGES = NAV_SECTIONS.flatMap((s) => s.items.map((i) => ({ ...i, section: s.label })));
+const PAGES = ALL_PAGES;
 
 export const IS_MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 export const PALETTE_SHORTCUT = IS_MAC ? "⌘K" : "Ctrl K";
@@ -77,7 +89,8 @@ export function CommandPalette() {
   }, [debounced]);
 
   const q = query.trim().toLowerCase();
-  const creates = useMemo(() => CREATE_ACTIONS.filter((a) => !q || matches(q, a.label, "create add")), [q]);
+  const businessActions = useBusinessActions();
+  const creates = useMemo(() => businessActions.filter((a) => !q || matches(q, a.label, a.keywords, "create add new")), [q, businessActions]);
   const pages = useMemo(() => PAGES.filter((p) => !q || matches(q, p.name, p.section)), [q]);
   const prefs = useMemo(() => [
     { id: "theme", label: "Toggle light / dark theme", icon: SunMoon, run: toggleTheme },
@@ -120,12 +133,23 @@ export function CommandPalette() {
             <CommandInput
               value={query}
               onValueChange={setQuery}
-              placeholder="Search customers, invoices, products... or type a command"
+              placeholder="Find anything, or type what you want to do (e.g. sell, restock)"
               className="h-12"
               data-testid="global-search-input"
             />
             <CommandList className="max-h-[min(60vh,420px)]">
               {nothing && <CommandEmpty data-testid="search-empty">No results for "{query}"</CommandEmpty>}
+
+              {creates.length > 0 && (
+                <CommandGroup heading="Do">
+                  {creates.map((a) => (
+                    <CommandItem key={a.id} value={`create-${a.id}`} onSelect={() => run(a.run)} data-testid={`palette-create-${a.id}`} className="gap-3">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><a.icon className="h-4 w-4" /></span>
+                      {a.label}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
 
               {q.length >= 2 && (stillSearching || results.length > 0) && (
                 <CommandGroup heading="Records" data-testid="search-results">
@@ -146,17 +170,6 @@ export function CommandPalette() {
                       </CommandItem>
                     );
                   })}
-                </CommandGroup>
-              )}
-
-              {creates.length > 0 && (
-                <CommandGroup heading="Create">
-                  {creates.map((a) => (
-                    <CommandItem key={a.id} value={`create-${a.id}`} onSelect={() => run(() => navigate(a.path))} data-testid={`palette-create-${a.id}`} className="gap-3">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Plus className="h-4 w-4" /></span>
-                      {a.label}
-                    </CommandItem>
-                  ))}
                 </CommandGroup>
               )}
 

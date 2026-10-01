@@ -7,5 +7,5 @@ export default function Products() {
   const { format, currency } = useCurrency();
   const { isManager } = usePermissions();
   // Everyone can add and update products; only owners and admins remove them.
-  return <ResourceManager config={productsConfig(format, { currency })} perms={{ create: true, edit: true, delete: isManager }} />;
+  return <ResourceManager section="products" config={productsConfig(format, { currency })} perms={{ create: true, edit: true, delete: isManager }} />;
 }

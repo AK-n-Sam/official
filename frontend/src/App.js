@@ -28,7 +28,7 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <AuthPage />} />
+      <Route path="/login" element={user ? <Navigate to="/today" replace /> : <AuthPage />} />
       <Route
         path="/print/invoices/:id"
         element={user ? <CurrencyProvider><InvoicePrint /></CurrencyProvider> : <Navigate to="/login" replace />}

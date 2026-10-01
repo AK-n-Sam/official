@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useDataChanged } from "@/hooks/useDataChanged";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
@@ -10,6 +11,7 @@ import { formatDate } from "@/lib/format";
 import { downloadCsv, csvFilename } from "@/lib/csv";
 import { PAYMENT_METHODS } from "@/modules/resourceConfigs";
 import { PageHeader } from "@/components/common/PageHeader";
+import { SectionSwitch } from "@/components/layout/SectionSwitch";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { TableSkeleton, ErrorState } from "@/components/common/States";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -27,6 +29,7 @@ export default function Sales() {
   const [range, setRange] = useState(() => ({ preset: "last_12", ...RANGE_PRESETS.last_12.range() }));
   const [outstanding, setOutstanding] = useState(null);
   const { data: payments, loading, error, refetch } = useResource("/payments", { date_from: range.from, date_to: range.to });
+  useDataChanged(refetch);
 
   useEffect(() => {
     api.get("/dashboard/stats").then(({ data }) => setOutstanding({ amount: data.outstanding, count: data.outstanding_count, overdue: data.overdue_amount })).catch(() => setOutstanding(null));
@@ -65,7 +68,8 @@ export default function Sales() {
 
   return (
     <div className="space-y-6 animate-in-up">
-      <PageHeader title="Sales" subtitle="Payments received from customers, and what is still owed to you.">
+      <SectionSwitch section="invoices" />
+      <PageHeader title="Payments" subtitle="Money received from customers, and what is still owed to you.">
         <Button variant="outline" size="sm" onClick={exportCsv} disabled={loading || payments.length === 0} data-testid="sales-export"><Download className="mr-1.5 h-4 w-4" /> Export CSV</Button>
       </PageHeader>
 

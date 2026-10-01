@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Users, FileText, CreditCard, Receipt, Package, CheckSquare, Activity } from "lucide-react";
 import api from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useDataChanged } from "@/hooks/useDataChanged";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -15,15 +16,15 @@ export function ActivityFeed() {
   const { format } = useCurrency();
   const [items, setItems] = useState(null);
 
-  useEffect(() => {
-    api.get("/activity").then(({ data }) => setItems(data)).catch(() => setItems([]));
-  }, []);
+  const load = useCallback(() => { api.get("/activity").then(({ data }) => setItems(data)).catch(() => setItems([])); }, []);
+  useEffect(load, [load]);
+  useDataChanged(load);
 
   return (
     <Card className="border-border/70 bg-card/90" data-testid="activity-feed">
       <div className="flex items-center gap-2 border-b border-border/70 px-5 py-4">
         <Activity className="h-4 w-4 text-muted-foreground" />
-        <h3 className="font-heading text-base font-semibold">Business Activity</h3>
+        <h3 className="font-heading text-base font-semibold">Recently</h3>
       </div>
       <div className="max-h-[420px] divide-y divide-border/50 overflow-y-auto">
         {items === null ? (

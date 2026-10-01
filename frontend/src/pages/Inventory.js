@@ -8,12 +8,15 @@ import { formatDate } from "@/lib/format";
 import { useCurrency } from "@/context/CurrencyContext";
 import { SummaryCard } from "@/components/common/SummaryCard";
 import { PageHeader } from "@/components/common/PageHeader";
+import { SectionSwitch } from "@/components/layout/SectionSwitch";
+import { useActions } from "@/components/actions/ActionsProvider";
+import { useDataChanged } from "@/hooks/useDataChanged";
 import { TableSkeleton, ErrorState } from "@/components/common/States";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,9 +28,11 @@ export default function Inventory() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const { data: movements, refetch: refetchMoves } = useResource("/stock-movements", {});
+  const actions = useActions();
+  useDataChanged(() => { refetch(); refetchMoves(); });
   const [open, setOpen] = useState(false);
   const [productId, setProductId] = useState("");
-  const [type, setType] = useState("in");
+  const [type, setType] = useState("adjustment");
   const [quantity, setQuantity] = useState(1);
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
@@ -48,17 +53,15 @@ export default function Inventory() {
 
   const openMovement = (prefill = {}) => {
     setProductId(prefill.productId || "");
-    setType(prefill.type || "in");
+    setType(prefill.type || "adjustment");
     setQuantity(prefill.quantity ?? 1);
     setReason(prefill.reason || "");
     setFormErr("");
     setOpen(true);
   };
-  // Suggest topping up to twice the minimum level, so the product doesn't land straight back on the list.
-  const openRestock = (p) => openMovement({
-    productId: p.id, type: "in", reason: "Restock",
-    quantity: Math.max(1, p.reorder_level * 2 - p.stock_quantity),
-  });
+  // Restocking is a purchase: stock goes up and the cost is recorded, in one step. The suggested
+  // quantity tops up to twice the minimum level so the product doesn't land straight back on the list.
+  const openRestock = (p) => actions.buyStock({ items: [{ product_id: p.id, quantity: Math.max(1, p.reorder_level * 2 - p.stock_quantity) }] });
 
   const selected = products.find((p) => p.id === productId);
   const submit = async (e) => {
@@ -71,7 +74,7 @@ export default function Inventory() {
     try {
       const { data } = await api.post("/stock-movements", { product_id: productId, type, quantity: qty, reason });
       toast.success(`${selected?.name || "Stock"}: now ${data.new_stock} in stock`);
-      setOpen(false); setProductId(""); setQuantity(1); setReason(""); setType("in");
+      setOpen(false); setProductId(""); setQuantity(1); setReason(""); setType("adjustment");
       refetch(); refetchMoves();
     } catch (e2) { setFormErr(formatApiError(e2)); }
     finally { setSaving(false); }
@@ -79,10 +82,16 @@ export default function Inventory() {
 
   return (
     <div className="space-y-6 animate-in-up">
-      <PageHeader title="Inventory" subtitle="Monitor stock levels and record movements.">
-        <Button onClick={() => openMovement()} data-testid="add-stock-movement-button">
-          <Settings2 className="mr-2 h-4 w-4" /> Record Movement
-        </Button>
+      <SectionSwitch section="products" />
+      <PageHeader title="Stock" subtitle="What's on the shelf. Sales take stock off automatically; buying stock puts it back and records the cost.">
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => openMovement()} data-testid="add-stock-movement-button">
+            <Settings2 className="mr-2 h-4 w-4" /> Adjust stock
+          </Button>
+          <Button onClick={() => actions.buyStock()} data-testid="buy-stock-button">
+            <PackagePlus className="mr-2 h-4 w-4" /> Buy stock
+          </Button>
+        </div>
       </PageHeader>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -183,7 +192,10 @@ export default function Inventory() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent data-testid="stock-movement-modal">
-          <DialogHeader><DialogTitle>{reason === "Restock" ? "Restock product" : "Record Stock Movement"}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Adjust stock</DialogTitle>
+            <DialogDescription>For counts, damage and other changes. Bought new stock? Use Buy stock, which also records the cost.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label className="text-xs text-muted-foreground">Product</Label>
@@ -197,9 +209,9 @@ export default function Inventory() {
                 <Select value={type} onValueChange={setType}>
                   <SelectTrigger className="mt-1.5" data-testid="movement-type"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="in">Stock In</SelectItem>
-                    <SelectItem value="out">Stock Out</SelectItem>
-                    <SelectItem value="adjustment">Stock count (set to)</SelectItem>
+                    <SelectItem value="adjustment">Counted (set to)</SelectItem>
+                    <SelectItem value="out">Removed (damaged, lost, used)</SelectItem>
+                    <SelectItem value="in">Added (returned, no cost)</SelectItem>
                   </SelectContent>
                 </Select></div>
               <div><Label className="text-xs text-muted-foreground">Quantity</Label>

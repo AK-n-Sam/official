@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Send, DollarSign, XCircle, Pencil, Copy, Printer, RotateCcw, Trash2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Send, DollarSign, XCircle, Pencil, Copy, Printer, RotateCcw, Trash2, AlertTriangle, Mail, Repeat } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useCurrency } from "@/context/CurrencyContext";
 import { usePermissions } from "@/context/AuthContext";
@@ -13,7 +13,10 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { ErrorState } from "@/components/common/States";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { RecordPaymentModal } from "@/components/modules/RecordPaymentModal";
+import { useActions } from "@/components/actions/ActionsProvider";
+import { useDataChanged } from "@/hooks/useDataChanged";
 import { InvoiceModal } from "@/components/modules/InvoiceModal";
+import { RepeatDialog } from "@/components/automation/RepeatDialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,6 +38,8 @@ export default function InvoiceDetail() {
   const [editOpen, setEditOpen] = useState(false);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [confirm, setConfirm] = useState(null); // { kind: "cancel" | "delete" | "payment", payment? }
+  const [repeatOpen, setRepeatOpen] = useState(false);
+  const [schedule, setSchedule] = useState(null); // the repeat this invoice starts or belongs to
 
   const load = useCallback(() => {
     setLoading(true);
@@ -42,7 +47,15 @@ export default function InvoiceDetail() {
       .catch((e) => setError(e)).finally(() => setLoading(false));
   }, [id]);
   useEffect(load, [load]);
+  const loadSchedule = useCallback(() => {
+    if (!isManager) return;
+    api.get("/automation/recurring").then(({ data }) => setSchedule(data.find((r) => r.source_id === id || r.id === inv?.recurring_id) || null)).catch(() => {});
+  }, [id, isManager, inv?.recurring_id]);
+  useEffect(loadSchedule, [loadSchedule]);
+  useDataChanged(loadSchedule);
   useTabTitle(inv?.invoice_number);
+  useDataChanged(load);
+  const actions = useActions();
 
   const setStatus = async (status, message) => {
     setBusy(true);
@@ -104,15 +117,26 @@ export default function InvoiceDetail() {
             {inv.customer_name}
           </button>
           <p className="mt-1 text-xs text-muted-foreground">Issued {formatDate(inv.issue_date)} · Due {formatDate(inv.due_date)}</p>
+          {schedule && (
+            <button type="button" onClick={() => navigate("/settings?tab=automation")} className="mt-1 flex items-center gap-1.5 text-xs text-primary hover:underline" data-testid="invoice-repeats">
+              <Repeat className="h-3 w-3" />
+              {inv.recurring_id && schedule.source_id !== id ? "Created by a repeating invoice" : `Repeats ${schedule.frequency}`}
+              {schedule.active ? ` · next on ${formatDate(schedule.next_date)}` : " · paused"}
+            </button>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => window.open(`/print/invoices/${id}?autoprint=1`, "_blank", "noopener")} data-testid="invoice-print"><Printer className="mr-1.5 h-4 w-4" /> Print / PDF</Button>
           <Button variant="outline" size="sm" onClick={() => setDuplicateOpen(true)} data-testid="invoice-duplicate"><Copy className="mr-1.5 h-4 w-4" /> Duplicate</Button>
+          {isManager && !schedule && inv.status !== "cancelled" && (
+            <Button variant="outline" size="sm" onClick={() => setRepeatOpen(true)} data-testid="invoice-repeat"><Repeat className="mr-1.5 h-4 w-4" /> Repeat</Button>
+          )}
           {can.edit && <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} data-testid="invoice-edit"><Pencil className="mr-1.5 h-4 w-4" /> Edit</Button>}
           {can.send && <Button variant="outline" size="sm" disabled={busy} onClick={() => setStatus("sent")} data-testid="invoice-send"><Send className="mr-1.5 h-4 w-4" /> Mark Sent</Button>}
           {can.reopen && <Button variant="outline" size="sm" disabled={busy} onClick={() => setStatus("draft", `${inv.invoice_number} reopened as a draft`)} data-testid="invoice-reopen"><RotateCcw className="mr-1.5 h-4 w-4" /> Reopen</Button>}
           {can.cancel && <Button variant="outline" size="sm" disabled={busy} onClick={() => setConfirm({ kind: "cancel" })} data-testid="invoice-cancel"><XCircle className="mr-1.5 h-4 w-4" /> Cancel</Button>}
           {can.remove && <Button variant="outline" size="sm" disabled={busy} className="text-rose-500 hover:text-rose-600" onClick={() => setConfirm({ kind: "delete" })} data-testid="invoice-delete"><Trash2 className="mr-1.5 h-4 w-4" /> Delete</Button>}
+          {can.pay && inv.status !== "draft" && <Button variant="outline" size="sm" disabled={busy} onClick={() => actions.remind({ invoiceId: inv.id })} data-testid="invoice-remind"><Mail className="mr-1.5 h-4 w-4" /> Send reminder</Button>}
           {can.pay && <Button size="sm" disabled={busy} onClick={() => setPayOpen(true)} data-testid="invoice-record-payment"><DollarSign className="mr-1.5 h-4 w-4" /> Record Payment</Button>}
         </div>
       </div>
@@ -170,7 +194,14 @@ export default function InvoiceDetail() {
         </Card>
 
         <Card className="border-border/70 bg-card/90">
-          <div className="border-b border-border/70 px-5 py-3"><h3 className="font-heading text-base font-semibold">Payment History</h3></div>
+          <div className="border-b border-border/70 px-5 py-3">
+            <h3 className="font-heading text-base font-semibold">Payment History</h3>
+            {inv.reminders?.length > 0 && (
+              <p className="mt-0.5 text-xs text-muted-foreground" data-testid="invoice-reminders">
+                Reminded {inv.reminders.length}×, last {formatDate(inv.reminders[inv.reminders.length - 1].at)}
+              </p>
+            )}
+          </div>
           <div className="divide-y divide-border/50" data-testid="invoice-payments">
             {(!inv.payments || inv.payments.length === 0) ? (
               <p className="px-5 py-8 text-center text-sm text-muted-foreground">
@@ -200,6 +231,8 @@ export default function InvoiceDetail() {
 
       <RecordPaymentModal open={payOpen} onOpenChange={setPayOpen} invoice={inv} onSaved={load} />
       <InvoiceModal open={editOpen} onOpenChange={setEditOpen} initial={inv} onSaved={() => load()} />
+      <RepeatDialog open={repeatOpen} onOpenChange={setRepeatOpen}
+        source={repeatOpen ? { type: "invoice", id: inv.id, label: `${inv.invoice_number} for ${inv.customer_name} · ${format(inv.total)}`, date: inv.issue_date } : null} />
       <InvoiceModal open={duplicateOpen} onOpenChange={setDuplicateOpen} template={inv}
         onSaved={(created) => created?.id && navigate(`/invoices/${created.id}`)} />
       <ConfirmDialog

@@ -2,16 +2,16 @@ import { useEffect, useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { X, ChevronDown } from "lucide-react";
 import { Icon } from "@/components/common/Icon";
-import { NAV_SECTIONS } from "@/lib/constants";
+import { ALL_PAGES } from "@/lib/constants";
 import { TAB_TITLE_EVENT } from "@/hooks/useTabTitle";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const NAV_MAP = {};
-NAV_SECTIONS.forEach((s) => s.items.forEach((i) => { NAV_MAP[i.path] = i; }));
+ALL_PAGES.forEach((p) => { NAV_MAP[p.path] = p; });
 
-const HOME = "/dashboard";
+const HOME = "/today";
 const STORAGE = "bmp_open_tabs";
 const DETAIL_ROUTES = {
   customers: { label: "Customer", icon: "Users" },

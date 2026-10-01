@@ -18,8 +18,8 @@ export default function AuthCallback() {
     (async () => {
       try {
         await googleSession(sessionId);
-        window.history.replaceState(null, "", "/dashboard");
-        navigate("/dashboard", { replace: true });
+        window.history.replaceState(null, "", "/today");
+        navigate("/today", { replace: true });
       } catch {
         navigate("/login", { replace: true });
       }

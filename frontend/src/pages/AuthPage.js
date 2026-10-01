@@ -26,7 +26,7 @@ export default function AuthPage() {
       if (mode === "login") await login(form.email, form.password);
       else await register({ name: form.name, email: form.email, password: form.password });
       toast.success("Welcome to NexusOS");
-      navigate("/dashboard");
+      navigate("/today");
     } catch (err) {
       setError(formatApiError(err));
     } finally { setLoading(false); }
@@ -34,7 +34,7 @@ export default function AuthPage() {
 
   const handleGoogle = () => {
     // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-    const redirectUrl = window.location.origin + "/dashboard";
+    const redirectUrl = window.location.origin + "/today";
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
   };
 
@@ -52,9 +52,9 @@ export default function AuthPage() {
         </div>
         <div>
           <h1 className="font-heading text-4xl font-extrabold leading-tight tracking-tight">The operating system for your business.</h1>
-          <p className="mt-4 max-w-md text-muted-foreground">Manage sales, invoices, inventory, customers and your team — all in one clean, fast workspace built for SMEs.</p>
+          <p className="mt-4 max-w-md text-muted-foreground">Record what happened (a sale, a payment, a delivery) and the invoices, stock and books update themselves. Each morning, one list tells you what needs you.</p>
           <div className="mt-8 grid grid-cols-2 gap-4">
-            {["Multi-currency billing", "Live dashboards", "Inventory tracking", "Team & tasks"].map((f) => (
+            {["Sell in one step", "Get paid, oldest invoice first", "Restock without retyping", "A daily list of what needs you"].map((f) => (
               <div key={f} className="flex items-center gap-2 text-sm"><div className="h-1.5 w-1.5 rounded-full bg-primary" />{f}</div>
             ))}
           </div>

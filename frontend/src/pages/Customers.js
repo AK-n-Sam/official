@@ -6,5 +6,5 @@ import { customersConfig } from "@/modules/resourceConfigs";
 export default function Customers() {
   const { format, currency } = useCurrency();
   const navigate = useNavigate();
-  return <ResourceManager config={customersConfig(format, { currency })} onRowClick={(row) => navigate(`/customers/${row.id}`)} />;
+  return <ResourceManager section="customers" config={customersConfig(format, { currency })} onRowClick={(row) => navigate(`/customers/${row.id}`)} />;
 }

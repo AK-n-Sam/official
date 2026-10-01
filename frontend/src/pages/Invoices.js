@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Plus, Search, FileText, DollarSign, Send, XCircle, AlertTriangle, FilePen, Wallet, Copy, Printer, Download, RotateCcw, Trash2, X } from "lucide-react";
+import { Plus, Search, FileText, DollarSign, Send, XCircle, FilePen, Copy, Printer, Download, RotateCcw, Trash2, X, Mail } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -11,50 +11,55 @@ import { formatDate } from "@/lib/format";
 import { downloadCsv, csvFilename } from "@/lib/csv";
 import { UNPAID, balanceOf, displayStatus, isPastDue, invoiceActions, showStockWarnings } from "@/lib/invoices";
 import { PageHeader } from "@/components/common/PageHeader";
-import { SummaryCard } from "@/components/common/SummaryCard";
+import { SectionSwitch } from "@/components/layout/SectionSwitch";
+import { useActions } from "@/components/actions/ActionsProvider";
+import { useDataChanged } from "@/hooks/useDataChanged";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { EmptyState } from "@/components/common/EmptyState";
 import { TableSkeleton, ErrorState } from "@/components/common/States";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { InvoiceModal } from "@/components/modules/InvoiceModal";
+import { cn } from "@/lib/utils";
 import { RecordPaymentModal } from "@/components/modules/RecordPaymentModal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable } from "@/components/common/DataTable";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
+// Views of the list. "Unpaid" covers sent, partly paid and overdue invoices; older links to the
+// separate Sent / Partially paid tabs land on Unpaid.
 const TAB_FILTERS = {
   all: () => true,
   unpaid: (r) => UNPAID.includes(r.status),
-  draft: (r) => r.status === "draft",
-  sent: (r) => r.status === "sent" || r.status === "pending",
-  partially_paid: (r) => r.status === "partially_paid",
-  paid: (r) => r.status === "paid",
   overdue: (r) => r.status === "overdue",
+  draft: (r) => r.status === "draft",
+  paid: (r) => r.status === "paid",
   cancelled: (r) => r.status === "cancelled",
 };
 const STATUSES = Object.keys(TAB_FILTERS);
+const TAB_LABELS = { all: "All", unpaid: "Unpaid", overdue: "Overdue", draft: "Drafts", paid: "Paid", cancelled: "Cancelled" };
+const LEGACY_TABS = { sent: "unpaid", partially_paid: "unpaid" };
+const tabFrom = (v) => (STATUSES.includes(v) ? v : LEGACY_TABS[v] || "all");
 
 export default function Invoices() {
   const { format, currency } = useCurrency();
   const navigate = useNavigate();
+  const actions = useActions();
   const [params, setParams] = useSearchParams();
-  const [status, setStatus] = useState(() => (STATUSES.includes(params.get("status")) ? params.get("status") : "all"));
+  const [status, setStatus] = useState(() => tabFrom(params.get("status")));
   const [search, setSearch] = useState(() => params.get("q") || "");
   const [range, setRange] = useState(() => ({ from: params.get("from") || "", to: params.get("to") || "" }));
   const debounced = useDebounce(search, 300);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [template, setTemplate] = useState(null);
-  const [prefillCustomer, setPrefillCustomer] = useState("");
   const [deleting, setDeleting] = useState(null);
   const [cancelling, setCancelling] = useState(null);
   const [payFor, setPayFor] = useState(null);
 
   // Dashboard links (e.g. /invoices?status=overdue) arriving while this page is already open.
   const statusParam = params.get("status");
-  useEffect(() => { if (STATUSES.includes(statusParam)) setStatus(statusParam); }, [statusParam]);
+  useEffect(() => { if (statusParam) setStatus(tabFrom(statusParam)); }, [statusParam]);
 
   // Keep the URL in step with the view, so it can be bookmarked or restored from a tab.
   useEffect(() => {
@@ -68,30 +73,28 @@ export default function Invoices() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, debounced, range]);
 
-  const openCreate = (customerId = "") => { setEditing(null); setTemplate(null); setPrefillCustomer(customerId); setModalOpen(true); };
-  const openDuplicate = (inv) => { setEditing(null); setTemplate(inv); setPrefillCustomer(""); setModalOpen(true); };
+  // New invoices use the same one-step flow as a sale, starting on "Pay later".
+  const openCreate = (customerId = "") => actions.sell({ mode: "invoice", customerId });
+  const openDuplicate = (inv) => { setEditing(null); setTemplate(inv); setModalOpen(true); };
   const openPrint = (inv) => window.open(`/print/invoices/${inv.id}?autoprint=1`, "_blank", "noopener");
   useCreateParam(({ customer }) => openCreate(customer || ""));
 
   // Load every invoice once (per search) and filter by status and date locally, so tab counts
   // and the summary cards always reflect the whole list and switching tabs is instant.
   const { data, loading, error, refetch } = useResource("/invoices", debounced ? { search: debounced } : {});
+  useDataChanged(refetch);
 
   const inRange = useMemo(() => data.filter((r) => (!range.from || r.issue_date >= range.from) && (!range.to || r.issue_date <= range.to)), [data, range]);
   const counts = useMemo(
     () => Object.fromEntries(STATUSES.map((s) => [s, inRange.filter(TAB_FILTERS[s]).length])),
     [inRange]
   );
-  const summary = useMemo(() => {
-    const unpaid = inRange.filter(TAB_FILTERS.unpaid);
-    const overdue = inRange.filter(TAB_FILTERS.overdue);
-    return {
-      outstanding: unpaid.reduce((s, r) => s + balanceOf(r), 0),
-      overdue: overdue.reduce((s, r) => s + balanceOf(r), 0),
-      drafts: inRange.filter(TAB_FILTERS.draft).reduce((s, r) => s + (r.total || 0), 0),
-      collected: inRange.reduce((s, r) => s + (r.amount_paid || 0), 0),
-    };
-  }, [inRange]);
+  // Money behind each view: what's owed for unpaid/overdue, invoice totals otherwise.
+  const amounts = useMemo(() => Object.fromEntries(STATUSES.map((s) => {
+    const rows = inRange.filter(TAB_FILTERS[s]);
+    const owed = s === "unpaid" || s === "overdue";
+    return [s, rows.reduce((sum, r) => sum + (owed ? balanceOf(r) : r.total || 0), 0)];
+  })), [inRange]);
   const rows = useMemo(() => inRange.filter(TAB_FILTERS[status]), [inRange, status]);
 
   const handleDelete = async () => {
@@ -108,7 +111,6 @@ export default function Invoices() {
       refetch();
     } catch (e) { toast.error(formatApiError(e), { duration: 8000 }); }
   };
-  const toggleStatus = (s) => setStatus((cur) => (cur === s ? "all" : s));
   const hasFilters = debounced || range.from || range.to;
 
   const exportCsv = () => {
@@ -165,34 +167,29 @@ export default function Invoices() {
 
   return (
     <div className="space-y-6 animate-in-up">
-      <PageHeader title="Invoices" subtitle="Create, send and collect on your invoices. Overdue invoices are flagged automatically.">
+      <SectionSwitch section="invoices" />
+      <PageHeader title="Invoices" subtitle="Everything you've billed. Overdue invoices are flagged automatically.">
         <Button onClick={() => openCreate()} data-testid="create-invoice-button">
           <Plus className="mr-2 h-4 w-4" /> New Invoice
         </Button>
       </PageHeader>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-testid="invoice-summary">
-        <SummaryCard label="Outstanding" value={format(summary.outstanding)} sub={`${counts.unpaid} unpaid invoice${counts.unpaid === 1 ? "" : "s"}`}
-          icon={Wallet} tone="text-amber-500" active={status === "unpaid"} onClick={() => toggleStatus("unpaid")} testId="invoice-summary-unpaid" />
-        <SummaryCard label="Overdue" value={format(summary.overdue)} sub={counts.overdue ? `${counts.overdue} need${counts.overdue === 1 ? "s" : ""} follow-up` : "Nothing overdue"}
-          icon={AlertTriangle} tone={counts.overdue ? "text-rose-500" : undefined} active={status === "overdue"} onClick={() => toggleStatus("overdue")} testId="invoice-summary-overdue" />
-        <SummaryCard label="Drafts" value={counts.draft} sub={counts.draft ? `${format(summary.drafts)} ready to send` : "No drafts"}
-          icon={FilePen} active={status === "draft"} onClick={() => toggleStatus("draft")} testId="invoice-summary-draft" />
-        <SummaryCard label="Collected" value={format(summary.collected)} sub={`${counts.paid} paid in full`}
-          icon={DollarSign} tone="text-emerald-500" active={status === "paid"} onClick={() => toggleStatus("paid")} testId="invoice-summary-paid" />
-      </div>
-
       <div className="flex flex-col gap-3">
-        <Tabs value={status} onValueChange={setStatus}>
-          <TabsList data-testid="invoice-status-tabs" className="h-auto flex-wrap">
-            {STATUSES.map((s) => (
-              <TabsTrigger key={s} value={s} className="gap-1.5 capitalize" data-testid={`invoice-tab-${s}`}>
-                {s.replace(/_/g, " ")}
-                {!loading && <span className="rounded bg-foreground/10 px-1.5 text-[10px] font-semibold tabular-nums">{counts[s]}</span>}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        {/* One row of views, each showing how many invoices and how much money it holds. */}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6" role="tablist" aria-label="Invoice views" data-testid="invoice-status-tabs">
+          {STATUSES.map((s) => (
+            <button key={s} type="button" role="tab" aria-selected={status === s} onClick={() => setStatus(s)} data-testid={`invoice-tab-${s}`} data-state={status === s ? "active" : "inactive"}
+              className={cn("rounded-lg border px-3 py-2 text-left transition-colors",
+                status === s ? "border-primary/60 bg-primary/5 ring-1 ring-primary/30" : "border-border/80 bg-card hover:border-primary/40")}>
+              <span className="flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground">
+                {TAB_LABELS[s]}{!loading && <span className="rounded bg-foreground/10 px-1.5 text-[10px] font-semibold tabular-nums text-foreground">{counts[s]}</span>}
+              </span>
+              <span className={cn("mt-0.5 block truncate font-mono text-sm font-semibold", s === "overdue" && counts.overdue ? "text-rose-500" : s === "unpaid" && counts.unpaid ? "text-amber-600 dark:text-amber-500" : "")}>
+                {loading ? "…" : format(amounts[s])}
+              </span>
+            </button>
+          ))}
+        </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <div className="relative flex-1 sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -240,6 +237,11 @@ export default function Invoices() {
                     <DollarSign className="mr-2 h-4 w-4" /> Record payment
                   </DropdownMenuItem>
                 )}
+                {can.pay && row.status !== "draft" && (
+                  <DropdownMenuItem onClick={() => actions.remind({ invoiceId: row.id })} data-testid={`remind-${row.id}`}>
+                    <Mail className="mr-2 h-4 w-4" /> Send reminder
+                  </DropdownMenuItem>
+                )}
                 {can.send && (
                   <DropdownMenuItem onClick={() => setInvStatus(row, "sent")} data-testid={`mark-sent-${row.id}`}>
                     <Send className="mr-2 h-4 w-4" /> Mark sent
@@ -283,7 +285,7 @@ export default function Invoices() {
         />
       )}
 
-      <InvoiceModal open={modalOpen} onOpenChange={setModalOpen} initial={editing} template={template} defaultCustomerId={prefillCustomer} onSaved={() => refetch()} />
+      <InvoiceModal open={modalOpen} onOpenChange={setModalOpen} initial={editing} template={template} onSaved={() => refetch()} />
       <RecordPaymentModal open={!!payFor} onOpenChange={(o) => !o && setPayFor(null)} invoice={payFor} onSaved={refetch} />
       <ConfirmDialog open={!!cancelling} onOpenChange={(o) => !o && setCancelling(null)} confirmLabel="Cancel invoice"
         title={`Cancel ${cancelling?.invoice_number}?`}

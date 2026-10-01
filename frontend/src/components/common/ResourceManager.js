@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Plus, Search, LayoutGrid, List, MoreHorizontal, Pencil, Trash2, Download, X } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Download, X } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -18,9 +18,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useDebounce } from "@/hooks/useDebounce";
 import { useCreateParam } from "@/hooks/useCreateParam";
 import { useRefOptions } from "@/hooks/useRefOptions";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useDataChanged } from "@/hooks/useDataChanged";
+import { SectionSwitch } from "@/components/layout/SectionSwitch";
 import { downloadCsv, csvFilename } from "@/lib/csv";
 
-function ResourceCards({ columns, rows, onEdit, onDelete, onRowClick, singular }) {
+function ResourceCards({ columns, rows, onEdit, onDelete, rowActions, onRowClick, singular }) {
   const [titleCol, ...rest] = columns;
   const [shown, setShown] = useState(PAGE_SIZE);
   useEffect(() => { setShown(PAGE_SIZE); }, [rows.length]);
@@ -38,7 +41,7 @@ function ResourceCards({ columns, rows, onEdit, onDelete, onRowClick, singular }
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">{titleCol.render ? titleCol.render(row) : row[titleCol.key]}</div>
-              {(onEdit || onDelete) && (
+              {(onEdit || onDelete || rowActions) && (
                 <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -46,7 +49,8 @@ function ResourceCards({ columns, rows, onEdit, onDelete, onRowClick, singular }
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-40">
+                    <DropdownMenuContent align="end" className="w-44">
+                      {rowActions?.(row)}
                       {onEdit && <DropdownMenuItem onClick={() => onEdit(row)} data-testid={`edit-${row.id}`}><Pencil className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>}
                       {onDelete && <DropdownMenuItem onClick={() => onDelete(row)} className="text-rose-500 focus:text-rose-500" data-testid={`delete-${row.id}`}><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>}
                     </DropdownMenuContent>
@@ -83,14 +87,15 @@ const nameOf = (row) => row?.name || row?.title || [row?.category, row?.vendor].
  * The URL carries search and filters (`?q=`, `?status=`, `?from=&to=`), so other pages can link
  * straight to a filtered list. `perms` says which actions the signed-in user may take.
  */
-export function ResourceManager({ config, onRowClick, perms = { create: true, edit: true, delete: true } }) {
+export function ResourceManager({ config, onRowClick, rowActions, section, perms = { create: true, edit: true, delete: true } }) {
   const { title, subtitle, endpoint, singular, columns, fields, filters = [], icon, searchPlaceholder, dateFilter } = config;
   const [params, setParams] = useSearchParams();
   const [search, setSearch] = useState(() => params.get("q") || "");
   const debounced = useDebounce(search, 300);
   const [filterState, setFilterState] = useState(() => Object.fromEntries(filters.map((f) => [f.name, params.get(f.name) || "all"])));
   const [range, setRange] = useState(() => ({ from: params.get("from") || "", to: params.get("to") || "" }));
-  const [view, setView] = useState(() => localStorage.getItem("bmp_resource_view") || "table");
+  // Tables on wide screens, cards on phones: chosen for the user rather than another toggle.
+  const view = useMediaQuery("(min-width: 768px)") ? "table" : "grid";
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
@@ -101,8 +106,6 @@ export function ResourceManager({ config, onRowClick, perms = { create: true, ed
 
   useCreateParam(() => { if (perms.create) { setEditing(null); setModalOpen(true); } });
   const formFields = useRefOptions(fields, modalOpen);
-
-  const setViewPersist = (v) => { setView(v); try { localStorage.setItem("bmp_resource_view", v); } catch { /* private mode */ } };
 
   // Mirror search + filters into the URL so the view can be shared, bookmarked or reopened.
   useEffect(() => {
@@ -125,6 +128,7 @@ export function ResourceManager({ config, onRowClick, perms = { create: true, ed
   }, [debounced, filterState, range, dateFilter]);
 
   const { data, loading, error, refetch } = useResource(endpoint, query);
+  useDataChanged(refetch);
 
   const openCreate = () => { setEditing(null); setModalOpen(true); };
   const openEdit = (row) => { setEditing(row); setModalOpen(true); };
@@ -183,6 +187,7 @@ export function ResourceManager({ config, onRowClick, perms = { create: true, ed
 
   return (
     <div className="space-y-6 animate-in-up">
+      {section && <SectionSwitch section={section} />}
       <PageHeader title={title} subtitle={subtitle}>
         {perms.create && (
           <Button onClick={openCreate} data-testid={`create-${singular.toLowerCase()}-button`}>
@@ -239,10 +244,6 @@ export function ResourceManager({ config, onRowClick, perms = { create: true, ed
           <Button variant="outline" size="sm" className="h-9" onClick={exportCsv} disabled={loading || data.length === 0} data-testid="resource-export">
             <Download className="mr-1.5 h-4 w-4" /> Export CSV
           </Button>
-          <div className="flex rounded-lg border border-border/70 p-0.5" role="group" aria-label="View">
-            <Button variant={view === "table" ? "secondary" : "ghost"} size="sm" className="h-8" onClick={() => setViewPersist("table")} aria-label="Table view" aria-pressed={view === "table"} data-testid="resource-view-table"><List className="h-4 w-4" /></Button>
-            <Button variant={view === "grid" ? "secondary" : "ghost"} size="sm" className="h-8" onClick={() => setViewPersist("grid")} aria-label="Card view" aria-pressed={view === "grid"} data-testid="resource-view-grid"><LayoutGrid className="h-4 w-4" /></Button>
-          </div>
         </div>
       </div>
 
@@ -260,13 +261,14 @@ export function ResourceManager({ config, onRowClick, perms = { create: true, ed
           testId={`${singular.toLowerCase()}-empty`}
         />
       ) : view === "grid" ? (
-        <ResourceCards columns={columns} rows={data} onEdit={onEdit} onDelete={onDelete} onRowClick={onRowClick} singular={singular} />
+        <ResourceCards columns={columns} rows={data} onEdit={onEdit} onDelete={onDelete} rowActions={rowActions} onRowClick={onRowClick} singular={singular} />
       ) : (
         <DataTable
           columns={columns}
           rows={data}
           onEdit={onEdit}
           onDelete={onDelete}
+          rowActions={rowActions}
           onRowClick={onRowClick}
           testId={`${singular.toLowerCase()}-table`}
         />

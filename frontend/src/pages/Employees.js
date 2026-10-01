@@ -11,6 +11,7 @@ export default function Employees() {
   // Employee records (and pay) are managed by owners and admins; members can look people up.
   return (
     <ResourceManager
+      section="team"
       config={employeesConfig(format, { currency, isManager })}
       perms={{ create: isManager, edit: isManager, delete: isManager }}
       onRowClick={(row) => navigate(`/employees/${row.id}`)}

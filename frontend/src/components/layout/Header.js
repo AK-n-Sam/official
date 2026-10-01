@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Bell, Sun, Moon, Menu, LogOut, User, Settings as SettingsIcon, AlertTriangle, Package, CheckSquare, Plus, PanelLeft, Rows3, ChevronRight, CircleHelp, LifeBuoy, Keyboard, Check } from "lucide-react";
+import { Bell, Sun, Moon, Menu, LogOut, User, Settings as SettingsIcon, AlertTriangle, Package, CheckSquare, ChevronDown, PanelLeft, ChevronRight, CircleHelp, LifeBuoy, Keyboard, ShoppingCart } from "lucide-react";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useLayout } from "@/context/LayoutContext";
 import { useCurrency } from "@/context/CurrencyContext";
-import { CommandPalette, CREATE_ACTIONS, PALETTE_SHORTCUT } from "@/components/layout/CommandPalette";
+import { CommandPalette, useBusinessActions, PALETTE_SHORTCUT } from "@/components/layout/CommandPalette";
 import { helpPathFor } from "@/modules/helpContent";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,7 +22,8 @@ const isTyping = (el) => el && (el.isContentEditable || ["INPUT", "TEXTAREA", "S
 export function Header({ onMenuClick }) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { toggleSidebar, density, setDensity } = useLayout();
+  const { toggleSidebar } = useLayout();
+  const businessActions = useBusinessActions();
   const { format } = useCurrency();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -64,25 +65,34 @@ export function Header({ onMenuClick }) {
       <CommandPalette />
 
       <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm" className="h-9 gap-1.5" data-testid="quick-create-button">
-              <Plus className="h-4 w-4" /><span className="hidden sm:inline">Create</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
-            <DropdownMenuLabel className="flex items-center justify-between">
-              Quick Create
-              <span className="font-mono text-[10px] font-normal text-muted-foreground">{PALETTE_SHORTCUT}</span>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {CREATE_ACTIONS.map((a) => (
-              <DropdownMenuItem key={a.id} onClick={() => navigate(a.path)} data-testid={`quick-create-${a.id}`}>
-                <a.icon className="mr-2 h-4 w-4" /> {a.label.replace(/^New /, "")}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* The most common thing an owner does, one click away; everything else one more. */}
+        <div className="flex items-center">
+          <Button size="sm" className="h-9 gap-1.5 rounded-r-none" onClick={businessActions[0].run} data-testid="header-sell">
+            <ShoppingCart className="h-4 w-4" /><span className="hidden sm:inline">Make a sale</span>
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" className="h-9 rounded-l-none border-l border-primary-foreground/25 px-2" aria-label="More actions" data-testid="quick-create-button">
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuLabel className="flex items-center justify-between">
+                Do something
+                <span className="font-mono text-[10px] font-normal text-muted-foreground">{PALETTE_SHORTCUT}</span>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {businessActions.map((a, i) => (
+                <div key={a.id}>
+                  {i === 4 && <DropdownMenuSeparator />}
+                  <DropdownMenuItem onClick={a.run} data-testid={`quick-create-${a.id}`}>
+                    <a.icon className="mr-2 h-4 w-4" /> {a.label}
+                  </DropdownMenuItem>
+                </div>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
 
         <Button variant="ghost" size="icon" onClick={() => navigate(helpPath)} data-testid="help-button" className="hidden h-9 w-9 sm:flex" title="Help for this page (?)" aria-label="Help for this page">
@@ -159,13 +169,6 @@ export function Header({ onMenuClick }) {
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate("/settings")} data-testid="menu-settings">
               <SettingsIcon className="mr-2 h-4 w-4" /> Settings
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={(e) => { e.preventDefault(); setDensity(density === "compact" ? "comfortable" : "compact"); }}
-              data-testid="density-toggle-button"
-            >
-              <Rows3 className="mr-2 h-4 w-4" /> Compact rows
-              {density === "compact" && <Check className="ml-auto h-4 w-4 text-primary" />}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate("/help")} data-testid="menu-help">
