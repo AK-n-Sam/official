@@ -179,7 +179,7 @@ export default function Help() {
 
   return (
     <div className="space-y-6 animate-in-up">
-      <PageHeader title="Help Center" subtitle="Guides, shortcuts and answers for everything in NexusOS." />
+      <PageHeader title="Help Center" subtitle="Guides, shortcuts and answers for everything in Six6Fix." />
 
       <Card className="relative overflow-hidden border-border/80 bg-gradient-to-br from-primary/10 via-card to-card p-5 shadow-sm sm:p-6">
         <p className="font-heading text-base font-semibold">How can we help?</p>

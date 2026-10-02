@@ -23,7 +23,7 @@ export default function AuthPage() {
     try {
       if (mode === "login") await login(form.email, form.password);
       else await register({ name: form.name, email: form.email, password: form.password });
-      toast.success("Welcome to NexusOS");
+      toast.success("Welcome to Six6Fix");
       navigate("/dashboard");
     } catch (err) {
       setError(formatApiError(err));
@@ -43,7 +43,7 @@ export default function AuthPage() {
       <div className="hidden w-1/2 flex-col justify-between bg-gradient-to-br from-primary/15 via-background to-violet-500/10 p-12 lg:flex">
         <div className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Zap className="h-5 w-5" /></div>
-          <span className="font-heading text-lg font-bold">Nexus<span className="text-primary">OS</span></span>
+          <span className="font-heading text-lg font-bold">Six6<span className="text-primary">Fix</span></span>
         </div>
         <div>
           <h1 className="font-heading text-4xl font-extrabold leading-tight tracking-tight">The operating system for your business.</h1>
@@ -54,14 +54,14 @@ export default function AuthPage() {
             ))}
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">© 2026 NexusOS Business Suite</p>
+        <p className="text-xs text-muted-foreground">© 2026 Six6Fix Business Suite</p>
       </div>
 
       <div className="flex w-full items-center justify-center p-6 lg:w-1/2">
         <Card className="w-full max-w-md border-border/70 bg-card/90 p-8">
           <div className="mb-6 flex items-center gap-2 lg:hidden">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Zap className="h-4 w-4" /></div>
-            <span className="font-heading text-base font-bold">NexusOS</span>
+            <span className="font-heading text-base font-bold">Six6Fix</span>
           </div>
           <h2 className="font-heading text-2xl font-bold tracking-tight">{mode === "login" ? "Welcome back" : "Create your account"}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{mode === "login" ? "Sign in to your workspace." : "Start managing your business in minutes."}</p>

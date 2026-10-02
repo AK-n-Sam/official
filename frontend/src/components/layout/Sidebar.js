@@ -23,7 +23,7 @@ export function Sidebar({ onNavigate, collapsed = false }) {
         </div>
         {!collapsed && (
           <div className="leading-tight">
-            <p className="font-heading text-sm font-bold tracking-tight">Nexus<span className="text-primary">OS</span></p>
+            <p className="font-heading text-sm font-bold tracking-tight">Six6<span className="text-primary">Fix</span></p>
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Business Suite</p>
           </div>
         )}

@@ -19,10 +19,10 @@ export const HELP_SECTIONS = [
     group: "Basics",
     title: "Getting started",
     icon: "Rocket",
-    summary: "A five-minute tour of NexusOS: workspaces, the screen layout and your first day.",
+    summary: "A five-minute tour of Six6Fix: workspaces, the screen layout and your first day.",
     links: [{ label: "Go to Dashboard", to: "/dashboard" }],
     blocks: [
-      { p: "NexusOS keeps sales, invoicing, customers, stock, people and tasks for your business in one place. Everything you see belongs to the **workspace** selected at the top of the sidebar." },
+      { p: "Six6Fix keeps sales, invoicing, customers, stock, people and tasks for your business in one place. Everything you see belongs to the **workspace** selected at the top of the sidebar." },
       { terms: [
         ["Sidebar", "Every module, grouped into Core, Finance, Sales & CRM, Inventory, Operations and Insights. Collapse it with the button at the bottom (or the panel icon in the header) to get more room."],
         ["Header", "Search / command palette, the **Create** button, display currency, theme, notifications, help (`?`) and your account menu."],

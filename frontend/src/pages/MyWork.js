@@ -49,6 +49,8 @@ export default function MyWork() {
 
   const firstName = (user?.name || "there").split(" ")[0];
   const userRole = (user?.role || "member").toUpperCase();
+  const hour = new Date().getHours();
+  const timeGreeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   if (loading) return <div className="space-y-6"><Skeleton className="h-10 w-64" /><div className="grid gap-6 lg:grid-cols-2"><Skeleton className="h-80 rounded-xl" /><Skeleton className="h-80 rounded-xl" /></div></div>;
   if (error) return <ErrorState message={formatApiError(error)} onRetry={load} />;
@@ -57,11 +59,22 @@ export default function MyWork() {
   const approvals = data.approvals || [];
   const notifications = data.notifications || [];
 
+  const handleQuickTaskComplete = async (e, task) => {
+    e.stopPropagation();
+    try {
+      await api.put(`/tasks/${task.id}`, { status: "completed" });
+      toast.success("Task completed!", { description: task.title });
+      load();
+    } catch (err) {
+      toast.error(formatApiError(err));
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in-up">
       <PageHeader
         title={`My Work & Focus (${userRole})`}
-        subtitle={`Personalized action center for ${user?.name || "you"}. What do you need to do today?`}
+        subtitle={`${timeGreeting}, ${firstName}! Personal action center for your day. What would you like to achieve today?`}
       >
         <Button variant="outline" onClick={() => navigate("/tasks?new=1")} data-testid="mywork-new-task">
           <Plus className="mr-2 h-4 w-4" /> New Task
@@ -197,7 +210,12 @@ export default function MyWork() {
                     <p className="truncate text-sm font-medium">{t.title}</p>
                     <p className="text-xs text-muted-foreground">Due {formatDate(t.due_date)}{t.customer_name ? ` · ${t.customer_name}` : ""}</p>
                   </div>
-                  <StatusBadge status={t.priority} />
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10" onClick={(e) => handleQuickTaskComplete(e, t)} title="Mark task complete in 1 click">
+                      <Check className="h-3.5 w-3.5" /> Done
+                    </Button>
+                    <StatusBadge status={t.priority} />
+                  </div>
                 </button>
               ))}
           </div>

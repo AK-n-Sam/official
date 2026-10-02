@@ -23,13 +23,13 @@ from seed import create_user_workspaces
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("bmp")
 
-app = FastAPI(title="SME Business Management Platform")
+app = FastAPI(title="Six6Fix API")
 api = APIRouter()
 
 
 @api.get("/")
 async def root():
-    return {"message": "SME Business Management Platform API", "status": "ok"}
+    return {"message": "Six6Fix API", "status": "ok"}
 
 
 async def log_audit_event(org_id: str, user: dict, action: str, category: str, target_id: str = "", target_name: str = "", details: str = ""):

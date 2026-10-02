@@ -161,8 +161,13 @@ export function Header({ onMenuClick }) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
-              <p className="truncate text-sm font-semibold">{user?.name}</p>
-              <p className="truncate text-xs font-normal text-muted-foreground">{user?.email}</p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="truncate text-sm font-semibold">{user?.name}</p>
+                <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider text-primary border-primary/30 shrink-0">
+                  {user?.role || "owner"}
+                </Badge>
+              </div>
+              <p className="truncate text-xs font-normal text-muted-foreground mt-0.5">{user?.email}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate("/settings?tab=profile")} data-testid="menu-profile">
