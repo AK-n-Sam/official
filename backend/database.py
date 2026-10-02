@@ -20,7 +20,11 @@ def _is_mongo_reachable(host="127.0.0.1", port=27017, timeout=1.0):
         return False
 
 
-if _is_mongo_reachable():
+if "localhost" not in mongo_url and "127.0.0.1" not in mongo_url:
+    from motor.motor_asyncio import AsyncIOMotorClient
+    client = AsyncIOMotorClient(mongo_url)
+    db = client[db_name]
+elif _is_mongo_reachable():
     from motor.motor_asyncio import AsyncIOMotorClient
     client = AsyncIOMotorClient(mongo_url)
     db = client[db_name]

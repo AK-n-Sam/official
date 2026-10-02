@@ -122,23 +122,23 @@ async def _build_user(name, email, password_hash=None, picture="", provider="pas
 
 @router.post("/register")
 async def register(payload: RegisterInput, response: Response):
-    email = payload.email.lower()
+    email = payload.email.lower().strip()
     if await db.users.find_one({"email": email}):
         raise HTTPException(status_code=400, detail="An account with this email already exists")
-    user = await _build_user(payload.name, email, hash_password(payload.password))
+    user = await _build_user(payload.name.strip(), email, hash_password(payload.password))
     token = create_access_token(user["id"], email)
-    response.set_cookie("access_token", token, httponly=True, secure=True, samesite="none", max_age=604800, path="/")
+    response.set_cookie("access_token", token, httponly=True, secure=False if os.environ.get("VERCEL") is None else True, samesite="lax", max_age=604800, path="/")
     return {"token": token, "user": _public_user(user)}
 
 
 @router.post("/login")
 async def login(payload: LoginInput, response: Response):
-    email = payload.email.lower()
+    email = payload.email.lower().strip()
     user = await db.users.find_one({"email": email})
     if not user or not user.get("password_hash") or not verify_password(payload.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     token = create_access_token(user["id"], email)
-    response.set_cookie("access_token", token, httponly=True, secure=True, samesite="none", max_age=604800, path="/")
+    response.set_cookie("access_token", token, httponly=True, secure=False if os.environ.get("VERCEL") is None else True, samesite="lax", max_age=604800, path="/")
     return {"token": token, "user": _public_user(user)}
 
 
@@ -149,7 +149,7 @@ async def google_session(payload: GoogleSessionInput, response: Response):
     if r.status_code != 200:
         raise HTTPException(status_code=401, detail="Invalid session")
     data = r.json()
-    email = data["email"].lower()
+    email = data["email"].lower().strip()
     user = await db.users.find_one({"id": {"$exists": True}, "email": email})
     if not user:
         user = await _build_user(data.get("name", email), email, None, data.get("picture", ""), "google")
@@ -160,7 +160,7 @@ async def google_session(payload: GoogleSessionInput, response: Response):
         "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
         "created_at": now_iso(),
     })
-    response.set_cookie("session_token", session_token, httponly=True, secure=True, samesite="none", max_age=604800, path="/")
+    response.set_cookie("session_token", session_token, httponly=True, secure=False if os.environ.get("VERCEL") is None else True, samesite="lax", max_age=604800, path="/")
     return {"token": session_token, "user": _public_user(user)}
 
 

@@ -1706,10 +1706,15 @@ async def update_preferences(payload: PreferencesUpdate, user: dict = Depends(ge
 app.include_router(auth_router)
 app.include_router(api)
 
+cors_origins = [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()]
+if not cors_origins:
+    cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:8000", "http://127.0.0.1:8000"]
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_origins=cors_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app|http://localhost:\d+|http://127\.0\.0\.1:\d+",
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -1725,8 +1730,8 @@ async def startup():
 
 
 async def _seed_admin():
-    admin_email = os.environ["ADMIN_EMAIL"].lower()
-    admin_password = os.environ["ADMIN_PASSWORD"]
+    admin_email = os.environ.get("ADMIN_EMAIL", "aniruddh.samarth@gmail.com").lower().strip()
+    admin_password = os.environ.get("ADMIN_PASSWORD", "Admin@12345")
     existing = await db.users.find_one({"email": admin_email})
     if existing is None:
         user_id = f"user_{uuid.uuid4().hex[:12]}"
