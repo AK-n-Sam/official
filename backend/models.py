@@ -17,6 +17,8 @@ class RegisterInput(_Base):
 class LoginInput(_Base):
     email: EmailStr
     password: str
+    workspace_id: Optional[str] = None
+    workspace_name: Optional[str] = None
 
 
 class GoogleSessionInput(_Base):

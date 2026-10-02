@@ -13,7 +13,7 @@ export default function AuthPage() {
   const { login, register } = useAuth();
   const navigate = useNavigate();
   const [mode, setMode] = useState("login");
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", organization_name: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -21,8 +21,16 @@ export default function AuthPage() {
     e.preventDefault();
     setError(""); setLoading(true);
     try {
-      if (mode === "login") await login(form.email, form.password);
-      else await register({ name: form.name, email: form.email, password: form.password });
+      if (mode === "login") {
+        await login(form.email, form.password);
+      } else {
+        await register({
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          organization_name: form.organization_name || undefined,
+        });
+      }
       toast.success("Welcome to Six6Fix");
       navigate("/dashboard");
     } catch (err) {
@@ -75,13 +83,23 @@ export default function AuthPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "register" && (
-              <div>
-                <Label className="text-xs font-medium text-muted-foreground">Full Name</Label>
-                <div className="relative mt-1.5">
-                  <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Jane Cooper" className="pl-9" required data-testid="auth-name" />
+              <>
+                <div>
+                  <Label className="text-xs font-medium text-muted-foreground">Full Name</Label>
+                  <div className="relative mt-1.5">
+                    <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Jane Cooper" className="pl-9" required data-testid="auth-name" />
+                  </div>
                 </div>
-              </div>
+
+                <div>
+                  <Label className="text-xs font-medium text-muted-foreground">Company / Workspace Name (Optional)</Label>
+                  <div className="relative mt-1.5">
+                    <Building2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input value={form.organization_name} onChange={(e) => setForm({ ...form, organization_name: e.target.value })} placeholder="Acme Software Corp" className="pl-9" data-testid="auth-org-name" />
+                  </div>
+                </div>
+              </>
             )}
             <div>
               <Label className="text-xs font-medium text-muted-foreground">Email</Label>
@@ -100,7 +118,7 @@ export default function AuthPage() {
             {error && <p className="text-sm text-rose-500" data-testid="auth-error">{error}</p>}
             <Button type="submit" className="w-full" disabled={loading} data-testid="auth-submit">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {mode === "login" ? "Sign in" : "Create account"}
+              {mode === "login" ? "Sign in to Workspace" : "Create Workspace Account"}
             </Button>
           </form>
 

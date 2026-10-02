@@ -114,9 +114,11 @@ async def get_current_user(request: Request) -> dict:
     return pub
 
 
-async def _build_user(name, email, password_hash=None, picture="", provider="password"):
+async def _build_user(name, email, password_hash=None, picture="", provider="password", organization_name=None):
     user_id = f"user_{uuid.uuid4().hex[:12]}"
     active_org_id, org_ids = await create_user_workspaces(user_id, name, email)
+    if organization_name and organization_name.strip():
+        await db.organizations.update_one({"id": active_org_id}, {"$set": {"name": organization_name.strip()}})
     doc = {
         "id": user_id,
         "name": name,
@@ -147,10 +149,11 @@ async def register(payload: RegisterInput, response: Response):
     email = payload.email.lower().strip()
     if await db.users.find_one({"email": email}):
         raise HTTPException(status_code=400, detail="An account with this email already exists")
-    user = await _build_user(payload.name.strip(), email, hash_password(payload.password))
+    user = await _build_user(payload.name.strip(), email, hash_password(payload.password), organization_name=payload.organization_name)
     token = create_access_token(user["id"], email)
     response.set_cookie("access_token", token, httponly=True, secure=False if os.environ.get("VERCEL") is None else True, samesite="lax", max_age=604800, path="/")
-    return {"token": token, "user": _public_user(user)}
+    active_org = await db.organizations.find_one({"id": user["active_org_id"]}, {"_id": 0})
+    return {"token": token, "user": _public_user(user), "active_org": active_org}
 
 
 @router.post("/login")
@@ -163,9 +166,15 @@ async def login(payload: LoginInput, response: Response):
 
     if not user or not user.get("password_hash") or not verify_password(payload.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    if payload.workspace_id and payload.workspace_id in user.get("org_ids", []):
+        await db.users.update_one({"id": user["id"]}, {"$set": {"active_org_id": payload.workspace_id}})
+        user["active_org_id"] = payload.workspace_id
+
     token = create_access_token(user["id"], email)
     response.set_cookie("access_token", token, httponly=True, secure=False if os.environ.get("VERCEL") is None else True, samesite="lax", max_age=604800, path="/")
-    return {"token": token, "user": _public_user(user)}
+    active_org = await db.organizations.find_one({"id": user.get("active_org_id")}, {"_id": 0})
+    return {"token": token, "user": _public_user(user), "active_org": active_org}
 
 
 @router.post("/google/session")

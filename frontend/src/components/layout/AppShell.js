@@ -24,6 +24,9 @@ import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import Help from "@/pages/Help";
 
+import ExecutiveCockpit from "@/pages/ExecutiveCockpit";
+import AdminCenter from "@/pages/AdminCenter";
+
 export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { sidebarCollapsed, density } = useLayout();
@@ -49,6 +52,8 @@ export function AppShell() {
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/my-work" element={<MyWork />} />
+              <Route path="/executive" element={<ExecutiveCockpit />} />
+              <Route path="/admin-center" element={<AdminCenter />} />
               <Route path="/sales" element={<Sales />} />
               <Route path="/leads" element={<Leads />} />
               <Route path="/customers" element={<Customers />} />

@@ -4,6 +4,8 @@ export const NAV_SECTIONS = [
     items: [
       { name: "Dashboard", path: "/dashboard", icon: "LayoutDashboard" },
       { name: "My Work", path: "/my-work", icon: "CircleUser" },
+      { name: "Executive Cockpit", path: "/executive", icon: "Crown", roles: ["owner", "admin", "manager", "executive"] },
+      { name: "Admin Center", path: "/admin-center", icon: "ShieldCheck", roles: ["owner", "admin"] },
     ],
   },
   {
