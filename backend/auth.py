@@ -13,7 +13,7 @@ from seed import create_user_workspaces
 JWT_ALGORITHM = "HS256"
 EMERGENT_SESSION_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
 
-router = APIRouter(prefix="/api/auth", tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 def hash_password(password: str) -> str:

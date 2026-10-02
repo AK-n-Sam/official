@@ -24,7 +24,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("bmp")
 
 app = FastAPI(title="SME Business Management Platform")
-api = APIRouter(prefix="/api")
+api = APIRouter()
 
 
 @api.get("/")
@@ -1703,7 +1703,10 @@ async def update_preferences(payload: PreferencesUpdate, user: dict = Depends(ge
     return doc
 
 
+app.include_router(auth_router, prefix="/api")
 app.include_router(auth_router)
+
+app.include_router(api, prefix="/api")
 app.include_router(api)
 
 cors_origins = [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()]
