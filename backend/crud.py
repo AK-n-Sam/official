@@ -83,7 +83,7 @@ def make_crud(collection: str, CreateModel, search_fields: List[str], filter_fie
         res = await db[collection].update_one({"id": item_id, **_base(user)}, {"$set": payload})
         if res.matched_count == 0:
             raise HTTPException(status_code=404, detail="Not found")
-        return await db[collection].find_one({"id": item_id}, {"_id": 0})
+        return await db[collection].find_one({"id": item_id, **_base(user)}, {"_id": 0})
 
     @router.delete("/{item_id}")
     async def delete_item(item_id: str, user: dict = Depends(get_current_user)):

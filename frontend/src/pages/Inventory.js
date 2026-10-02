@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Warehouse, ArrowUpCircle, ArrowDownCircle, Settings2, Package, Layers, Wallet, AlertTriangle, PackagePlus } from "lucide-react";
+import { Warehouse, ArrowUpCircle, ArrowDownCircle, Settings2, Package, Layers, Wallet, AlertTriangle, PackagePlus, Zap, TrendingUp, Truck } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { formatDate } from "@/lib/format";
@@ -21,6 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 export default function Inventory() {
   const { data: products, loading, error, refetch } = useResource("/products", {});
   const { data: movements, refetch: refetchMoves } = useResource("/stock-movements", {});
+  const [intel, setIntel] = useState(null);
   const [open, setOpen] = useState(false);
   const [productId, setProductId] = useState("");
   const [type, setType] = useState("in");
@@ -30,10 +31,19 @@ export default function Inventory() {
   const [lowOnly, setLowOnly] = useState(false);
   const { format } = useCurrency();
 
+  useEffect(() => {
+    api.get("/products/intelligence")
+      .then(({ data }) => setIntel(data))
+      .catch(() => {});
+  }, [products]);
+
   const isLow = (p) => p.stock_quantity <= p.reorder_level;
   const lowStock = products.filter(isLow);
   const totalUnits = products.reduce((s, p) => s + p.stock_quantity, 0);
-  const stockValue = products.reduce((s, p) => s + p.stock_quantity * (p.cost || 0), 0);
+  const stockValue = intel?.total_cost_valuation || products.reduce((s, p) => s + p.stock_quantity * (p.cost || 0), 0);
+  const retailValue = intel?.total_retail_valuation || products.reduce((s, p) => s + p.stock_quantity * (p.price || 0), 0);
+  const potentialProfit = intel?.potential_gross_profit || (retailValue - stockValue);
+
   const shown = lowOnly ? lowStock : products;
 
   const openMovement = (prefill = {}) => {
@@ -43,9 +53,9 @@ export default function Inventory() {
     setReason(prefill.reason || "");
     setOpen(true);
   };
-  // Suggest topping up to twice the minimum level, so the product doesn't land straight back on the list.
+
   const openRestock = (p) => openMovement({
-    productId: p.id, type: "in", reason: "Restock",
+    productId: p.id, type: "in", reason: `Restock via ${p.supplier_name || "Supplier"}`,
     quantity: Math.max(1, p.reorder_level * 2 - p.stock_quantity),
   });
 
@@ -63,7 +73,7 @@ export default function Inventory() {
 
   return (
     <div className="space-y-6 animate-in-up">
-      <PageHeader title="Inventory" subtitle="Monitor stock levels and record movements.">
+      <PageHeader title="Inventory" subtitle="Monitor stock levels, valuation, and reorder intelligence.">
         <Button onClick={() => openMovement()} data-testid="add-stock-movement-button">
           <Settings2 className="mr-2 h-4 w-4" /> Record Movement
         </Button>
@@ -72,11 +82,36 @@ export default function Inventory() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <SummaryCard label="Products" value={products.length} sub="SKUs tracked" icon={Package} testId="inv-total-skus" />
         <SummaryCard label="Units in stock" value={totalUnits.toLocaleString()} sub="across all products" icon={Layers} testId="inv-total-units" />
-        <SummaryCard label="Stock value" value={format(stockValue)} sub="at purchase price" icon={Wallet} tone="text-primary" testId="inv-stock-value" />
-        <SummaryCard label="Low stock" value={lowStock.length} sub={lowStock.length ? (lowOnly ? "Showing low stock only" : "Click to show only these") : "All stocked"}
+        <SummaryCard label="Stock Value (Cost)" value={format(stockValue)} sub={`Retail Val: ${format(retailValue)}`} icon={Wallet} tone="text-primary" testId="inv-stock-value" />
+        <SummaryCard label="Low Stock" value={lowStock.length} sub={lowStock.length ? (lowOnly ? "Showing low stock only" : "Click to filter low stock") : "All stocked"}
           icon={AlertTriangle} tone={lowStock.length ? "text-rose-500" : undefined} active={lowOnly}
           onClick={lowStock.length ? () => setLowOnly((v) => !v) : undefined} testId="inv-low-stock" />
       </div>
+
+      {/* Inventory Intelligence Summary Banner */}
+      <Card className="border-border/70 bg-card/90 p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <Zap className="h-4 w-4 text-amber-500" /> Valuation & Reorder Intelligence
+          </span>
+          <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
+            <TrendingUp className="h-3.5 w-3.5" /> Potential Margin: {format(potentialProfit)}
+          </span>
+        </div>
+        {lowStock.length > 0 ? (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg text-sm">
+            <div className="flex items-center gap-2 text-amber-600 font-medium">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>{lowStock.length} product(s) have fallen below their minimum reorder threshold.</span>
+            </div>
+            <Button size="sm" variant="outline" className="h-7 text-xs border-amber-500/30 text-amber-700 bg-amber-500/5 hover:bg-amber-500/15" onClick={() => openRestock(lowStock[0])}>
+              <Truck className="mr-1 h-3.5 w-3.5" /> Quick Reorder ({lowStock[0]?.name})
+            </Button>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">All inventory levels are healthy. Automated burn rate calculations update as sales are recorded.</p>
+        )}
+      </Card>
 
       {loading ? (
         <div className="rounded-xl border border-border/80 bg-card/90"><TableSkeleton /></div>
@@ -87,7 +122,7 @@ export default function Inventory() {
       ) : (
         <Card className="overflow-hidden border-border/80 bg-card/90">
           <div className="flex items-center justify-between gap-3 border-b border-border/70 px-5 py-4">
-            <h3 className="font-heading text-base font-semibold">Stock Levels</h3>
+            <h3 className="font-heading text-base font-semibold">Stock Levels & Supplier Info</h3>
             {lowStock.length > 0 && (
               <Button variant={lowOnly ? "secondary" : "ghost"} size="sm" className="h-8 text-xs" onClick={() => setLowOnly((v) => !v)} data-testid="inv-low-only">
                 {lowOnly ? "Show all products" : `Low stock only (${lowStock.length})`}
@@ -98,7 +133,7 @@ export default function Inventory() {
             <Table data-testid="inventory-table">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  {["Product", "SKU", "In Stock", "Reorder At", "Value", "Status"].map((h) => (
+                  {["Product", "SKU / Supplier", "In Stock", "Reorder At", "Cost / Retail", "Status"].map((h) => (
                     <TableHead key={h} className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{h}</TableHead>
                   ))}
                 </TableRow>
@@ -109,10 +144,16 @@ export default function Inventory() {
                   return (
                     <TableRow key={p.id} data-testid={`inventory-row-${p.id}`}>
                       <TableCell className="font-medium">{p.name}</TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{p.sku}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        <span className="font-mono">{p.sku || "—"}</span>
+                        {p.supplier_name && <span className="block text-[11px] text-muted-foreground/80">{p.supplier_name}</span>}
+                      </TableCell>
                       <TableCell className={`font-mono font-semibold ${low ? "text-rose-500" : ""}`}>{p.stock_quantity} {p.unit}</TableCell>
                       <TableCell className="font-mono text-muted-foreground">{p.reorder_level}</TableCell>
-                      <TableCell className="font-mono text-muted-foreground">{format(p.stock_quantity * (p.cost || 0))}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        <span>{format(p.stock_quantity * (p.cost || 0))}</span>
+                        <span className="block text-muted-foreground font-normal">Val: {format(p.stock_quantity * (p.price || 0))}</span>
+                      </TableCell>
                       <TableCell>
                         {low ? (
                           <div className="flex items-center gap-2">
@@ -148,7 +189,6 @@ export default function Inventory() {
                   <p className="text-xs text-muted-foreground">{m.reason || m.type} · {formatDate(m.date)}</p>
                 </div>
               </div>
-              {/* An adjustment sets stock to an exact count rather than adding or removing. */}
               <span className={`font-mono text-sm font-semibold ${m.type === "in" ? "text-emerald-500" : m.type === "out" ? "text-rose-500" : "text-blue-500"}`}
                 title={m.type === "adjustment" ? "Stock set to this count" : undefined}>
                 {m.type === "in" ? "+" : m.type === "out" ? "−" : "= "}{m.quantity}
@@ -160,7 +200,7 @@ export default function Inventory() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent data-testid="stock-movement-modal">
-          <DialogHeader><DialogTitle>{reason === "Restock" ? "Restock product" : "Record Stock Movement"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{reason?.includes("Restock") ? "Restock Product" : "Record Stock Movement"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div>
               <Label className="text-xs text-muted-foreground">Product</Label>

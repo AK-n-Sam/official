@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Send, DollarSign, XCircle, Clock, Pencil, Copy, Printer } from "lucide-react";
+import { ArrowLeft, Send, DollarSign, XCircle, Clock, Pencil, Copy, Printer, Bell, AlertCircle, CheckCircle2, Zap } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useTabTitle } from "@/hooks/useTabTitle";
@@ -13,7 +13,9 @@ import { InvoiceModal } from "@/components/modules/InvoiceModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { CollaborationSection } from "@/components/common/CollaborationSection";
 
 export default function InvoiceDetail() {
   const { id } = useParams();
@@ -25,6 +27,7 @@ export default function InvoiceDetail() {
   const [payOpen, setPayOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
+  const [sendingReminder, setSendingReminder] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -37,6 +40,19 @@ export default function InvoiceDetail() {
   const setStatus = async (status) => {
     try { await api.post(`/invoices/${id}/status`, { status }); toast.success(`Invoice marked ${status.replace(/_/g, " ")}`); load(); }
     catch (e) { toast.error(formatApiError(e)); }
+  };
+
+  const handleSendReminder = async () => {
+    setSendingReminder(true);
+    try {
+      const res = await api.post(`/invoices/${id}/remind`);
+      toast.success(res.data.message || "Payment reminder sent!");
+      load();
+    } catch (err) {
+      toast.error(formatApiError(err));
+    } finally {
+      setSendingReminder(false);
+    }
   };
 
   if (loading) return <div className="space-y-4"><Skeleton className="h-10 w-48" /><Skeleton className="h-64 rounded-xl" /></div>;
@@ -55,6 +71,11 @@ export default function InvoiceDetail() {
           <div className="flex items-center gap-3">
             <h1 className="font-mono text-2xl font-bold tracking-tight" data-testid="invoice-detail-number">{inv.invoice_number}</h1>
             <StatusBadge status={inv.status} />
+            {inv.reminder_count > 0 && (
+              <Badge variant="secondary" className="text-xs font-medium flex items-center gap-1">
+                <Bell className="h-3 w-3" /> Reminded {inv.reminder_count}x
+              </Badge>
+            )}
           </div>
           <button onClick={() => inv.customer_id && navigate(`/customers/${inv.customer_id}`)} className="mt-1 text-sm text-primary hover:underline">
             {inv.customer_name}
@@ -66,11 +87,70 @@ export default function InvoiceDetail() {
           <Button variant="outline" size="sm" onClick={() => setDuplicateOpen(true)} data-testid="invoice-duplicate"><Copy className="mr-1.5 h-4 w-4" /> Duplicate</Button>
           <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} data-testid="invoice-edit"><Pencil className="mr-1.5 h-4 w-4" /> Edit</Button>
           {inv.status === "draft" && <Button variant="outline" size="sm" onClick={() => setStatus("sent")} data-testid="invoice-send"><Send className="mr-1.5 h-4 w-4" /> Mark Sent</Button>}
+          {["sent", "overdue", "partially_paid"].includes(inv.status) && (
+            <Button variant="outline" size="sm" onClick={handleSendReminder} disabled={sendingReminder} data-testid="invoice-reminder">
+              <Bell className="mr-1.5 h-4 w-4 text-amber-500" /> {sendingReminder ? "Sending..." : "Send Reminder"}
+            </Button>
+          )}
           {!["paid", "cancelled"].includes(inv.status) && <Button variant="outline" size="sm" onClick={() => setStatus("overdue")} data-testid="invoice-overdue"><Clock className="mr-1.5 h-4 w-4" /> Overdue</Button>}
           {!["paid", "cancelled"].includes(inv.status) && <Button variant="outline" size="sm" onClick={() => setStatus("cancelled")} data-testid="invoice-cancel"><XCircle className="mr-1.5 h-4 w-4" /> Cancel</Button>}
           {balance > 0 && inv.status !== "cancelled" && <Button size="sm" onClick={() => setPayOpen(true)} data-testid="invoice-record-payment"><DollarSign className="mr-1.5 h-4 w-4" /> Record Payment</Button>}
         </div>
       </div>
+
+      {/* Decision Support & Smart Status Banner */}
+      <Card className="border-border/70 bg-card/90 p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <Zap className="h-4 w-4 text-amber-500" /> Context & Next Action
+          </span>
+          {inv.last_reminder_sent && (
+            <span className="text-xs text-muted-foreground">Last reminder: {formatDate(inv.last_reminder_sent)}</span>
+          )}
+        </div>
+        
+        {inv.credit_warning && (
+          <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-500/10 border border-amber-500/20 rounded-md p-2 font-medium">
+            <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+            <span>{inv.credit_warning}</span>
+          </div>
+        )}
+
+        {inv.status === "overdue" && (
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2 text-red-600 font-medium">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>Overdue Invoice: Balance of {format(balance)} was due on {formatDate(inv.due_date)}.</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handleSendReminder} disabled={sendingReminder}>
+                <Bell className="mr-1 h-3 w-3" /> Send Reminder
+              </Button>
+              <Button size="sm" className="h-7 text-xs" onClick={() => setPayOpen(true)}>
+                Record Payment
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {inv.status === "paid" && (
+          <div className="flex items-center gap-2 text-sm text-emerald-600 font-medium">
+            <CheckCircle2 className="h-4 w-4" /> Paid in full. Balance is zero.
+          </div>
+        )}
+
+        {["sent", "partially_paid", "pending"].includes(inv.status) && (
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Clock className="h-4 w-4 text-amber-500 shrink-0" />
+              <span>Awaiting payment: Balance of {format(balance)} due on {formatDate(inv.due_date)}.</span>
+            </div>
+            <Button size="sm" className="h-7 text-xs" onClick={() => setPayOpen(true)}>
+              Record Payment
+            </Button>
+          </div>
+        )}
+      </Card>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="border-border/70 bg-card/90 lg:col-span-2">
@@ -129,6 +209,9 @@ export default function InvoiceDetail() {
           </div>
         </Card>
       </div>
+
+      {/* Team Handoffs & Collaboration Notes */}
+      <CollaborationSection targetType="invoice" targetId={id} title="Invoice Handoffs & Team Notes" />
 
       <RecordPaymentModal open={payOpen} onOpenChange={setPayOpen} invoice={inv} onSaved={load} />
       <InvoiceModal open={editOpen} onOpenChange={setEditOpen} initial={inv} onSaved={() => load()} />

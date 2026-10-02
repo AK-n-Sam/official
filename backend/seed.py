@@ -256,23 +256,29 @@ async def _seed_org(org_id: str, profile: dict):
     await db.leads.insert_many(leads)
 
 
-async def create_user_workspaces(user_id: str, user_name: str, user_email: str):
-    """Create the 3 demo organizations for a user, seed each, return (active_org_id, org_ids)."""
-    org_ids = []
-    for idx, profile in enumerate(WORKSPACE_PROFILES):
-        org_id = _id()
-        org_ids.append(org_id)
-        await db.organizations.insert_one({
-            "id": org_id, "owner_user_id": user_id, "name": profile["name"],
-            "industry": profile["industry"], "email": user_email, "phone": "",
-            "website": f"www.{profile['name'].split()[0].lower()}.com",
-            "address": "", "city": "", "country": "",
-            "currency": profile["currency"], "timezone": profile["timezone"], "tax_id": "",
-            "invoice_prefix": profile["name"][:3].upper(), "invoice_tax_rate": 0.08,
-            "invoice_due_days": 30, "invoice_notes": "Thank you for your business.",
-            "created_at": now_iso(), "updated_at": now_iso(),
-        })
-        await _seed_org(org_id, profile)
-        for coll in ("customers", "suppliers", "products", "expenses", "employees", "tasks", "invoices", "payments", "stock_movements", "leads"):
-            await db[coll].update_many({"org_id": org_id}, {"$set": {"created_by": user_id}})
-    return org_ids[0], org_ids
+async def create_user_workspaces(user_id: str, user_name: str, user_email: str, organization_name: str = None):
+    """Create a fresh clean workspace for a user with zero sample/demo data, return (active_org_id, org_ids)."""
+    org_id = _id()
+    name = organization_name or f"{user_name}'s Workspace"
+    await db.organizations.insert_one({
+        "id": org_id,
+        "owner_user_id": user_id,
+        "name": name,
+        "industry": "General Business",
+        "email": user_email,
+        "phone": "",
+        "website": "",
+        "address": "",
+        "city": "",
+        "country": "",
+        "currency": "USD",
+        "timezone": "America/New_York",
+        "tax_id": "",
+        "invoice_prefix": "INV",
+        "invoice_tax_rate": 0.0,
+        "invoice_due_days": 30,
+        "invoice_notes": "Thank you for your business.",
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
+    })
+    return org_id, [org_id]

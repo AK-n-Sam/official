@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { EmptyState } from "@/components/common/EmptyState";
+import { TeamWorkloadWidget } from "@/components/settings/TeamWorkloadWidget";
 import { MoreHorizontal } from "lucide-react";
 
 export function TeamTab() {
@@ -192,6 +193,9 @@ export function TeamTab() {
           </div>
         )}
       </Card>
+
+      {/* Team Workload & Unassigned Work Queue */}
+      <TeamWorkloadWidget />
 
       <ConfirmDialog open={!!removing} onOpenChange={(o) => !o && setRemoving(null)}
         title="Remove member?" description={`${removing?.name || "This member"} will lose access to this workspace. Consider reassigning their records first.`} confirmLabel="Remove" onConfirm={remove} />

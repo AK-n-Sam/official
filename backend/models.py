@@ -80,6 +80,8 @@ class CustomerCreate(_Base):
     country: Optional[str] = ""
     status: str = "active"
     notes: Optional[str] = ""
+    tax_id: Optional[str] = ""
+    credit_limit: Optional[float] = 0.0
 
 
 class SupplierCreate(_Base):
@@ -90,6 +92,8 @@ class SupplierCreate(_Base):
     category: Optional[str] = ""
     address: Optional[str] = ""
     status: str = "active"
+    tax_id: Optional[str] = ""
+    payment_terms: Optional[str] = "Net 30"
 
 
 class ProductCreate(_Base):
@@ -101,6 +105,7 @@ class ProductCreate(_Base):
     tax_rate: float = 0
     stock_quantity: int = 0
     reorder_level: int = 5
+    reorder_quantity: Optional[int] = 10
     unit: str = "unit"
     supplier_id: Optional[str] = ""
     supplier_name: Optional[str] = ""
@@ -119,11 +124,20 @@ class LeadCreate(_Base):
     value: float = 0
     source: Optional[str] = ""
     notes: Optional[str] = ""
+    loss_reason: Optional[str] = ""
 
 
 class PaymentCreate(_Base):
     invoice_id: str
     amount: float
+    method: str = "bank_transfer"
+    date: Optional[str] = ""
+    notes: Optional[str] = ""
+
+
+class PaymentAllocationInput(_Base):
+    customer_id: str = Field(min_length=1)
+    amount: float = Field(gt=0)
     method: str = "bank_transfer"
     date: Optional[str] = ""
     notes: Optional[str] = ""
@@ -195,3 +209,46 @@ class PaymentInput(_Base):
     amount: float
     method: str = "bank_transfer"
     date: Optional[str] = ""
+
+
+class CustomerNoteCreate(_Base):
+    note: str = Field(min_length=1)
+    type: str = "note"  # note | call | meeting | email
+
+
+# ---------- Team & Collaboration ----------
+class MemberRoleUpdate(_Base):
+    role: str = Field(min_length=1)  # owner | admin | manager | sales | finance | operations | staff | member
+
+
+class MemberStatusUpdate(_Base):
+    status: str = Field(min_length=1)  # active | deactivated
+
+
+class CommentCreate(_Base):
+    target_type: str = Field(min_length=1)  # customer | invoice | lead | task | product
+    target_id: str = Field(min_length=1)
+    content: str = Field(min_length=1)
+    mentions: List[str] = []
+
+
+class HandoffCreate(_Base):
+    target_type: str = Field(min_length=1)
+    target_id: str = Field(min_length=1)
+    assignee_id: str = Field(min_length=1)
+    assignee_name: Optional[str] = ""
+    note: Optional[str] = ""
+
+
+class ApprovalCreate(_Base):
+    target_type: str = Field(min_length=1)  # expense | discount | invoice | setting
+    target_id: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    amount: float = 0.0
+    notes: Optional[str] = ""
+
+
+class ApprovalDecision(_Base):
+    status: str = Field(min_length=1)  # approved | rejected
+    notes: Optional[str] = ""
+

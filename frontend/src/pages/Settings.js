@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TeamTab } from "@/components/settings/TeamTab";
+import { AuditLogTab } from "@/components/settings/AuditLogTab";
 import { Loader2 } from "lucide-react";
 
 function Row({ label, children }) {
@@ -28,7 +29,7 @@ function Row({ label, children }) {
   );
 }
 
-const SETTINGS_TABS = ["business", "team", "profile", "preferences", "invoicing"];
+const SETTINGS_TABS = ["business", "team", "profile", "preferences", "invoicing", "audit"];
 
 export default function Settings() {
   const { user, refresh } = useAuth();
@@ -93,6 +94,7 @@ export default function Settings() {
           <TabsTrigger value="profile" data-testid="tab-profile">Profile</TabsTrigger>
           <TabsTrigger value="preferences" data-testid="tab-preferences">Preferences</TabsTrigger>
           <TabsTrigger value="invoicing" data-testid="tab-invoicing">Invoicing</TabsTrigger>
+          <TabsTrigger value="audit" data-testid="tab-audit">Audit Trail</TabsTrigger>
         </TabsList>
 
         <TabsContent value="business">
@@ -184,6 +186,10 @@ export default function Settings() {
               {saving === "org" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save Invoice Settings
             </Button>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="audit">
+          <AuditLogTab />
         </TabsContent>
       </Tabs>
     </div>

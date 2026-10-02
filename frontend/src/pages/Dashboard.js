@@ -16,8 +16,9 @@ import { useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ArrowUpRight, ArrowDownRight, FileText, CheckSquare, Plus } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, FileText, CheckSquare, Plus, Zap, ArrowRight, ShieldCheck, Activity } from "lucide-react";
 
 function StatChip({ label, value, icon, onClick, testId }) {
   return (
@@ -80,6 +81,7 @@ export default function Dashboard() {
   const hour = new Date().getHours();
   const greetWord = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const firstName = (user?.name || "there").split(" ")[0];
+  const health = stats.business_health || { score: 90, status: "Good" };
 
   return (
     <div className="space-y-8 animate-in-up">
@@ -89,9 +91,65 @@ export default function Dashboard() {
 
       <WelcomeBanner />
 
+      {/* Fresh Account Onboarding Card */}
+      {stats.invoice_count === 0 && stats.customer_count === 0 && (
+        <Card className="border-primary/30 bg-primary/5 p-5 shadow-sm space-y-3" data-testid="fresh-workspace-banner">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-primary" />
+              <h3 className="font-heading font-bold text-base">Welcome to your new workspace!</h3>
+            </div>
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+              Fresh Account
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">Your account is clean and ready. Add your first customer, product, or invoice to start tracking your business revenue and cashflow.</p>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Button size="sm" onClick={() => navigate("/customers?new=1")}>
+              <Plus className="mr-1.5 h-4 w-4" /> Add First Customer
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => navigate("/products?new=1")}>
+              <Plus className="mr-1.5 h-4 w-4" /> Add First Product
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => navigate("/invoices?new=1")}>
+              <Plus className="mr-1.5 h-4 w-4" /> Create First Invoice
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Decision Support: Priority Attention Card */}
+      {stats.decision_support?.length > 0 && (
+        <Card className="border-amber-500/30 bg-amber-500/5 p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-amber-500" />
+              <h3 className="font-heading font-bold text-base">Business Attention & Next Actions</h3>
+            </div>
+            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
+              {stats.decision_support.length} Action Needed
+            </Badge>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+            {stats.decision_support.map((item) => (
+              <div key={item.id} className="rounded-lg border border-border bg-card p-4 space-y-2 flex flex-col justify-between">
+                <div>
+                  <h4 className="font-semibold text-sm">{item.title}</h4>
+                  <p className="text-xs text-muted-foreground mt-1">{item.why}</p>
+                </div>
+                <Button size="sm" variant="outline" className="w-full text-xs mt-2 justify-between" onClick={() => navigate(item.action_link)}>
+                  <span>{item.next_action}</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* Primary money KPIs — the four numbers that matter most */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Total Sales" value={format(stats.total_sales)} icon="TrendingUp" tone="emerald" delta={12} sub="paid revenue" testId="kpi-total-sales" />
+        <KpiCard label="Total Sales" value={format(stats.total_sales)} icon="TrendingUp" tone="emerald" sub="paid revenue" testId="kpi-total-sales" />
         <KpiCard label="Estimated Profit" value={format(stats.profit)} icon="Wallet" tone={stats.profit >= 0 ? "primary" : "rose"} sub="sales − expenses" testId="kpi-profit" />
         <KpiCard label="Outstanding" value={format(stats.outstanding)} icon="FileText" tone="amber" sub={`${stats.outstanding_count} invoices`} testId="kpi-outstanding" />
         <KpiCard label="Amount Collected" value={format(stats.amount_collected)} icon="CreditCard" tone="emerald" sub="all payments" testId="kpi-collected" />
@@ -108,9 +166,15 @@ export default function Dashboard() {
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <Card className="border-border bg-card p-5 shadow-sm lg:col-span-2" data-testid="sales-trend-chart">
-              <div className="mb-4">
-                <h3 className="font-heading text-base font-semibold">Revenue vs Expenses</h3>
-                <p className="text-xs text-muted-foreground">Last 6 months</p>
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="font-heading text-base font-semibold">Revenue vs Expenses</h3>
+                  <p className="text-xs text-muted-foreground">Last 6 months</p>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Activity className="h-4 w-4 text-emerald-500" />
+                  <span>Health Index: <strong>{health.score}/100 ({health.status})</strong></span>
+                </div>
               </div>
               <ResponsiveContainer width="100%" height={280}>
                 <AreaChart data={stats.sales_trend} margin={{ left: -12, right: 8, top: 8 }}>
