@@ -7,8 +7,8 @@ const getSystemTheme = () =>
   window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 
 export function ThemeProvider({ children }) {
-  // pref: "system" | "light" | "dark". Default follows the OS with a manual override.
-  const [pref, setPref] = useState(() => localStorage.getItem("bmp_theme") || "system");
+  // pref: "system" | "light" | "dark". Default is dark theme for high-contrast SaaS aesthetic.
+  const [pref, setPref] = useState(() => localStorage.getItem("bmp_theme") || "dark");
   const [systemTheme, setSystemTheme] = useState(getSystemTheme);
 
   useEffect(() => {
