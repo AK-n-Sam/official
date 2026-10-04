@@ -100,25 +100,25 @@ export function CommandPalette() {
         type="button"
         onClick={() => setOpen(true)}
         data-testid="global-search-trigger"
-        className="hidden h-9 w-64 items-center gap-2 rounded-full border border-border/60 bg-muted/60 px-3.5 text-xs text-muted-foreground transition-colors hover:bg-muted sm:flex"
+        className="hidden h-8 w-[292px] items-center gap-2 rounded-md border border-border/70 bg-[#f2f4f7] px-3 text-[11px] text-muted-foreground transition-colors hover:bg-muted sm:flex"
       >
         <Search className="h-3.5 w-3.5 shrink-0 opacity-70" />
         <span className="flex-1 truncate text-left font-medium">Search anything...</span>
-        <span className="font-mono text-[10px] opacity-70">/</span>
+        <span className="rounded border border-border/70 bg-card px-1.5 py-0.5 font-mono text-[9px] opacity-70">/</span>
       </button>
       <Button variant="ghost" size="icon" className="h-9 w-9 sm:hidden" onClick={() => setOpen(true)} data-testid="global-search-trigger-mobile" aria-label="Search">
         <Search className="h-[18px] w-[18px]" />
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="top-[15%] translate-y-0 gap-0 overflow-hidden p-0 sm:max-w-xl [&>button.absolute]:hidden" data-testid="command-palette">
+        <DialogContent className="top-[12%] translate-y-0 gap-0 overflow-hidden rounded-xl p-0 shadow-2xl sm:max-w-xl [&>button.absolute]:hidden" data-testid="command-palette">
           <DialogTitle className="sr-only">Command palette</DialogTitle>
           <DialogDescription className="sr-only">Search records, create items, or jump to a page.</DialogDescription>
           <Command shouldFilter={false} className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider">
             <CommandInput
               value={query}
               onValueChange={setQuery}
-              placeholder="Ask, find, or do anything... (e.g. 'Rahul', 'Overdue invoices', 'Create invoice')"
+              placeholder="Search, create, or jump anywhere..."
               className="h-12"
               data-testid="global-search-input"
             />
