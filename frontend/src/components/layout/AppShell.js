@@ -36,16 +36,16 @@ export function AppShell() {
       </div>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="w-64 p-0">
+        <SheetContent side="left" className="w-[272px] border-r border-white/10 bg-[#0d0f13] p-0 text-white">
           <Sidebar onNavigate={() => setMobileOpen(false)} />
         </SheetContent>
       </Sheet>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col bg-[#f7f8fa] dark:bg-[#090b0f]">
         <Header onMenuClick={() => setMobileOpen(true)} />
         <WorkspaceTabs />
         <main className="flex-1 overflow-y-auto">
-          <div className={`mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ${density === "compact" ? "py-3" : "py-6"}`}>
+          <div className={`mx-auto w-full max-w-[1480px] px-4 sm:px-6 lg:px-8 ${density === "compact" ? "py-4" : "py-7 lg:py-8"}`}>
             <Routes>
               <Route index element={<Navigate to={startPage} replace />} />
               
