@@ -23,14 +23,21 @@ export default function MyWork() {
   const { format } = useCurrency();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
+  const [todayQueue, setTodayQueue] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [decidingId, setDecidingId] = useState(null);
 
   const load = () => {
     setLoading(true);
-    api.get("/my-work").then(({ data }) => { setData(data); setError(null); })
-      .catch((e) => setError(e)).finally(() => setLoading(false));
+    Promise.all([
+      api.get("/my-work"),
+      api.get("/personalization/today")
+    ]).then(([resMyWork, resToday]) => {
+      setData(resMyWork.data);
+      setTodayQueue(resToday.data?.items || []);
+      setError(null);
+    }).catch((e) => setError(e)).finally(() => setLoading(false));
   };
   useEffect(load, []);
 
@@ -99,6 +106,40 @@ export default function MyWork() {
           <p className="mt-2 font-mono text-2xl font-extrabold text-rose-500">{data.tasks.filter(isOverdue).length}</p>
         </Card>
       </div>
+
+      {/* Start Here: Personalized Recommended Queue */}
+      {todayQueue.length > 0 && (
+        <Card className="border-primary/30 bg-gradient-to-r from-primary/10 via-card to-card p-5 space-y-3 shadow-sm" data-testid="start-here-banner">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary">
+              <Zap className="h-4 w-4" /> Start Here · Personalized Recommendations
+            </span>
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-xs">
+              AI Tailored
+            </Badge>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+            {todayQueue.slice(0, 3).map((item) => (
+              <div key={item.id} className="rounded-lg border border-border/80 bg-card p-4 space-y-2 flex flex-col justify-between hover:border-primary/50 transition-colors">
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider">
+                      {item.type}
+                    </Badge>
+                    <span className="text-[10px] font-mono text-muted-foreground">{item.why}</span>
+                  </div>
+                  <h4 className="font-semibold text-sm mt-2">{item.title}</h4>
+                  <p className="text-xs text-muted-foreground mt-1">{item.subtitle}</p>
+                </div>
+                <Button size="sm" variant="outline" className="w-full text-xs mt-3 justify-between" onClick={() => navigate(item.link)}>
+                  <span>{item.action_label}</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Pending Approvals Widget */}
       {approvals.length > 0 && (

@@ -1820,6 +1820,43 @@ async def trigger_business_brain(user: dict = Depends(get_current_user)):
     return {"success": True, "executed_count": len(executed), "events": executed}
 
 
+# ---------- Deep Personalization System ----------
+@api.get("/personalization/me", tags=["personalization"])
+async def get_my_personalization(user: dict = Depends(get_current_user)):
+    from personalization import get_or_create_personalization
+    org_id = user["active_org_id"]
+    return await get_or_create_personalization(user["id"], org_id)
+
+
+@api.put("/personalization/me", tags=["personalization"])
+async def update_my_personalization(payload: dict = Body(...), user: dict = Depends(get_current_user)):
+    from personalization import update_personalization_prefs
+    org_id = user["active_org_id"]
+    return await update_personalization_prefs(user["id"], org_id, payload)
+
+
+@api.post("/personalization/favorites", tags=["personalization"])
+async def toggle_favorite(payload: dict = Body(...), user: dict = Depends(get_current_user)):
+    from personalization import toggle_user_favorite
+    org_id = user["active_org_id"]
+    return await toggle_user_favorite(user["id"], org_id, payload)
+
+
+@api.post("/personalization/recent", tags=["personalization"])
+async def log_recent_context(payload: dict = Body(...), user: dict = Depends(get_current_user)):
+    from personalization import log_user_recent_context
+    org_id = user["active_org_id"]
+    await log_user_recent_context(user["id"], org_id, payload)
+    return {"success": True}
+
+
+@api.get("/personalization/today", tags=["personalization"])
+async def get_today_queue(user: dict = Depends(get_current_user)):
+    from personalization import compute_personalized_today_queue
+    org_id = user["active_org_id"]
+    return await compute_personalized_today_queue(user, org_id)
+
+
 app.include_router(auth_router, prefix="/api")
 app.include_router(auth_router)
 

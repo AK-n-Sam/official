@@ -18,6 +18,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TeamTab } from "@/components/settings/TeamTab";
 import { AuditLogTab } from "@/components/settings/AuditLogTab";
+import { PersonalizationTab } from "@/components/settings/PersonalizationTab";
 import { Loader2 } from "lucide-react";
 
 function Row({ label, children }) {
@@ -29,7 +30,7 @@ function Row({ label, children }) {
   );
 }
 
-const SETTINGS_TABS = ["business", "team", "profile", "preferences", "invoicing", "audit"];
+const SETTINGS_TABS = ["business", "team", "profile", "personalization", "preferences", "invoicing", "audit"];
 
 export default function Settings() {
   const { user, refresh } = useAuth();
@@ -85,13 +86,14 @@ export default function Settings() {
 
   return (
     <div className="space-y-6 animate-in-up">
-      <PageHeader title="Settings" subtitle="Manage your business, profile and preferences." />
+      <PageHeader title="Settings" subtitle="Manage your business, profile, personalization and preferences." />
 
       <Tabs value={tab} onValueChange={changeTab}>
         <TabsList data-testid="settings-tabs">
           <TabsTrigger value="business" data-testid="tab-business">Business</TabsTrigger>
           <TabsTrigger value="team" data-testid="tab-team">Team</TabsTrigger>
           <TabsTrigger value="profile" data-testid="tab-profile">Profile</TabsTrigger>
+          <TabsTrigger value="personalization" data-testid="tab-personalization">Personalization</TabsTrigger>
           <TabsTrigger value="preferences" data-testid="tab-preferences">Preferences</TabsTrigger>
           <TabsTrigger value="invoicing" data-testid="tab-invoicing">Invoicing</TabsTrigger>
           <TabsTrigger value="audit" data-testid="tab-audit">Audit Trail</TabsTrigger>
@@ -131,6 +133,12 @@ export default function Settings() {
             <Button className="mt-5" onClick={saveProfile} disabled={saving === "profile"} data-testid="save-profile">
               {saving === "profile" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save Profile
             </Button>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="personalization">
+          <Card className="border-border/70 bg-card/90 p-6">
+            <PersonalizationTab />
           </Card>
         </TabsContent>
 

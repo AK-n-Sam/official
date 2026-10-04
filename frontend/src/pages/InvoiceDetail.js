@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Send, DollarSign, XCircle, Clock, Pencil, Copy, Printer, Bell, AlertCircle, CheckCircle2, Zap } from "lucide-react";
+import { ArrowLeft, Send, DollarSign, XCircle, Clock, Pencil, Copy, Printer, Bell, AlertCircle, CheckCircle2, Zap, Star } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useCurrency } from "@/context/CurrencyContext";
+import { usePersonalization } from "@/context/PersonalizationContext";
 import { useTabTitle } from "@/hooks/useTabTitle";
 import { formatDate } from "@/lib/format";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -21,6 +22,7 @@ export default function InvoiceDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { format } = useCurrency();
+  const { isFavorite, toggleFavorite, logRecent } = usePersonalization();
   const [inv, setInv] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,9 +33,15 @@ export default function InvoiceDetail() {
 
   const load = useCallback(() => {
     setLoading(true);
-    api.get(`/invoices/${id}`).then(({ data }) => { setInv(data); setError(null); })
+    api.get(`/invoices/${id}`).then(({ data }) => {
+      setInv(data);
+      setError(null);
+      if (data?.invoice_number) {
+        logRecent({ type: "invoice", id, title: data.invoice_number, path: `/invoices/${id}` });
+      }
+    })
       .catch((e) => setError(e)).finally(() => setLoading(false));
-  }, [id]);
+  }, [id, logRecent]);
   useEffect(load, [load]);
   useTabTitle(inv?.invoice_number);
 
@@ -70,6 +78,16 @@ export default function InvoiceDetail() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="font-mono text-2xl font-bold tracking-tight" data-testid="invoice-detail-number">{inv.invoice_number}</h1>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => toggleFavorite({ type: "invoice", id, title: inv.invoice_number, path: `/invoices/${id}` })}
+              title={isFavorite("invoice", id) ? "Remove from starred" : "Star this invoice"}
+              className="h-8 w-8"
+              data-testid="star-invoice-button"
+            >
+              <Star className={`h-4 w-4 ${isFavorite("invoice", id) ? "text-amber-500 fill-amber-500" : "text-muted-foreground"}`} />
+            </Button>
             <StatusBadge status={inv.status} />
             {inv.reminder_count > 0 && (
               <Badge variant="secondary" className="text-xs font-medium flex items-center gap-1">

@@ -11,6 +11,8 @@ import AuthCallback from "@/pages/AuthCallback";
 import InvoicePrint from "@/pages/InvoicePrint";
 import { Toaster } from "@/components/ui/sonner";
 
+import { PersonalizationProvider } from "@/context/PersonalizationContext";
+
 function FullLoader() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
@@ -31,11 +33,11 @@ function AppRoutes() {
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <AuthPage />} />
       <Route
         path="/print/invoices/:id"
-        element={user ? <CurrencyProvider><InvoicePrint /></CurrencyProvider> : <Navigate to="/login" replace />}
+        element={user ? <CurrencyProvider><PersonalizationProvider><InvoicePrint /></PersonalizationProvider></CurrencyProvider> : <Navigate to="/login" replace />}
       />
       <Route
         path="/*"
-        element={user ? <CurrencyProvider><LayoutProvider><AppShell /></LayoutProvider></CurrencyProvider> : <Navigate to="/login" replace />}
+        element={user ? <CurrencyProvider><PersonalizationProvider><LayoutProvider><AppShell /></LayoutProvider></PersonalizationProvider></CurrencyProvider> : <Navigate to="/login" replace />}
       />
     </Routes>
   );

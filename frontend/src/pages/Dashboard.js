@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, Legend, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import api, { formatApiError } from "@/lib/api";
 import { useCurrency } from "@/context/CurrencyContext";
+import { usePersonalization } from "@/context/PersonalizationContext";
 import { CURRENCIES, formatDate } from "@/lib/format";
 import { PageHeader } from "@/components/common/PageHeader";
 import { KpiCard } from "@/components/dashboard/KpiCard";
@@ -49,6 +50,7 @@ function SectionCard({ title, action, onAction, children, testId }) {
 
 export default function Dashboard() {
   const { format, currency } = useCurrency();
+  const { getTerm } = usePersonalization();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
@@ -149,9 +151,9 @@ export default function Dashboard() {
 
       {/* Primary money KPIs — the four numbers that matter most */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Total Sales" value={format(stats.total_sales)} icon="TrendingUp" tone="emerald" sub="paid revenue" testId="kpi-total-sales" />
-        <KpiCard label="Estimated Profit" value={format(stats.profit)} icon="Wallet" tone={stats.profit >= 0 ? "primary" : "rose"} sub="sales − expenses" testId="kpi-profit" />
-        <KpiCard label="Outstanding" value={format(stats.outstanding)} icon="FileText" tone="amber" sub={`${stats.outstanding_count} invoices`} testId="kpi-outstanding" />
+        <KpiCard label={getTerm("revenue")} value={format(stats.total_sales)} icon="TrendingUp" tone="emerald" sub="paid revenue" testId="kpi-total-sales" />
+        <KpiCard label={getTerm("margin")} value={format(stats.profit)} icon="Wallet" tone={stats.profit >= 0 ? "primary" : "rose"} sub="sales − expenses" testId="kpi-profit" />
+        <KpiCard label={getTerm("accounts_receivable")} value={format(stats.outstanding)} icon="FileText" tone="amber" sub={`${stats.outstanding_count} invoices`} testId="kpi-outstanding" />
         <KpiCard label="Amount Collected" value={format(stats.amount_collected)} icon="CreditCard" tone="emerald" sub="all payments" testId="kpi-collected" />
       </div>
 

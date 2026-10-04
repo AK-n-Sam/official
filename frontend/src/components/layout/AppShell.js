@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { WorkspaceTabs } from "@/components/layout/WorkspaceTabs";
 import { useLayout } from "@/context/LayoutContext";
+import { usePersonalization } from "@/context/PersonalizationContext";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import Dashboard from "@/pages/Dashboard";
 import MyWork from "@/pages/MyWork";
@@ -31,6 +32,8 @@ import AutomationCenter from "@/pages/AutomationCenter";
 export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { sidebarCollapsed, density } = useLayout();
+  const { preferences } = usePersonalization();
+  const startPage = preferences?.start_page || "/dashboard";
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -50,7 +53,7 @@ export function AppShell() {
         <main className="flex-1 overflow-y-auto">
           <div className={`mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ${density === "compact" ? "py-3" : "py-6"}`}>
             <Routes>
-              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route index element={<Navigate to={startPage} replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/my-work" element={<MyWork />} />
               <Route path="/executive" element={<ExecutiveCockpit />} />
