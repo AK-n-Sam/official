@@ -1820,6 +1820,42 @@ async def trigger_business_brain(user: dict = Depends(get_current_user)):
     return {"success": True, "executed_count": len(executed), "events": executed}
 
 
+# ---------- Business Autopilot Engine Endpoints ----------
+@api.get("/autopilot/status", tags=["automation"])
+async def get_autopilot_status_route(user: dict = Depends(get_current_user)):
+    from automation import get_autopilot_status
+    org_id = user["active_org_id"]
+    return await get_autopilot_status(org_id)
+
+
+@api.post("/autopilot/toggle", tags=["automation"])
+async def toggle_autopilot_route(payload: dict = Body(...), user: dict = Depends(get_current_user)):
+    from automation import toggle_autopilot
+    org_id = user["active_org_id"]
+    enabled = bool(payload.get("enabled", True))
+    mode = payload.get("mode", "full_autopilot")
+    result = await toggle_autopilot(org_id, enabled, mode)
+    await log_audit_event(org_id, user, "autopilot_toggled", "settings", "autopilot", "", f"Autopilot enabled={enabled}, mode={mode}")
+    return result
+
+
+@api.get("/autopilot/history", tags=["automation"])
+async def get_autopilot_history_route(user: dict = Depends(get_current_user)):
+    from automation import get_autopilot_history
+    org_id = user["active_org_id"]
+    logs = await get_autopilot_history(org_id)
+    return {"history": logs, "total": len(logs)}
+
+
+@api.post("/autopilot/run-now", tags=["automation"])
+async def run_autopilot_now_route(user: dict = Depends(get_current_user)):
+    from automation import run_business_brain
+    org_id = user["active_org_id"]
+    executed = await run_business_brain(org_id, user["id"])
+    await log_audit_event(org_id, user, "autopilot_manual_run", "automation", "autopilot", "", f"Manually triggered autopilot cycle. Executed {len(executed)} actions.")
+    return {"success": True, "executed_count": len(executed), "events": executed}
+
+
 # ---------- Deep Personalization System ----------
 @api.get("/personalization/me", tags=["personalization"])
 async def get_my_personalization(user: dict = Depends(get_current_user)):

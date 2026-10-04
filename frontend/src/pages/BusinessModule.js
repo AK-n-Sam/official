@@ -23,6 +23,7 @@ export default function BusinessModule() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [todayData, setTodayData] = useState([]);
+  const [autopilotStatus, setAutopilotStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -31,10 +32,12 @@ export default function BusinessModule() {
     setLoading(true);
     Promise.all([
       api.get("/dashboard/stats"),
-      api.get("/personalization/today")
-    ]).then(([resStats, resToday]) => {
+      api.get("/personalization/today"),
+      api.get("/autopilot/status")
+    ]).then(([resStats, resToday, resAutopilot]) => {
       setStats(resStats.data);
       setTodayData(resToday.data?.items || []);
+      setAutopilotStatus(resAutopilot.data);
       setError(null);
     }).catch((e) => setError(e)).finally(() => setLoading(false));
   }, []);
@@ -96,6 +99,32 @@ export default function BusinessModule() {
               </Button>
             </form>
           </Card>
+
+          {/* Today's Business Autopilot Summary Banner */}
+          {autopilotStatus && (
+            <Card className="border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-card to-card p-4 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4" data-testid="autopilot-summary-banner">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-500">
+                  <Zap className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm">Today's Business Autopilot Summary</span>
+                    <Badge variant="outline" className={autopilotStatus.enabled ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] uppercase font-bold" : "bg-amber-500/20 text-amber-600 border-amber-500/30 text-[10px] uppercase font-bold"}>
+                      {autopilotStatus.enabled ? "Autopilot Active" : "Paused"}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {autopilotStatus.summary?.headline || `${autopilotStatus.today_actions_count} automated actions executed today.`}
+                  </p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => navigate("/automation")} className="text-xs gap-1.5 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 shrink-0">
+                <Zap className="h-3.5 w-3.5" />
+                <span>Autopilot Center</span>
+              </Button>
+            </Card>
+          )}
 
           {/* The 6 Flagship Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
