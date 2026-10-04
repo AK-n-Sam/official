@@ -56,7 +56,7 @@ export function Header({ onMenuClick }) {
   const routeName = pathname === "/business" || pathname === "/" || pathname === "/overview" ? "Overview" : pathname.replace("/", "").replace(/-/g, " ");
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border/60 bg-background/90 px-4 backdrop-blur-md sm:px-6">
+    <header className="sticky top-0 z-40 flex h-[60px] items-center justify-between border-b border-border/70 bg-white/90 px-4 backdrop-blur-xl dark:bg-[#0b0d11]/90 sm:px-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuClick} data-testid="mobile-menu-button">
           <Menu className="h-5 w-5" />
@@ -70,10 +70,10 @@ export function Header({ onMenuClick }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-2">
         <CommandPalette />
 
-        <Button variant="ghost" size="icon" onClick={() => window.location.reload()} className="h-8 w-8 rounded-full border border-border/60 bg-card" title="Refresh workspace">
+        <Button variant="ghost" size="icon" onClick={() => window.location.reload()} className="h-8 w-8 rounded-md border border-border/70 bg-card" title="Refresh workspace">
           <Clock className="h-3.5 w-3.5 text-muted-foreground" />
         </Button>
 
@@ -88,7 +88,7 @@ export function Header({ onMenuClick }) {
 
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative h-9 w-9" data-testid="favorites-recent-button" title="Favorites & Recent Pages">
+            <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-md" data-testid="favorites-recent-button" title="Favorites & Recent Pages">
               <Star className="h-[18px] w-[18px] text-amber-500 fill-amber-500/20" />
               {favorites.length > 0 && (
                 <span className="absolute right-1 top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-black">
@@ -197,8 +197,8 @@ export function Header({ onMenuClick }) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 rounded-full pl-1 outline-none" data-testid="user-menu-button">
-              <Avatar className="h-8 w-8 border border-border/60">
+            <button className="flex items-center rounded-full pl-0.5 outline-none" data-testid="user-menu-button">
+              <Avatar className="h-8 w-8 border border-border/70">
                 <AvatarImage src={user?.picture} alt={user?.name} />
                 <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary">{initials}</AvatarFallback>
               </Avatar>
