@@ -197,8 +197,8 @@ export default function BusinessModule() {
                   <p className="font-mono text-sm font-bold">{stats.employee_count}</p>
                 </div>
               </div>
-              <Button variant="ghost" size="sm" className="w-full text-xs justify-between pt-2" onClick={() => navigate("/people")}>
-                <span>Manage Team & Tasks</span>
+              <Button variant="ghost" size="sm" className="w-full text-xs justify-between pt-2" onClick={() => navigate("/team")}>
+                <span>Manage Team Workspace</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </Card>

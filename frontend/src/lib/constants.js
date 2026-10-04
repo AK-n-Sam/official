@@ -61,17 +61,21 @@ export const FLAGSHIP_MODULES = [
     ]
   },
   {
-    id: "people",
-    name: "People",
-    path: "/people",
+    id: "team",
+    name: "Team",
+    path: "/team",
     icon: "Briefcase",
-    tagline: "Who is doing the work?",
-    badge: "Workforce & Team",
+    tagline: "Manage the people who make the business run.",
+    badge: "Team Workspace",
     subItems: [
-      { id: "my-work", name: "My Work", path: "/people?tab=my-work" },
-      { id: "team", name: "Team & Workload", path: "/people?tab=team" },
-      { id: "approvals", name: "Approvals", path: "/people?tab=approvals" },
-      { id: "collaboration", name: "Collaboration", path: "/people?tab=collaboration" },
+      { id: "home", name: "Team Home", path: "/team?tab=home" },
+      { id: "my-work", name: "My Work", path: "/team?tab=my-work" },
+      { id: "directory", name: "Team Directory", path: "/team?tab=directory" },
+      { id: "workload", name: "Workload & Tasks", path: "/team?tab=workload" },
+      { id: "unassigned", name: "Unassigned Queue", path: "/team?tab=unassigned" },
+      { id: "handoffs", name: "Handoffs", path: "/team?tab=handoffs" },
+      { id: "approvals", name: "Approvals", path: "/team?tab=approvals" },
+      { id: "bottlenecks", name: "Bottlenecks & Automations", path: "/team?tab=bottlenecks" },
     ]
   },
   {

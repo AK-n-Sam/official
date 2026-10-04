@@ -11,7 +11,7 @@ import BusinessModule from "@/pages/BusinessModule";
 import CustomersModule from "@/pages/CustomersModule";
 import MoneyModule from "@/pages/MoneyModule";
 import OperationsModule from "@/pages/OperationsModule";
-import PeopleModule from "@/pages/PeopleModule";
+import TeamModule from "@/pages/TeamModule";
 import InsightsModule from "@/pages/InsightsModule";
 
 import CustomerDetail from "@/pages/CustomerDetail";
@@ -70,12 +70,13 @@ export function AppShell() {
               <Route path="/inventory" element={<Navigate to="/operations?tab=stock" replace />} />
               <Route path="/suppliers" element={<Navigate to="/operations?tab=suppliers" replace />} />
 
-              {/* FLAGSHIP 5: PEOPLE */}
-              <Route path="/people" element={<PeopleModule />} />
-              <Route path="/my-work" element={<Navigate to="/people?tab=my-work" replace />} />
-              <Route path="/employees" element={<Navigate to="/people?tab=team" replace />} />
+              {/* FLAGSHIP 5: TEAM */}
+              <Route path="/team" element={<TeamModule />} />
+              <Route path="/people" element={<Navigate to="/team" replace />} />
+              <Route path="/my-work" element={<Navigate to="/team?tab=my-work" replace />} />
+              <Route path="/employees" element={<Navigate to="/team?tab=directory" replace />} />
               <Route path="/employees/:id" element={<EmployeeDetail />} />
-              <Route path="/tasks" element={<Navigate to="/people?tab=team" replace />} />
+              <Route path="/tasks" element={<Navigate to="/team?tab=workload" replace />} />
 
               {/* FLAGSHIP 6: INSIGHTS */}
               <Route path="/insights" element={<InsightsModule />} />
