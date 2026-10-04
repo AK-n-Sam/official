@@ -99,17 +99,16 @@ export function PersonalizationTab() {
           <div className="pt-2">
             <Label className="text-xs font-semibold">Preferred Start Page</Label>
             <Select value={form.start_page} onValueChange={(val) => setForm({ ...form, start_page: val })}>
-              <SelectTrigger className="w-full mt-1.5">
+              <SelectTrigger className="w-full mt-1.5" data-testid="select-start-page">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="/dashboard">Dashboard</SelectItem>
-                <SelectItem value="/my-work">My Work & Focus</SelectItem>
-                <SelectItem value="/executive">Executive Cockpit</SelectItem>
-                <SelectItem value="/sales">Sales & Leads</SelectItem>
-                <SelectItem value="/invoices">Invoices & Finance</SelectItem>
-                <SelectItem value="/customers">Customer 360</SelectItem>
-                <SelectItem value="/automations">Automation Center</SelectItem>
+                <SelectItem value="/business">🏢 1. Business (Command Center)</SelectItem>
+                <SelectItem value="/customers">👥 2. Customers (CRM & Sales)</SelectItem>
+                <SelectItem value="/money">💰 3. Money (Financial Engine)</SelectItem>
+                <SelectItem value="/operations">📦 4. Operations (Stock & Suppliers)</SelectItem>
+                <SelectItem value="/people">⚡ 5. People (Workforce & My Work)</SelectItem>
+                <SelectItem value="/insights">🧠 6. Insights (Intelligence Layer)</SelectItem>
               </SelectContent>
             </Select>
           </div>

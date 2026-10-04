@@ -1,51 +1,105 @@
+export const FLAGSHIP_MODULES = [
+  {
+    id: "business",
+    name: "Business",
+    path: "/business",
+    icon: "Building2",
+    tagline: "How is my business doing?",
+    badge: "Command Center",
+    subItems: [
+      { id: "overview", name: "Overview", path: "/business?tab=overview" },
+      { id: "today", name: "Today", path: "/business?tab=today" },
+      { id: "priorities", name: "Priorities", path: "/business?tab=priorities" },
+      { id: "decisions", name: "Decisions", path: "/business?tab=decisions" },
+      { id: "goals", name: "Goals", path: "/business?tab=goals" },
+    ]
+  },
+  {
+    id: "customers",
+    name: "Customers",
+    path: "/customers",
+    icon: "Users",
+    tagline: "Who do we do business with?",
+    badge: "CRM & Sales",
+    subItems: [
+      { id: "people", name: "People", path: "/customers?tab=people" },
+      { id: "opportunities", name: "Opportunities", path: "/customers?tab=opportunities" },
+      { id: "customers", name: "Existing Customers", path: "/customers?tab=customers" },
+      { id: "followups", name: "Follow-ups", path: "/customers?tab=followups" },
+      { id: "insights", name: "Insights & Tiers", path: "/customers?tab=insights" },
+    ]
+  },
+  {
+    id: "money",
+    name: "Money",
+    path: "/money",
+    icon: "Wallet",
+    tagline: "Where is my money going and coming from?",
+    badge: "Financial Engine",
+    subItems: [
+      { id: "overview", name: "Overview", path: "/money?tab=overview" },
+      { id: "get-paid", name: "Get Paid", path: "/money?tab=get-paid" },
+      { id: "spend", name: "Spend", path: "/money?tab=spend" },
+      { id: "owed-to-you", name: "Owed to You", path: "/money?tab=owed-to-you" },
+      { id: "performance", name: "Performance & Reports", path: "/money?tab=performance" },
+      { id: "automation", name: "Automation", path: "/money?tab=automation" },
+    ]
+  },
+  {
+    id: "operations",
+    name: "Operations",
+    path: "/operations",
+    icon: "Package",
+    tagline: "Can the business actually deliver?",
+    badge: "Stock & Execution",
+    subItems: [
+      { id: "overview", name: "Overview", path: "/operations?tab=overview" },
+      { id: "stock", name: "Stock & Inventory", path: "/operations?tab=stock" },
+      { id: "products", name: "Products Catalog", path: "/operations?tab=products" },
+      { id: "suppliers", name: "Suppliers", path: "/operations?tab=suppliers" },
+      { id: "work", name: "Work & Issues", path: "/operations?tab=work" },
+    ]
+  },
+  {
+    id: "people",
+    name: "People",
+    path: "/people",
+    icon: "Briefcase",
+    tagline: "Who is doing the work?",
+    badge: "Workforce & Team",
+    subItems: [
+      { id: "my-work", name: "My Work", path: "/people?tab=my-work" },
+      { id: "team", name: "Team & Workload", path: "/people?tab=team" },
+      { id: "approvals", name: "Approvals", path: "/people?tab=approvals" },
+      { id: "collaboration", name: "Collaboration", path: "/people?tab=collaboration" },
+    ]
+  },
+  {
+    id: "insights",
+    name: "Insights",
+    path: "/insights",
+    icon: "Zap",
+    tagline: "What should I know?",
+    badge: "Intelligence Layer",
+    subItems: [
+      { id: "overview", name: "Overview", path: "/insights?tab=overview" },
+      { id: "reports", name: "Reports & Analytics", path: "/insights?tab=reports" },
+      { id: "risks", name: "Risks & Opportunities", path: "/insights?tab=risks" },
+      { id: "automations", name: "Automations", path: "/insights?tab=automations" },
+    ]
+  }
+];
+
 export const NAV_SECTIONS = [
   {
-    label: "Core",
-    items: [
-      { name: "Dashboard", path: "/dashboard", icon: "LayoutDashboard" },
-      { name: "My Work", path: "/my-work", icon: "CircleUser" },
-      { name: "Executive Cockpit", path: "/executive", icon: "Crown", roles: ["owner", "admin", "manager", "executive"] },
-      { name: "Admin Center", path: "/admin-center", icon: "ShieldCheck", roles: ["owner", "admin"] },
-    ],
-  },
-  {
-    label: "Finance",
-    items: [
-      { name: "Sales", path: "/sales", icon: "TrendingUp" },
-      { name: "Invoices", path: "/invoices", icon: "FileText" },
-      { name: "Expenses", path: "/expenses", icon: "Receipt" },
-    ],
-  },
-  {
-    label: "Sales & CRM",
-    items: [
-      { name: "Leads", path: "/leads", icon: "Target" },
-      { name: "Customers", path: "/customers", icon: "Users" },
-      { name: "Suppliers", path: "/suppliers", icon: "Truck" },
-    ],
-  },
-  {
-    label: "Inventory",
-    items: [
-      { name: "Products", path: "/products", icon: "Package" },
-      { name: "Inventory", path: "/inventory", icon: "Warehouse" },
-    ],
-  },
-  {
-    label: "Operations",
-    items: [
-      { name: "Employees", path: "/employees", icon: "Briefcase" },
-      { name: "Tasks", path: "/tasks", icon: "CheckSquare" },
-    ],
-  },
-  {
-    label: "Insights",
-    items: [
-      { name: "Automation Center", path: "/automations", icon: "Zap" },
-      { name: "Reports", path: "/reports", icon: "BarChart3" },
-      { name: "Settings", path: "/settings", icon: "Sliders" },
-      { name: "Help", path: "/help", icon: "LifeBuoy" },
-    ],
+    label: "Operating System",
+    items: FLAGSHIP_MODULES.map((m) => ({
+      name: m.name,
+      path: m.path,
+      icon: m.icon,
+      tagline: m.tagline,
+      badge: m.badge,
+    })),
   },
 ];
 

@@ -4,7 +4,7 @@ import { Icon } from "@/components/common/Icon";
 import { WorkspaceSwitcher } from "@/components/layout/WorkspaceSwitcher";
 import { useLayout } from "@/context/LayoutContext";
 import { cn } from "@/lib/utils";
-import { Zap, PanelLeftClose, PanelLeft } from "lucide-react";
+import { Zap, PanelLeftClose, PanelLeft, Settings, ShieldCheck } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 
@@ -12,6 +12,7 @@ export function Sidebar({ onNavigate, collapsed = false }) {
   const { toggleSidebar } = useLayout();
   const { user } = useAuth();
   const userRole = (user?.role || "member").toLowerCase();
+  const isAdminOrOwner = ["owner", "admin"].includes(userRole);
 
   const filteredSections = NAV_SECTIONS.map((section) => ({
     ...section,
@@ -36,7 +37,7 @@ export function Sidebar({ onNavigate, collapsed = false }) {
         {!collapsed && (
           <div className="leading-tight">
             <p className="font-heading text-sm font-bold tracking-tight">Six6<span className="text-primary">Fix</span></p>
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Business Suite</p>
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Business Operating System</p>
           </div>
         )}
       </div>
@@ -51,28 +52,32 @@ export function Sidebar({ onNavigate, collapsed = false }) {
         {filteredSections.map((section) => (
           <div key={section.label} className={collapsed ? "mb-2 border-b border-border/40 pb-2 last:border-0" : "mb-3.5"}>
             {!collapsed && (
-              <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">
+              <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">
                 {section.label}
               </p>
             )}
-            <div className="space-y-0.5">
+            <div className="space-y-1">
               {section.items.map((item) => (
                 <NavLink
                   key={item.path}
                   to={item.path}
                   onClick={onNavigate}
-                  title={collapsed ? item.name : undefined}
+                  title={collapsed ? item.name : item.tagline}
                   data-testid={`sidebar-nav-${item.name.toLowerCase()}`}
                   className={({ isActive }) =>
                     cn(
-                      "flex items-center gap-3 rounded-lg border-l-2 border-transparent px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-                      collapsed && "justify-center px-0",
-                      isActive && "border-primary bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
+                      "flex items-center gap-3 rounded-lg border-l-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground transition-all hover:bg-accent hover:text-foreground",
+                      collapsed && "justify-center px-0 py-2",
+                      isActive && "border-primary bg-primary/10 text-primary font-semibold hover:bg-primary/10 hover:text-primary"
                     )
                   }
                 >
-                  <Icon name={item.icon} className="h-[18px] w-[18px] shrink-0" />
-                  {!collapsed && item.name}
+                  <Icon name={item.icon} className="h-5 w-5 shrink-0" />
+                  {!collapsed && (
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm leading-tight">{item.name}</p>
+                    </div>
+                  )}
                 </NavLink>
               ))}
             </div>
@@ -80,12 +85,46 @@ export function Sidebar({ onNavigate, collapsed = false }) {
         ))}
       </nav>
 
-      <div className="border-t border-border/70 p-2">
+      <div className="border-t border-border/70 p-2 space-y-1">
+        {isAdminOrOwner && (
+          <NavLink
+            to="/admin-center"
+            onClick={onNavigate}
+            title={collapsed ? "Admin Center" : undefined}
+            data-testid="sidebar-nav-admin"
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+                collapsed && "justify-center px-0",
+                isActive && "bg-accent text-foreground"
+              )
+            }
+          >
+            <ShieldCheck className="h-4 w-4 shrink-0 text-amber-500" />
+            {!collapsed && <span>Admin Center</span>}
+          </NavLink>
+        )}
+        <NavLink
+          to="/settings"
+          onClick={onNavigate}
+          title={collapsed ? "Settings" : undefined}
+          data-testid="sidebar-nav-settings"
+          className={({ isActive }) =>
+            cn(
+              "flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+              collapsed && "justify-center px-0",
+              isActive && "bg-accent text-foreground"
+            )
+          }
+        >
+          <Settings className="h-4 w-4 shrink-0" />
+          {!collapsed && <span>Settings</span>}
+        </NavLink>
         <button
           onClick={toggleSidebar}
           data-testid="sidebar-collapse-toggle"
           className={cn(
-            "hidden w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:flex",
+            "hidden w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:flex",
             collapsed && "justify-center px-0"
           )}
         >
