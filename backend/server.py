@@ -1718,24 +1718,26 @@ async def get_executive_overview(user: dict = Depends(get_current_user)):
     net_profit = total_revenue - total_expenses
     margin_pct = round((net_profit / total_revenue * 100), 1) if total_revenue > 0 else 0.0
 
-    mrr = round(total_revenue / 12, 2)
+    # Calculate real data history months from actual records
+    months_set = set()
+    for i in paid_inv:
+        d = i.get("issue_date") or i.get("created_at") or ""
+        if len(d) >= 7:
+            months_set.add(d[:7])
+    data_months = max(1, len(months_set))
+    mrr = round(total_revenue / data_months, 2)
     arr = round(mrr * 12, 2)
 
-    open_tasks = [t for t in tasks if t.get("status") != "completed"]
-    done_tasks = [t for t in tasks if t.get("status") == "completed"]
-    task_throughput = round((len(done_tasks) / len(tasks) * 100), 1) if tasks else 100.0
+    monthly_burn = total_expenses / data_months
+    if monthly_burn > 0 and net_profit > 0:
+        runway_months = round(net_profit / monthly_burn, 1)
+        runway_label = f"{runway_months} Mo"
+    elif monthly_burn > 0:
+        runway_label = "Deficit Burn"
+    else:
+        runway_label = "Stable (No Burn)"
 
-    won_leads = [l for l in leads if l.get("stage") == "won"]
-    lead_conversion = round((len(won_leads) / len(leads) * 100), 1) if leads else 0.0
-
-    pending_approvals = await db.approvals.find({"org_id": org_id, "status": "pending"}).to_list(100)
-
-    # Top customer concentration
-    cust_sales = {}
-    for i in paid_inv:
-        cname = i.get("customer_name") or "Unassigned"
-        cust_sales[cname] = cust_sales.get(cname, 0.0) + float(i.get("total", 0))
-    top_customers = sorted([{"name": k, "revenue": v} for k, v in cust_sales.items()], key=lambda x: x["revenue"], reverse=True)[:5]
+    data_confidence = "Calculated from live workspace invoices" if len(paid_inv) >= 2 else "Initial state — metrics refine as transactions occur"
 
     return {
         "user_role": user.get("role", "member"),
@@ -1752,7 +1754,9 @@ async def get_executive_overview(user: dict = Depends(get_current_user)):
         "total_customers_count": len(customers),
         "pending_approvals": pending_approvals,
         "top_customers": top_customers,
-        "cash_runway_months": 18,
+        "cash_runway_label": runway_label,
+        "data_confidence": data_confidence,
+        "data_months": data_months,
     }
 
 
@@ -1782,6 +1786,38 @@ async def get_admin_overview(user: dict = Depends(get_current_user)):
             "admins_see_all": bool(org and org.get("admins_see_all", False)),
         }
     }
+
+
+@api.get("/automations", tags=["automation"])
+async def list_automations(user: dict = Depends(get_current_user)):
+    from automation import ensure_default_automations
+    org_id = user["active_org_id"]
+    await ensure_default_automations(org_id)
+    rules = await db.automations.find({"org_id": org_id}, {"_id": 0}).to_list(100)
+    logs = await db.automation_logs.find({"org_id": org_id}, {"_id": 0}).sort("executed_at", -1).limit(50).to_list(50)
+    return {
+        "rules": rules,
+        "logs": logs,
+        "active_count": len([r for r in rules if r.get("enabled")]),
+        "total_executed_count": len(logs)
+    }
+
+
+@api.post("/automations/{rule_id}/toggle", tags=["automation"])
+async def toggle_automation(rule_id: str, payload: dict = Body(...), user: dict = Depends(get_current_user)):
+    org_id = user["active_org_id"]
+    enabled = bool(payload.get("enabled", True))
+    await db.automations.update_one({"id": rule_id, "org_id": org_id}, {"$set": {"enabled": enabled, "updated_at": now_iso()}})
+    await log_audit_event(org_id, user, "automation_toggled", "settings", rule_id, "", f"Toggled automation rule enabled={enabled}")
+    return {"success": True, "enabled": enabled}
+
+
+@api.post("/automations/run", tags=["automation"])
+async def trigger_business_brain(user: dict = Depends(get_current_user)):
+    from automation import run_business_brain
+    org_id = user["active_org_id"]
+    executed = await run_business_brain(org_id, user["id"])
+    return {"success": True, "executed_count": len(executed), "events": executed}
 
 
 app.include_router(auth_router, prefix="/api")

@@ -21,6 +21,7 @@ def test_app_startup_and_routes():
     assert "/api/search" in paths
     assert "/api/executive/overview" in paths
     assert "/api/admin/overview" in paths
+    assert "/api/automations" in paths
 
 def test_customer_insights_derivation():
     c = {"name": "Test Acme Corp", "credit_limit": 5000.0}

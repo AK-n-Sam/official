@@ -6,8 +6,20 @@ import { useLayout } from "@/context/LayoutContext";
 import { cn } from "@/lib/utils";
 import { Zap, PanelLeftClose, PanelLeft } from "lucide-react";
 
+import { useAuth } from "@/context/AuthContext";
+
 export function Sidebar({ onNavigate, collapsed = false }) {
   const { toggleSidebar } = useLayout();
+  const { user } = useAuth();
+  const userRole = (user?.role || "member").toLowerCase();
+
+  const filteredSections = NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => {
+      if (!item.roles) return true;
+      return item.roles.includes(userRole);
+    }),
+  })).filter((section) => section.items.length > 0);
 
   return (
     <aside
@@ -36,7 +48,7 @@ export function Sidebar({ onNavigate, collapsed = false }) {
       )}
 
       <nav className="flex-1 overflow-y-auto px-3 py-3">
-        {NAV_SECTIONS.map((section) => (
+        {filteredSections.map((section) => (
           <div key={section.label} className={collapsed ? "mb-2 border-b border-border/40 pb-2 last:border-0" : "mb-3.5"}>
             {!collapsed && (
               <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">

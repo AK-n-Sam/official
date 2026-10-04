@@ -26,6 +26,7 @@ import Help from "@/pages/Help";
 
 import ExecutiveCockpit from "@/pages/ExecutiveCockpit";
 import AdminCenter from "@/pages/AdminCenter";
+import AutomationCenter from "@/pages/AutomationCenter";
 
 export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -54,6 +55,7 @@ export function AppShell() {
               <Route path="/my-work" element={<MyWork />} />
               <Route path="/executive" element={<ExecutiveCockpit />} />
               <Route path="/admin-center" element={<AdminCenter />} />
+              <Route path="/automations" element={<AutomationCenter />} />
               <Route path="/sales" element={<Sales />} />
               <Route path="/leads" element={<Leads />} />
               <Route path="/customers" element={<Customers />} />

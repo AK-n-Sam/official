@@ -65,8 +65,8 @@ export default function ExecutiveCockpit() {
             <TrendingUp className="h-4 w-4 text-emerald-500" />
           </div>
           <p className="mt-2 font-mono text-3xl font-extrabold">{format(data.arr || 0)}</p>
-          <p className="mt-1 text-xs text-emerald-500 font-medium flex items-center gap-1">
-            +14.2% YoY growth estimate
+          <p className="mt-1 text-xs text-muted-foreground font-medium truncate">
+            {data.data_confidence || "Calculated from active invoices"}
           </p>
         </Card>
 
@@ -77,7 +77,7 @@ export default function ExecutiveCockpit() {
           </div>
           <p className="mt-2 font-mono text-3xl font-extrabold">{format(data.mrr || 0)}</p>
           <p className="mt-1 text-xs text-muted-foreground font-medium">
-            Based on active customer invoices
+            Avg across {data.data_months || 1} active month(s)
           </p>
         </Card>
 
@@ -97,9 +97,9 @@ export default function ExecutiveCockpit() {
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cash Runway</span>
             <ShieldCheck className="h-4 w-4 text-amber-500" />
           </div>
-          <p className="mt-2 font-mono text-3xl font-extrabold">{data.cash_runway_months} Mo</p>
+          <p className="mt-2 font-mono text-2xl font-bold">{data.cash_runway_label || "Stable"}</p>
           <p className="mt-1 text-xs text-emerald-500 font-medium">
-            Strong operating liquidity
+            Operating liquidity status
           </p>
         </Card>
       </div>
