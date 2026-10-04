@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Users, Target, PhoneCall, TrendingUp, DollarSign, ArrowRight, Plus, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Users, Target, PhoneCall, TrendingUp, DollarSign, ArrowRight, Plus, ShieldCheck, AlertTriangle, Zap } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useCurrency } from "@/context/CurrencyContext";
 import { PageHeader } from "@/components/common/PageHeader";
 import { ErrorState } from "@/components/common/States";
 import { DetailDrawer } from "@/components/common/DetailDrawer";
+import { AutomationModal } from "@/components/common/AutomationModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,7 @@ export default function CustomersModule() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [drawerCustomer, setDrawerCustomer] = useState(null);
+  const [automationModalOpen, setAutomationModalOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -47,16 +49,17 @@ export default function CustomersModule() {
   return (
     <div className="space-y-6 animate-in-up">
       <PageHeader
-        title="Customers & Sales Hub"
-        subtitle="Who do we do business with? People, opportunities, follow-ups, and customer 360 relationships."
+        title="Customers & CRM Workspace"
+        subtitle="Who do we do business with? Customer relationships, lifetime value, payment status, and next actions."
       >
         <div className="flex items-center gap-2">
-          <Button onClick={() => navigate("/customers?new=1")} data-testid="new-customer-btn">
-            <Plus className="mr-1.5 h-4 w-4" /> Add Customer
+          <Button variant="outline" size="sm" onClick={() => setAutomationModalOpen(true)} className="gap-1.5 text-xs border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
+            <Zap className="h-3.5 w-3.5 text-emerald-500" />
+            <span>Automate (WHEN → DO)</span>
           </Button>
-          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-xs px-3 py-1 font-semibold">
-            👥 Flagship Module 2
-          </Badge>
+          <Button size="sm" onClick={() => navigate("/customers?new=1")} className="gap-1.5 text-xs font-semibold" data-testid="new-customer-btn">
+            <Plus className="h-4 w-4" /> Add Customer
+          </Button>
         </div>
       </PageHeader>
 
@@ -217,6 +220,12 @@ export default function CustomersModule() {
           </div>
         )}
       </DetailDrawer>
+
+      <AutomationModal
+        open={automationModalOpen}
+        onOpenChange={setAutomationModalOpen}
+        defaultModule="Customers"
+      />
     </div>
   );
 }

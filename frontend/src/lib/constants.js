@@ -1,14 +1,14 @@
-export const FLAGSHIP_MODULES = [
+export const PRIMARY_WORK_AREAS = [
   {
-    id: "business",
-    name: "Business",
+    id: "overview",
+    name: "Overview",
     path: "/business",
-    icon: "Building2",
-    tagline: "How is my business doing?",
+    icon: "LayoutDashboard",
+    tagline: "Command Center: How is my business doing?",
     badge: "Command Center",
     subItems: [
       { id: "overview", name: "Overview", path: "/business?tab=overview" },
-      { id: "today", name: "Today", path: "/business?tab=today" },
+      { id: "today", name: "Today & Attention", path: "/business?tab=today" },
       { id: "priorities", name: "Priorities", path: "/business?tab=priorities" },
       { id: "decisions", name: "Decisions", path: "/business?tab=decisions" },
       { id: "goals", name: "Goals", path: "/business?tab=goals" },
@@ -20,13 +20,25 @@ export const FLAGSHIP_MODULES = [
     path: "/customers",
     icon: "Users",
     tagline: "Who do we do business with?",
-    badge: "CRM & Sales",
+    badge: "CRM & Relationships",
     subItems: [
-      { id: "people", name: "People", path: "/customers?tab=people" },
-      { id: "opportunities", name: "Opportunities", path: "/customers?tab=opportunities" },
-      { id: "customers", name: "Existing Customers", path: "/customers?tab=customers" },
-      { id: "followups", name: "Follow-ups", path: "/customers?tab=followups" },
-      { id: "insights", name: "Insights & Tiers", path: "/customers?tab=insights" },
+      { id: "customers", name: "All Customers", path: "/customers?tab=customers" },
+      { id: "people", name: "Contacts", path: "/customers?tab=people" },
+      { id: "opportunities", name: "Deals", path: "/customers?tab=opportunities" },
+      { id: "insights", name: "Tiers & Value", path: "/customers?tab=insights" },
+    ]
+  },
+  {
+    id: "sales",
+    name: "Sales",
+    path: "/sales",
+    icon: "TrendingUp",
+    tagline: "What are we selling & sales pipeline",
+    badge: "Sales Pipeline",
+    subItems: [
+      { id: "pipeline", name: "Pipeline Kanban", path: "/sales?tab=pipeline" },
+      { id: "revenue", name: "Revenue Performance", path: "/sales?tab=revenue" },
+      { id: "history", name: "Payment History", path: "/sales?tab=history" },
     ]
   },
   {
@@ -34,15 +46,14 @@ export const FLAGSHIP_MODULES = [
     name: "Money",
     path: "/money",
     icon: "Wallet",
-    tagline: "Where is my money going and coming from?",
+    tagline: "Where is money coming in and going out?",
     badge: "Financial Engine",
     subItems: [
-      { id: "overview", name: "Overview", path: "/money?tab=overview" },
-      { id: "get-paid", name: "Get Paid", path: "/money?tab=get-paid" },
-      { id: "spend", name: "Spend", path: "/money?tab=spend" },
+      { id: "overview", name: "Financial Overview", path: "/money?tab=overview" },
+      { id: "get-paid", name: "Invoices & Get Paid", path: "/money?tab=get-paid" },
+      { id: "spend", name: "Expenses & Spend", path: "/money?tab=spend" },
       { id: "owed-to-you", name: "Owed to You", path: "/money?tab=owed-to-you" },
-      { id: "performance", name: "Performance & Reports", path: "/money?tab=performance" },
-      { id: "automation", name: "Automation", path: "/money?tab=automation" },
+      { id: "performance", name: "Reports", path: "/money?tab=performance" },
     ]
   },
   {
@@ -50,54 +61,46 @@ export const FLAGSHIP_MODULES = [
     name: "Operations",
     path: "/operations",
     icon: "Package",
-    tagline: "Can the business actually deliver?",
+    tagline: "Can the business deliver?",
     badge: "Stock & Execution",
     subItems: [
-      { id: "overview", name: "Overview", path: "/operations?tab=overview" },
+      { id: "overview", name: "Operations Home", path: "/operations?tab=overview" },
       { id: "stock", name: "Stock & Inventory", path: "/operations?tab=stock" },
       { id: "products", name: "Products Catalog", path: "/operations?tab=products" },
       { id: "suppliers", name: "Suppliers", path: "/operations?tab=suppliers" },
-      { id: "work", name: "Work & Issues", path: "/operations?tab=work" },
+      { id: "work", name: "Tasks & Work", path: "/operations?tab=work" },
     ]
   },
   {
-    id: "team",
-    name: "Team",
+    id: "people",
+    name: "People",
     path: "/team",
     icon: "Briefcase",
-    tagline: "Manage the people who make the business run.",
+    tagline: "Who is doing the work?",
     badge: "Team Workspace",
     subItems: [
-      { id: "home", name: "Team Home", path: "/team?tab=home" },
-      { id: "my-work", name: "My Work", path: "/team?tab=my-work" },
+      { id: "home", name: "Team Hub", path: "/team?tab=home" },
+      { id: "my-work", name: "My Work Queue", path: "/team?tab=my-work" },
       { id: "directory", name: "Team Directory", path: "/team?tab=directory" },
-      { id: "workload", name: "Workload & Tasks", path: "/team?tab=workload" },
+      { id: "workload", name: "Workload & Capacity", path: "/team?tab=workload" },
       { id: "unassigned", name: "Unassigned Queue", path: "/team?tab=unassigned" },
-      { id: "handoffs", name: "Handoffs", path: "/team?tab=handoffs" },
-      { id: "approvals", name: "Approvals", path: "/team?tab=approvals" },
-      { id: "bottlenecks", name: "Bottlenecks & Automations", path: "/team?tab=bottlenecks" },
-    ]
-  },
-  {
-    id: "insights",
-    name: "Insights",
-    path: "/insights",
-    icon: "Zap",
-    tagline: "What should I know?",
-    badge: "Intelligence Layer",
-    subItems: [
-      { id: "overview", name: "Overview", path: "/insights?tab=overview" },
-      { id: "reports", name: "Reports & Analytics", path: "/insights?tab=reports" },
-      { id: "risks", name: "Risks & Opportunities", path: "/insights?tab=risks" },
-      { id: "automations", name: "Automations", path: "/insights?tab=automations" },
     ]
   }
 ];
 
+export const SYSTEM_WORK_AREAS = [
+  { id: "automations", name: "Automations", path: "/automation", icon: "Zap", tagline: "Continuous SME Autopilot engine" },
+  { id: "team-access", name: "Team & Access", path: "/admin-center", icon: "ShieldCheck", tagline: "Roles, permissions & workspace settings" },
+  { id: "settings", name: "Settings", path: "/settings", icon: "Settings", tagline: "Preferences & profile" },
+  { id: "help", name: "Help", path: "/help", icon: "CircleHelp", tagline: "SME Operating guide & shortcuts" },
+];
+
+export const FLAGSHIP_MODULES = PRIMARY_WORK_AREAS;
+
 export const NAV_SECTIONS = [
   {
-    label: "Operating System",
-    items: FLAGSHIP_MODULES.map((m) => ({
+    label: "Primary Work Areas",
+    items: PRIMARY_WORK_AREAS.map((m) => ({
       name: m.name,
       path: m.path,
       icon: m.icon,
@@ -105,6 +108,15 @@ export const NAV_SECTIONS = [
       badge: m.badge,
     })),
   },
+  {
+    label: "System & Automations",
+    items: SYSTEM_WORK_AREAS.map((m) => ({
+      name: m.name,
+      path: m.path,
+      icon: m.icon,
+      tagline: m.tagline,
+    })),
+  }
 ];
 
 export const TIMEZONES = [

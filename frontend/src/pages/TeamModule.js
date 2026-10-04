@@ -21,6 +21,8 @@ import Employees from "@/pages/Employees";
 import Tasks from "@/pages/Tasks";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 
+import { AutomationModal } from "@/components/common/AutomationModal";
+
 export default function TeamModule() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "home";
@@ -34,6 +36,7 @@ export default function TeamModule() {
   const [unassignedTasks, setUnassignedTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [automationModalOpen, setAutomationModalOpen] = useState(false);
 
   // Modal States
   const [handoffOpen, setHandoffOpen] = useState(false);
@@ -139,20 +142,21 @@ export default function TeamModule() {
         subtitle="Manage the people who make the business run. Organize workforce, workload capacity, handoffs, and approvals."
       >
         <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={() => navigate("/tasks?new=1")} data-testid="team-create-task-btn">
-            <Plus className="mr-1.5 h-4 w-4" /> Create Task
+          <Button variant="outline" size="sm" onClick={() => setAutomationModalOpen(true)} className="gap-1.5 text-xs border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
+            <Zap className="h-3.5 w-3.5 text-emerald-500" />
+            <span>Automate (WHEN → DO)</span>
+          </Button>
+          <Button size="sm" onClick={() => navigate("/tasks?new=1")} className="gap-1.5 text-xs font-semibold" data-testid="team-create-task-btn">
+            <Plus className="h-4 w-4" /> Create Task
           </Button>
           {isManagerOrOwner && (
-            <Button variant="outline" onClick={() => navigate("/employees?new=1")} data-testid="team-add-member-btn">
-              <UserPlus className="mr-1.5 h-4 w-4" /> Add Team Member
+            <Button variant="outline" size="sm" onClick={() => navigate("/employees?new=1")} className="gap-1.5 text-xs font-semibold" data-testid="team-add-member-btn">
+              <UserPlus className="h-4 w-4" /> Add Team Member
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={() => setHandoffOpen(true)} data-testid="team-handoff-btn">
-            <ArrowRightLeft className="mr-1.5 h-4 w-4 text-primary" /> Start Handoff
+          <Button variant="outline" size="sm" onClick={() => setHandoffOpen(true)} className="gap-1.5 text-xs" data-testid="team-handoff-btn">
+            <ArrowRightLeft className="h-4 w-4 text-primary" /> Start Handoff
           </Button>
-          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-xs px-3 py-1 font-semibold">
-            ⚡ Flagship Module 5
-          </Badge>
         </div>
       </PageHeader>
 
@@ -551,6 +555,12 @@ export default function TeamModule() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <AutomationModal
+        open={automationModalOpen}
+        onOpenChange={setAutomationModalOpen}
+        defaultModule="People & Team"
+      />
     </div>
   );
 }

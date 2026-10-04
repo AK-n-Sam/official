@@ -5,6 +5,7 @@ import api, { formatApiError } from "@/lib/api";
 import { useCurrency } from "@/context/CurrencyContext";
 import { PageHeader } from "@/components/common/PageHeader";
 import { ErrorState } from "@/components/common/States";
+import { AutomationModal } from "@/components/common/AutomationModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,7 @@ export default function OperationsModule() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [automationModalOpen, setAutomationModalOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -48,15 +50,16 @@ export default function OperationsModule() {
         subtitle="Can the business actually deliver? Stock levels, product catalog, suppliers, and fulfillment."
       >
         <div className="flex items-center gap-2">
-          <Button onClick={() => navigate("/products?new=1")} data-testid="new-product-ops-btn">
-            <Plus className="mr-1.5 h-4 w-4" /> Add Product
+          <Button variant="outline" size="sm" onClick={() => setAutomationModalOpen(true)} className="gap-1.5 text-xs border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
+            <Zap className="h-3.5 w-3.5 text-emerald-500" />
+            <span>Automate (WHEN → DO)</span>
           </Button>
-          <Button variant="outline" onClick={() => navigate("/suppliers?new=1")} data-testid="new-supplier-ops-btn">
-            <Plus className="mr-1.5 h-4 w-4" /> Add Supplier
+          <Button size="sm" onClick={() => navigate("/products?new=1")} className="gap-1.5 text-xs font-semibold" data-testid="new-product-ops-btn">
+            <Plus className="h-4 w-4" /> Add Product
           </Button>
-          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-xs px-3 py-1 font-semibold">
-            📦 Flagship Module 4
-          </Badge>
+          <Button variant="outline" size="sm" onClick={() => navigate("/suppliers?new=1")} className="gap-1.5 text-xs font-semibold" data-testid="new-supplier-ops-btn">
+            <Plus className="h-4 w-4" /> Add Supplier
+          </Button>
         </div>
       </PageHeader>
 
@@ -140,6 +143,12 @@ export default function OperationsModule() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <AutomationModal
+        open={automationModalOpen}
+        onOpenChange={setAutomationModalOpen}
+        defaultModule="Operations"
+      />
     </div>
   );
 }

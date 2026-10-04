@@ -6,6 +6,7 @@ import { useCurrency } from "@/context/CurrencyContext";
 import { usePersonalization } from "@/context/PersonalizationContext";
 import { PageHeader } from "@/components/common/PageHeader";
 import { ErrorState } from "@/components/common/States";
+import { AutomationModal } from "@/components/common/AutomationModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ export default function MoneyModule() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [automationModalOpen, setAutomationModalOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -43,18 +45,19 @@ export default function MoneyModule() {
     <div className="space-y-6 animate-in-up">
       <PageHeader
         title="Money & Financial Engine"
-        subtitle="Where is my money going and coming from? Get paid, track spend, and manage cashflow."
+        subtitle="Where is my money going and coming from? Invoices, payments, expenses, and receivables."
       >
         <div className="flex items-center gap-2">
-          <Button onClick={() => navigate("/invoices?new=1")} data-testid="new-invoice-money-btn">
-            <Plus className="mr-1.5 h-4 w-4" /> Create Invoice
+          <Button variant="outline" size="sm" onClick={() => setAutomationModalOpen(true)} className="gap-1.5 text-xs border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
+            <Zap className="h-3.5 w-3.5 text-emerald-500" />
+            <span>Automate (WHEN → DO)</span>
           </Button>
-          <Button variant="outline" onClick={() => navigate("/expenses?new=1")} data-testid="new-expense-money-btn">
-            <Plus className="mr-1.5 h-4 w-4" /> Log Expense
+          <Button size="sm" onClick={() => navigate("/invoices?new=1")} className="gap-1.5 text-xs font-semibold" data-testid="new-invoice-money-btn">
+            <Plus className="h-4 w-4" /> Create Invoice
           </Button>
-          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-xs px-3 py-1 font-semibold">
-            💰 Flagship Module 3
-          </Badge>
+          <Button variant="outline" size="sm" onClick={() => navigate("/expenses?new=1")} className="gap-1.5 text-xs font-semibold" data-testid="new-expense-money-btn">
+            <Plus className="h-4 w-4" /> Log Expense
+          </Button>
         </div>
       </PageHeader>
 
@@ -173,6 +176,12 @@ export default function MoneyModule() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <AutomationModal
+        open={automationModalOpen}
+        onOpenChange={setAutomationModalOpen}
+        defaultModule="Money"
+      />
     </div>
   );
 }

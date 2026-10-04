@@ -9,10 +9,12 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 import BusinessModule from "@/pages/BusinessModule";
 import CustomersModule from "@/pages/CustomersModule";
+import Sales from "@/pages/Sales";
 import MoneyModule from "@/pages/MoneyModule";
 import OperationsModule from "@/pages/OperationsModule";
 import TeamModule from "@/pages/TeamModule";
 import InsightsModule from "@/pages/InsightsModule";
+import AutomationCenter from "@/pages/AutomationCenter";
 
 import CustomerDetail from "@/pages/CustomerDetail";
 import InvoiceDetail from "@/pages/InvoiceDetail";
@@ -47,43 +49,46 @@ export function AppShell() {
             <Routes>
               <Route index element={<Navigate to={startPage} replace />} />
               
-              {/* FLAGSHIP 1: BUSINESS */}
+              {/* PRIMARY WORK AREA 1: OVERVIEW */}
+              <Route path="/overview" element={<BusinessModule />} />
               <Route path="/business" element={<BusinessModule />} />
               <Route path="/dashboard" element={<Navigate to="/business?tab=overview" replace />} />
               <Route path="/executive" element={<Navigate to="/business?tab=decisions" replace />} />
 
-              {/* FLAGSHIP 2: CUSTOMERS */}
+              {/* PRIMARY WORK AREA 2: CUSTOMERS */}
               <Route path="/customers" element={<CustomersModule />} />
               <Route path="/customers/:id" element={<CustomerDetail />} />
-              <Route path="/leads" element={<Navigate to="/customers?tab=opportunities" replace />} />
-              <Route path="/sales" element={<Navigate to="/customers?tab=opportunities" replace />} />
+              <Route path="/leads" element={<Navigate to="/sales" replace />} />
 
-              {/* FLAGSHIP 3: MONEY */}
+              {/* PRIMARY WORK AREA 3: SALES */}
+              <Route path="/sales" element={<Sales />} />
+
+              {/* PRIMARY WORK AREA 4: MONEY */}
               <Route path="/money" element={<MoneyModule />} />
               <Route path="/invoices" element={<Navigate to="/money?tab=get-paid" replace />} />
               <Route path="/invoices/:id" element={<InvoiceDetail />} />
               <Route path="/expenses" element={<Navigate to="/money?tab=spend" replace />} />
 
-              {/* FLAGSHIP 4: OPERATIONS */}
+              {/* PRIMARY WORK AREA 5: OPERATIONS */}
               <Route path="/operations" element={<OperationsModule />} />
               <Route path="/products" element={<Navigate to="/operations?tab=products" replace />} />
               <Route path="/inventory" element={<Navigate to="/operations?tab=stock" replace />} />
               <Route path="/suppliers" element={<Navigate to="/operations?tab=suppliers" replace />} />
 
-              {/* FLAGSHIP 5: TEAM */}
+              {/* PRIMARY WORK AREA 6: PEOPLE */}
+              <Route path="/people" element={<TeamModule />} />
               <Route path="/team" element={<TeamModule />} />
-              <Route path="/people" element={<Navigate to="/team" replace />} />
               <Route path="/my-work" element={<Navigate to="/team?tab=my-work" replace />} />
               <Route path="/employees" element={<Navigate to="/team?tab=directory" replace />} />
               <Route path="/employees/:id" element={<EmployeeDetail />} />
               <Route path="/tasks" element={<Navigate to="/team?tab=workload" replace />} />
 
-              {/* FLAGSHIP 6: INSIGHTS */}
+              {/* SECONDARY SYSTEM AREAS */}
+              <Route path="/automation" element={<AutomationCenter />} />
+              <Route path="/automations" element={<AutomationCenter />} />
               <Route path="/insights" element={<InsightsModule />} />
               <Route path="/reports" element={<Navigate to="/insights?tab=reports" replace />} />
-              <Route path="/automations" element={<Navigate to="/insights?tab=automations" replace />} />
 
-              {/* CORE UTILITIES */}
               <Route path="/admin-center" element={<AdminCenter />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/help" element={<Help />} />
