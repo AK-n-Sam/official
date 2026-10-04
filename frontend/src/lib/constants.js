@@ -91,15 +91,13 @@ export const PRIMARY_WORK_AREAS = [
 export const SYSTEM_WORK_AREAS = [
   { id: "automations", name: "Automations", path: "/automation", icon: "Zap", tagline: "Continuous SME Autopilot engine" },
   { id: "team-access", name: "Team & Access", path: "/admin-center", icon: "ShieldCheck", tagline: "Roles, permissions & workspace settings" },
-  { id: "settings", name: "Settings", path: "/settings", icon: "Settings", tagline: "Preferences & profile" },
-  { id: "help", name: "Help", path: "/help", icon: "CircleHelp", tagline: "SME Operating guide & shortcuts" },
 ];
 
 export const FLAGSHIP_MODULES = PRIMARY_WORK_AREAS;
 
 export const NAV_SECTIONS = [
   {
-    label: "Primary Work Areas",
+    label: "WORK",
     items: PRIMARY_WORK_AREAS.map((m) => ({
       name: m.name,
       path: m.path,
@@ -109,7 +107,7 @@ export const NAV_SECTIONS = [
     })),
   },
   {
-    label: "System & Automations",
+    label: "SYSTEM",
     items: SYSTEM_WORK_AREAS.map((m) => ({
       name: m.name,
       path: m.path,

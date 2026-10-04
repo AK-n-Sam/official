@@ -178,39 +178,36 @@ export default function BusinessModule() {
             </div>
 
             {todayData.length === 0 ? (
-              <Card className="border-border bg-card p-6 text-center text-xs text-muted-foreground">
-                <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
+              <Card className="border-border/70 bg-card p-4 text-center text-xs text-muted-foreground">
+                <CheckCircle2 className="h-6 w-6 text-emerald-500 mx-auto mb-1" />
                 <p className="font-bold text-foreground">All caught up!</p>
-                <p className="mt-1">No overdue invoices, inventory shortages, or workload bottlenecks today.</p>
+                <p className="mt-0.5">No overdue invoices, inventory shortages, or workload bottlenecks today.</p>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {todayData.slice(0, 4).map((item) => (
-                  <Card key={item.id} className="border-border/80 bg-card p-4 space-y-2 hover:border-primary/50 transition-colors shadow-sm">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="space-y-1">
+              <Card className="border-border/70 bg-card divide-y divide-border/60 overflow-hidden shadow-sm">
+                {todayData.slice(0, 5).map((item) => (
+                  <div key={item.id} className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-accent/20 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-1.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+                        <AlertTriangle className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider bg-amber-500/10 text-amber-600 border-amber-500/30">
+                          <p className="text-xs font-bold text-foreground truncate">{item.title}</p>
+                          <Badge variant="outline" className="text-[9px] uppercase font-bold tracking-wider bg-amber-500/10 text-amber-600 border-amber-500/30 shrink-0">
                             {item.type}
                           </Badge>
-                          <p className="text-xs font-bold text-foreground">{item.title}</p>
                         </div>
-                        {/* 1. What happened & 2. Why does it matter */}
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          <strong>Why it matters:</strong> {item.why}
-                        </p>
+                        <p className="text-[11px] text-muted-foreground truncate">{item.why}</p>
                       </div>
                     </div>
-                    {/* 3. Action button */}
-                    <div className="pt-2 flex justify-end border-t border-border/50">
-                      <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-primary hover:text-primary" onClick={() => navigate(item.link)}>
-                        <span>{item.action_label || "Fix now"}</span>
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </Card>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-primary hover:text-primary shrink-0 self-end sm:self-auto" onClick={() => navigate(item.link)}>
+                      <span>{item.action_label || "Take Action"}</span>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 ))}
-              </div>
+              </Card>
             )}
           </div>
 

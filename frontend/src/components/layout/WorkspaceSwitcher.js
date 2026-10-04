@@ -40,17 +40,20 @@ export function WorkspaceSwitcher() {
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className="h-10 w-full justify-between gap-2 bg-card/60 px-3"
+          className="h-11 w-full justify-between gap-2 bg-card/60 px-3 border-border/70 hover:bg-accent/50"
           data-testid="workspace-switcher"
           disabled={switching}
         >
-          <span className="flex items-center gap-2 truncate">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary">
-              <Building2 className="h-3.5 w-3.5" />
+          <span className="flex items-center gap-2.5 truncate">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-xs">
+              {(active?.name || "W")[0].toUpperCase()}
             </span>
-            <span className="truncate text-sm font-semibold">{active?.name || "Select workspace"}</span>
+            <span className="truncate text-left leading-tight">
+              <span className="block text-[9px] font-bold uppercase tracking-widest text-muted-foreground/80">WORKSPACE</span>
+              <span className="block truncate text-xs font-bold text-foreground">{active?.name || "Select workspace"}</span>
+            </span>
           </span>
-          <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-1.5" align="start">
