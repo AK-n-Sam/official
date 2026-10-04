@@ -15,17 +15,17 @@ export function KpiCard({ label, value, icon, tone = "primary", delta, sub, test
   const t = TONES[tone] || TONES.primary;
   return (
     <Card
-      className="group relative overflow-hidden border-border bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-6"
+      className="group relative overflow-hidden rounded-xl border-border/80 bg-card p-5 shadow-[0_1px_2px_rgba(16,24,40,0.03)] transition-[box-shadow,border-color,transform] duration-150 hover:-translate-y-0.5 hover:border-border hover:shadow-[0_6px_18px_rgba(16,24,40,0.06)] sm:p-6"
       data-testid={testId}
     >
       <span className={cn("absolute inset-x-0 top-0 h-0.5", t.bar)} aria-hidden />
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
-        <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-transform duration-200 group-hover:scale-105", t.badge)}>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+        <div className={cn("flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full", t.badge)}>
           <Icon name={icon} className="h-4 w-4" />
         </div>
       </div>
-      <p className="mt-4 font-mono text-2xl font-bold leading-none tracking-tight tabular-nums text-foreground sm:text-3xl" data-testid={`${testId}-value`}>
+      <p className="mt-4 font-mono text-[27px] font-bold leading-none tracking-tight tabular-nums text-foreground sm:text-3xl" data-testid={`${testId}-value`}>
         {value}
       </p>
       {(delta != null || sub) && (
