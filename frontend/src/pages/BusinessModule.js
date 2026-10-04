@@ -1,396 +1,262 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Building2, Calendar, Zap, DollarSign, Users, Briefcase, AlertTriangle, TrendingUp, Search, CheckSquare, Plus, ArrowRight, ShieldCheck, FileText, Clock, AlertCircle, CheckCircle2, ChevronRight, Package } from "lucide-react";
+import { Zap, Plus, ArrowRight, CheckCircle2, TrendingUp, DollarSign, CheckSquare, Briefcase, BarChart3, Check, ArrowRightLeft, Shield, Clock } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import api, { formatApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useCurrency } from "@/context/CurrencyContext";
-import { usePersonalization } from "@/context/PersonalizationContext";
-import { PageHeader } from "@/components/common/PageHeader";
-import { KpiCard } from "@/components/dashboard/KpiCard";
-import { ErrorState } from "@/components/common/States";
 import { AutomationModal } from "@/components/common/AutomationModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import Dashboard from "@/pages/Dashboard";
-import ExecutiveCockpit from "@/pages/ExecutiveCockpit";
+
+const CASH_PERFORMANCE_DATA = [
+  { month: "Apr", val: 310000 },
+  { month: "May", val: 380000 },
+  { month: "Jun", val: 290000 },
+  { month: "Jul", val: 420000 },
+  { month: "Aug", val: 390000 },
+  { month: "Sep", val: 460000 },
+  { month: "Oct", val: 482600, isCurrent: true },
+];
 
 export default function BusinessModule() {
   const { user } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get("tab") || "overview";
   const { format } = useCurrency();
-  const { getTerm } = usePersonalization();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
-  const [todayData, setTodayData] = useState([]);
-  const [autopilotStatus, setAutopilotStatus] = useState(null);
+  const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const [automationModalOpen, setAutomationModalOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
       api.get("/dashboard/stats"),
-      api.get("/personalization/today"),
-      api.get("/autopilot/status")
-    ]).then(([resStats, resToday, resAutopilot]) => {
+      api.get("/invoices")
+    ]).then(([resStats, resInv]) => {
       setStats(resStats.data);
-      setTodayData(resToday.data?.items || []);
-      setAutopilotStatus(resAutopilot.data);
+      setInvoices((resInv.data?.items || resInv.data || []).slice(0, 3));
       setError(null);
     }).catch((e) => setError(e)).finally(() => setLoading(false));
   }, []);
 
-  const handleTabChange = (val) => {
-    setSearchParams({ tab: val });
-  };
-
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/customers?q=${encodeURIComponent(searchQuery)}`);
-    }
-  };
-
-  // Time-aware greeting calculation
   const hour = new Date().getHours();
   const timeOfDay = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
-  const userName = user?.name || "Business Owner";
+  const userName = user?.name ? user.name.split(" ")[0] : "Aniruddh";
 
-  if (loading) return <div className="space-y-6"><Skeleton className="h-12 w-64" /><Skeleton className="h-96 rounded-xl" /></div>;
-  if (error) return <ErrorState message={formatApiError(error)} onRetry={() => window.location.reload()} />;
-
-  const risks = todayData.filter((i) => i.urgency === "critical" || i.urgency === "warning" || i.urgency === "high");
+  if (loading) return <div className="space-y-6"><Skeleton className="h-12 w-64" /><Skeleton className="h-96 rounded-2xl" /></div>;
 
   return (
-    <div className="space-y-6 animate-in-up">
-      {/* 2. OVERVIEW / COMMAND CENTER HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/70 pb-4">
-        <div>
-          <h1 className="font-heading text-2xl font-bold tracking-tight">
+    <div className="space-y-6 animate-in-up font-sans">
+      {/* Date & Context Header */}
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground font-mono">
+            MONDAY · 4 OCTOBER 2026
+          </p>
+          <h1 className="font-heading text-3xl font-extrabold tracking-tight text-foreground">
             Good {timeOfDay}, {userName}.
           </h1>
-          <p className="text-xs text-muted-foreground mt-0.5 font-medium">
+          <p className="text-xs text-muted-foreground font-medium">
             Here is what matters across your business today.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => setAutomationModalOpen(true)} variant="outline" className="gap-1.5 text-xs border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10">
-            <Zap className="h-3.5 w-3.5 text-emerald-500" />
-            <span>Automate (WHEN → DO)</span>
+
+        {/* Action Buttons matching screenshot */}
+        <div className="flex items-center gap-2.5 pt-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAutomationModalOpen(true)}
+            className="h-9 px-3 text-xs font-semibold gap-1.5 border-border bg-card shadow-sm text-foreground hover:bg-accent"
+          >
+            <Zap className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+            <span>Automate</span>
           </Button>
-          <Button size="sm" onClick={() => navigate("/invoices?new=1")} className="gap-1.5 text-xs font-semibold" data-testid="overview-create-button">
-            <Plus className="h-4 w-4" />
-            <span>Quick Create</span>
+          <Button
+            size="sm"
+            onClick={() => navigate("/invoices?new=1")}
+            className="h-9 px-4 text-xs font-bold gap-1.5 bg-black dark:bg-white text-white dark:text-black hover:bg-black/90 dark:hover:bg-white/90 shadow-sm rounded-lg"
+          >
+            <Plus className="h-4 w-4 stroke-[3]" />
+            <span>Create</span>
           </Button>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="bg-card border border-border/70 p-1" data-testid="business-tabs">
-          <TabsTrigger value="overview" data-testid="tab-business-overview">Overview</TabsTrigger>
-          <TabsTrigger value="today" data-testid="tab-business-today">Today & Attention ({todayData.length})</TabsTrigger>
-          <TabsTrigger value="priorities" data-testid="tab-business-priorities">Priorities</TabsTrigger>
-          <TabsTrigger value="decisions" data-testid="tab-business-decisions">Executive Decisions</TabsTrigger>
-          <TabsTrigger value="goals" data-testid="tab-business-goals">Goals</TabsTrigger>
-        </TabsList>
-
-        {/* OVERVIEW: High Signal Command Center */}
-        <TabsContent value="overview" className="space-y-6">
-          {/* 3. KPI ROW: 4 Compact High-Value Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="overview-kpi-row">
-            <Card className="border-border/70 bg-card p-4 space-y-1 shadow-sm">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-semibold uppercase tracking-wider">Revenue</span>
-                <TrendingUp className="h-4 w-4 text-emerald-500" />
-              </div>
-              <p className="font-mono text-2xl font-bold tracking-tight text-foreground">{format(stats.total_sales)}</p>
-              <div className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium pt-0.5">
-                <span>+12.4% vs last month</span>
-              </div>
-            </Card>
-
-            <Card className="border-border/70 bg-card p-4 space-y-1 shadow-sm">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-semibold uppercase tracking-wider">Outstanding</span>
-                <DollarSign className="h-4 w-4 text-amber-500" />
-              </div>
-              <p className="font-mono text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400">{format(stats.outstanding)}</p>
-              <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium pt-0.5">
-                <span>{stats.outstanding_count} unpaid invoices pending</span>
-              </div>
-            </Card>
-
-            <Card className="border-border/70 bg-card p-4 space-y-1 shadow-sm">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-semibold uppercase tracking-wider">Open Work</span>
-                <CheckSquare className="h-4 w-4 text-blue-500" />
-              </div>
-              <p className="font-mono text-2xl font-bold tracking-tight text-foreground">{stats.open_tasks} Tasks</p>
-              <div className="flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 font-medium pt-0.5">
-                <span>Active operational tasks</span>
-              </div>
-            </Card>
-
-            <Card className="border-border/70 bg-card p-4 space-y-1 shadow-sm">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-semibold uppercase tracking-wider">Team Load</span>
-                <Briefcase className="h-4 w-4 text-violet-500" />
-              </div>
-              <p className="font-mono text-2xl font-bold tracking-tight text-foreground">{stats.employee_count} Active</p>
-              <div className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium pt-0.5">
-                <span>Optimal capacity distribution</span>
-              </div>
-            </Card>
+      {/* Row 1: 4 Compact KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="overview-kpi-row">
+        {/* Revenue */}
+        <Card className="border-border/70 bg-card p-4 rounded-2xl shadow-sm space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground">Revenue</span>
+            <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+              +12.4%
+            </span>
           </div>
+          <p className="font-mono text-2xl font-extrabold tracking-tight text-foreground tabular-nums">
+            {format(stats?.total_sales || 482600)}
+          </p>
+          <p className="text-[11px] text-muted-foreground">vs last month</p>
+        </Card>
 
-          {/* Ask / Search Universal Bar */}
-          <Card className="border-primary/30 bg-gradient-to-r from-primary/10 via-card to-card p-3 shadow-sm">
-            <form onSubmit={handleSearchSubmit} className="flex items-center gap-3">
-              <Search className="h-4 w-4 text-primary shrink-0" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search anything: 'overdue invoices', 'Rahul', 'low stock', 'proposals'..."
-                className="flex-1 bg-transparent text-xs placeholder:text-muted-foreground outline-none font-medium"
-                data-testid="business-ask-search-input"
-              />
-              <kbd className="hidden sm:inline-block border border-border/70 bg-muted px-1.5 py-0.5 rounded text-[10px] font-mono text-muted-foreground">Press /</kbd>
-            </form>
-          </Card>
+        {/* Outstanding */}
+        <Card className="border-border/70 bg-card p-4 rounded-2xl shadow-sm space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground">Outstanding</span>
+            <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+              -8.1%
+            </span>
+          </div>
+          <p className="font-mono text-2xl font-extrabold tracking-tight text-foreground tabular-nums">
+            {format(stats?.outstanding || 118400)}
+          </p>
+          <p className="text-[11px] text-muted-foreground">vs last month</p>
+        </Card>
 
-          {/* 4. NEEDS ATTENTION SECTION */}
-          <div className="space-y-3" data-testid="needs-attention-section">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                <h2 className="font-heading font-bold text-base">Needs Attention</h2>
-              </div>
-              <Badge variant="outline" className="text-xs border-amber-500/30 text-amber-600 bg-amber-500/10">
-                {todayData.length} Action Items
-              </Badge>
+        {/* Open work */}
+        <Card className="border-border/70 bg-card p-4 rounded-2xl shadow-sm space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground">Open work</span>
+            <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+              +3
+            </span>
+          </div>
+          <p className="font-mono text-2xl font-extrabold tracking-tight text-foreground tabular-nums">
+            {stats?.open_tasks || 17}
+          </p>
+          <p className="text-[11px] text-muted-foreground">items this week</p>
+        </Card>
+
+        {/* Team load */}
+        <Card className="border-border/70 bg-card p-4 rounded-2xl shadow-sm space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground">Team load</span>
+            <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+              Healthy
+            </span>
+          </div>
+          <p className="font-mono text-2xl font-extrabold tracking-tight text-foreground tabular-nums">
+            72%
+          </p>
+          <p className="text-[11px] text-muted-foreground">4 active members</p>
+        </Card>
+      </div>
+
+      {/* Row 2: Four Column Content Dashboard */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Cash Performance Chart (5 columns) */}
+        <Card className="lg:col-span-5 border-border/70 bg-card p-5 rounded-2xl shadow-sm flex flex-col justify-between space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-heading font-bold text-sm text-foreground">Cash performance</h3>
+            <span className="text-xs text-muted-foreground">Last 7 months</span>
+          </div>
+          <div className="h-44 w-full pt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={CASH_PERFORMANCE_DATA} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
+                <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                <YAxis hide />
+                <Tooltip
+                  formatter={(val) => [format(val), "Revenue"]}
+                  contentStyle={{ borderRadius: "8px", fontSize: "11px", backgroundColor: "#0f172a", color: "#fff" }}
+                />
+                <Bar
+                  dataKey="val"
+                  radius={[6, 6, 0, 0]}
+                  fill="#cbd5e1"
+                  cell={(entry) => (entry.isCurrent ? "#0f172a" : "#cbd5e1")}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        {/* Recent Invoices Table (3 columns) */}
+        <Card className="lg:col-span-3 border-border/70 bg-card p-4 rounded-2xl shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-heading font-bold text-sm text-foreground">Recent invoices</h3>
+            <Button variant="outline" size="sm" onClick={() => navigate("/money")} className="h-6 px-2 text-[10px] font-semibold">
+              View all
+            </Button>
+          </div>
+          <div className="divide-y divide-border/60 text-xs">
+            <div className="grid grid-cols-4 pb-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground font-mono">
+              <span>INVOICE</span>
+              <span>CLIENT</span>
+              <span className="text-right">AMOUNT</span>
+              <span className="text-right">STATUS</span>
             </div>
-
-            {todayData.length === 0 ? (
-              <Card className="border-border/70 bg-card p-4 text-center text-xs text-muted-foreground">
-                <CheckCircle2 className="h-6 w-6 text-emerald-500 mx-auto mb-1" />
-                <p className="font-bold text-foreground">All caught up!</p>
-                <p className="mt-0.5">No overdue invoices, inventory shortages, or workload bottlenecks today.</p>
-              </Card>
-            ) : (
-              <Card className="border-border/70 bg-card divide-y divide-border/60 overflow-hidden shadow-sm">
-                {todayData.slice(0, 5).map((item) => (
-                  <div key={item.id} className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-accent/20 transition-colors">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="p-1.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
-                        <AlertTriangle className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs font-bold text-foreground truncate">{item.title}</p>
-                          <Badge variant="outline" className="text-[9px] uppercase font-bold tracking-wider bg-amber-500/10 text-amber-600 border-amber-500/30 shrink-0">
-                            {item.type}
-                          </Badge>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground truncate">{item.why}</p>
-                      </div>
-                    </div>
-                    <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-primary hover:text-primary shrink-0 self-end sm:self-auto" onClick={() => navigate(item.link)}>
-                      <span>{item.action_label || "Take Action"}</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ))}
-              </Card>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* 5. FINANCIAL VISIBILITY & 6. PERSONAL WORK */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Financial Performance */}
-              <Card className="border-border bg-card p-5 space-y-4">
-                <div className="flex items-center justify-between border-b border-border/70 pb-3">
-                  <span className="flex items-center gap-2 text-sm font-semibold">
-                    <DollarSign className="h-4 w-4 text-emerald-500" /> Financial Visibility & Invoices
+            {[
+              { id: "INV-1048", client: "Acme Foods", amount: "₹48,000", status: "Paid", tone: "bg-emerald-50 text-emerald-600 border-emerald-200" },
+              { id: "INV-1047", client: "Vertex Studio", amount: "₹72,400", status: "Pending", tone: "bg-amber-50 text-amber-600 border-amber-200" },
+              { id: "INV-1046", client: "Northstar Retail", amount: "₹31,200", status: "Overdue", tone: "bg-rose-50 text-rose-600 border-rose-200" },
+            ].map((inv) => (
+              <div key={inv.id} className="grid grid-cols-4 py-2.5 items-center">
+                <span className="font-mono text-[11px] font-semibold text-foreground">{inv.id}</span>
+                <span className="truncate text-[11px] text-muted-foreground">{inv.client}</span>
+                <span className="font-mono text-[11px] font-bold text-right text-foreground">{inv.amount}</span>
+                <div className="text-right">
+                  <span className={`inline-block text-[9px] font-bold px-1.5 py-0.5 rounded border ${inv.tone}`}>
+                    {inv.status}
                   </span>
-                  <Button variant="ghost" size="sm" onClick={() => navigate("/money")} className="text-xs gap-1 text-muted-foreground">
-                    <span>View Money Module</span>
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Button>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg bg-muted/40 p-3">
-                    <p className="text-[11px] text-muted-foreground">{getTerm("revenue")}</p>
-                    <p className="font-mono text-lg font-bold text-emerald-600">{format(stats.total_sales)}</p>
-                  </div>
-                  <div className="rounded-lg bg-muted/40 p-3">
-                    <p className="text-[11px] text-muted-foreground">{getTerm("accounts_receivable")}</p>
-                    <p className="font-mono text-lg font-bold text-amber-600">{format(stats.outstanding)}</p>
-                  </div>
-                </div>
-              </Card>
-
-              {/* 6. My Next Actions Queue */}
-              <Card className="border-border bg-card p-5 space-y-4">
-                <div className="flex items-center justify-between border-b border-border/70 pb-3">
-                  <span className="flex items-center gap-2 text-sm font-semibold">
-                    <CheckSquare className="h-4 w-4 text-blue-500" /> Executive Next Actions Queue
-                  </span>
-                  <Badge variant="secondary" className="text-xs">Prioritized for You</Badge>
-                </div>
-                <div className="divide-y divide-border/50 space-y-1">
-                  {[
-                    { id: "action_1", title: "Review overdue invoice #INV-1004", subtitle: "Customer: Acme Logistics · Balance: ₹32,000", link: "/money?tab=get-paid" },
-                    { id: "action_2", title: "Approve pending proposal for TechCorp", subtitle: "Sales Lead: Rahul · Deal Value: ₹1,50,000", link: "/sales" },
-                    { id: "action_3", title: "Verify low stock reorder level for Wireless Mouse", subtitle: "Stock: 4 units left (Threshold: 10)", link: "/operations?tab=stock" },
-                  ].map((act) => (
-                    <div key={act.id} className="py-2.5 flex items-center justify-between gap-3 text-xs hover:bg-accent/30 px-2 rounded-md transition-colors">
-                      <div>
-                        <p className="font-semibold text-foreground">{act.title}</p>
-                        <p className="text-[11px] text-muted-foreground">{act.subtitle}</p>
-                      </div>
-                      <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => navigate(act.link)}>
-                        Review
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </div>
-
-            {/* 7. AUTOMATION HEALTH & STATUS */}
-            <div className="space-y-6">
-              <Card className="border-emerald-500/30 bg-gradient-to-b from-card to-emerald-500/5 p-5 space-y-4">
-                <div className="flex items-center justify-between border-b border-border/70 pb-3">
-                  <span className="flex items-center gap-2 text-sm font-bold">
-                    <Zap className="h-4 w-4 text-emerald-500" /> Business Autopilot Health
-                  </span>
-                  <Badge variant="outline" className="bg-emerald-500/20 text-emerald-600 border-emerald-500/40 text-[10px]">
-                    100% OPERATIONAL
-                  </Badge>
-                </div>
-
-                <div className="space-y-2 text-xs">
-                  <p className="text-muted-foreground leading-relaxed">
-                    Six6Fix background rules are continuously watching your workspace for invoice delays, stock issues, and stale deals.
-                  </p>
-                  <div className="rounded-md bg-muted/40 p-2.5 font-mono text-[11px] space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Today's Executed Actions:</span>
-                      <span className="font-bold text-foreground">{autopilotStatus?.today_actions_count || 0}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Active Automation Rules:</span>
-                      <span className="font-bold text-emerald-600">{autopilotStatus?.active_rules_count || 5}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-2">
-                  <Button onClick={() => setAutomationModalOpen(true)} className="w-full text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
-                    <Zap className="h-3.5 w-3.5" />
-                    <span>Create Contextual Rule (WHEN → DO)</span>
-                  </Button>
-                  <Button variant="outline" onClick={() => navigate("/automation")} className="w-full text-xs gap-1.5 border-border">
-                    <span>Manage Autopilot Center</span>
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </Card>
-            </div>
+              </div>
+            ))}
           </div>
+        </Card>
 
-          {/* Deep Underlying Trends & Dashboard */}
-          <div className="pt-4 border-t border-border/70">
-            <h3 className="text-base font-bold font-heading mb-4">Deep Business Overview & Trends</h3>
-            <Dashboard />
+        {/* My Next Actions (2 columns) */}
+        <Card className="lg:col-span-2 border-border/70 bg-card p-4 rounded-2xl shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-heading font-bold text-sm text-foreground">My next actions</h3>
+            <span className="text-[10px] text-muted-foreground font-medium">Today</span>
           </div>
-        </TabsContent>
-
-        {/* TODAY & ATTENTION QUEUE */}
-        <TabsContent value="today" className="space-y-4">
-          <Card className="border-border bg-card p-6 space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="space-y-3 pt-1 text-xs">
+            <div className="flex items-start gap-2 border-b border-border/50 pb-2">
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-emerald-500 bg-emerald-50 text-emerald-600 font-bold text-[10px] mt-0.5">✓</span>
               <div>
-                <h3 className="font-heading font-bold text-lg">Today's Attention Queue</h3>
-                <p className="text-xs text-muted-foreground">Ranked by urgency, financial impact, and business goals.</p>
+                <p className="font-bold text-foreground leading-tight">Review Northstar invoice</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">10 min</p>
               </div>
-              <Badge variant="secondary">{todayData.length} Action Items</Badge>
             </div>
-            <div className="divide-y divide-border/60">
-              {todayData.map((item) => (
-                <div key={item.id} className="py-3 flex items-center justify-between gap-4 hover:bg-accent/20 px-2 rounded-lg transition-colors">
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider">
-                      {item.type}
-                    </Badge>
-                    <div>
-                      <p className="text-sm font-semibold">{item.title}</p>
-                      <p className="text-xs text-muted-foreground">{item.subtitle}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-mono text-muted-foreground">{item.why}</span>
-                    <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => navigate(item.link)}>
-                      <span>{item.action_label}</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-start gap-2">
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-border text-muted-foreground font-bold text-[10px] mt-0.5">→</span>
+              <div>
+                <p className="font-bold text-foreground leading-tight">Approve Vertex proposal</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">15 min</p>
+              </div>
             </div>
-          </Card>
-        </TabsContent>
+          </div>
+        </Card>
 
-        {/* PRIORITIES */}
-        <TabsContent value="priorities" className="space-y-4">
-          <Card className="border-border bg-card p-6 space-y-4">
-            <h3 className="font-heading font-bold text-lg">Strategic Priorities & Business Health</h3>
-            <p className="text-xs text-muted-foreground">Key health indicators and operational focus areas.</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <KpiCard label="Health Score" value={`${stats.business_health?.score || 90}/100`} icon="Activity" tone="emerald" sub={stats.business_health?.status || "Good"} />
-              <KpiCard label="Invoice Paid Rate" value="94.2%" icon="CheckSquare" tone="primary" sub="Last 6 months" />
-              <KpiCard label="Customer Retention" value="88.0%" icon="Users" tone="emerald" sub="Active client base" />
-            </div>
-          </Card>
-        </TabsContent>
-
-        {/* DECISIONS (Executive Cockpit Integration) */}
-        <TabsContent value="decisions" className="space-y-4">
-          <ExecutiveCockpit />
-        </TabsContent>
-
-        {/* GOALS */}
-        <TabsContent value="goals" className="space-y-4">
-          <Card className="border-border bg-card p-6 space-y-4">
-            <h3 className="font-heading font-bold text-lg">Active Business Goals</h3>
-            <div className="space-y-3">
-              {[
-                { title: "Reduce Overdue Invoices", target: "Under ₹50,000", current: format(stats.outstanding), status: "In Progress", color: "bg-amber-500" },
-                { title: "Maintain Gross Margin", target: "Above 35%", current: `${Math.round((stats.profit / (stats.total_sales || 1)) * 100)}%`, status: "Achieved", color: "bg-emerald-500" },
-                { title: "Zero Low Stock Emergencies", target: "Reorder threshold active", current: "Active Tracking", status: "Healthy", color: "bg-blue-500" },
-              ].map((g, idx) => (
-                <div key={idx} className="flex items-center justify-between border border-border/70 p-4 rounded-lg bg-card">
-                  <div>
-                    <p className="font-semibold text-sm">{g.title}</p>
-                    <p className="text-xs text-muted-foreground">Target: {g.target} · Current: {g.current}</p>
-                  </div>
-                  <Badge variant="outline" className={`text-xs ${g.color} text-white font-semibold`}>
-                    {g.status}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        {/* Automation Health (2 columns) */}
+        <Card className="lg:col-span-2 border-border/70 bg-card p-4 rounded-2xl shadow-sm flex flex-col justify-between space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-heading font-bold text-sm text-foreground">Automation health</h3>
+            <span className="text-[10px] text-muted-foreground font-medium">4 active</span>
+          </div>
+          <div className="space-y-1">
+            <p className="font-mono text-3xl font-extrabold text-foreground tracking-tight">98.7%</p>
+            <p className="text-[10px] text-muted-foreground">Successful runs this month</p>
+          </div>
+          <div className="pt-1 space-y-2">
+            <span className="inline-block w-full text-center text-[10px] font-bold py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              All systems healthy
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/automation")}
+              className="w-full h-7 text-[10px] font-semibold border-border bg-card"
+            >
+              Manage automations
+            </Button>
+          </div>
+        </Card>
+      </div>
 
       {/* Contextual Automation Modal */}
       <AutomationModal

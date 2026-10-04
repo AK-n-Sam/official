@@ -53,59 +53,38 @@ export function Header({ onMenuClick }) {
 
   const initials = (user?.name || "U").split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
 
+  const routeName = pathname === "/business" || pathname === "/" || pathname === "/overview" ? "Overview" : pathname.replace("/", "").replace(/-/g, " ");
+
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-border/70 bg-background/90 px-4 backdrop-blur-md sm:px-6">
-      <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuClick} data-testid="mobile-menu-button">
-        <Menu className="h-5 w-5" />
-      </Button>
-
-      <Button variant="ghost" size="icon" className="hidden lg:flex" onClick={toggleSidebar} data-testid="sidebar-toggle-desktop">
-        <PanelLeft className="h-5 w-5" />
-      </Button>
-
-      <CommandPalette />
-
-      <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm" className="h-9 gap-1.5" data-testid="quick-create-button">
-              <Plus className="h-4 w-4" /><span className="hidden sm:inline">Create</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
-            <DropdownMenuLabel className="flex items-center justify-between">
-              Quick Create
-              <span className="font-mono text-[10px] font-normal text-muted-foreground">{PALETTE_SHORTCUT}</span>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {CREATE_ACTIONS.map((a) => (
-              <DropdownMenuItem key={a.id} onClick={() => navigate(a.path)} data-testid={`quick-create-${a.id}`}>
-                <a.icon className="mr-2 h-4 w-4" /> {a.label.replace(/^New /, "")}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <Select value={currency} onValueChange={setCurrency}>
-          <SelectTrigger className="h-9 w-[88px] border-border/60 bg-card/50" data-testid="currency-selector">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.keys(CURRENCIES).map((code) => (
-              <SelectItem key={code} value={code} data-testid={`currency-opt-${code}`}>
-                {CURRENCIES[code].symbol} {code}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Button variant="ghost" size="icon" onClick={() => navigate(helpPath)} data-testid="help-button" className="hidden h-9 w-9 sm:flex" title="Help for this page (?)" aria-label="Help for this page">
-          <CircleHelp className="h-[18px] w-[18px]" />
+    <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border/60 bg-background/90 px-4 backdrop-blur-md sm:px-6">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuClick} data-testid="mobile-menu-button">
+          <Menu className="h-5 w-5" />
         </Button>
 
-        <Button variant="ghost" size="icon" onClick={toggleTheme} data-testid="theme-toggle-button" className="h-9 w-9">
-          {theme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+        {/* Left Breadcrumb */}
+        <div className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <span>Workspace</span>
+          <span>/</span>
+          <span className="font-bold text-foreground capitalize">{routeName}</span>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 sm:gap-3">
+        <CommandPalette />
+
+        <Button variant="ghost" size="icon" onClick={() => window.location.reload()} className="h-8 w-8 rounded-full border border-border/60 bg-card" title="Refresh workspace">
+          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
         </Button>
+
+        <Button variant="ghost" size="icon" onClick={toggleTheme} data-testid="theme-toggle-button" className="h-8 w-8 rounded-full border border-border/60 bg-card">
+          {theme === "dark" ? <Sun className="h-3.5 w-3.5 text-amber-400" /> : <Moon className="h-3.5 w-3.5 text-muted-foreground" />}
+        </Button>
+
+        {/* User Profile Avatar Circle */}
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 font-extrabold text-xs text-white shadow-sm">
+          {initials}
+        </div>
 
         <Popover>
           <PopoverTrigger asChild>

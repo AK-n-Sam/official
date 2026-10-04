@@ -100,13 +100,11 @@ export function CommandPalette() {
         type="button"
         onClick={() => setOpen(true)}
         data-testid="global-search-trigger"
-        className="hidden h-9 max-w-md flex-1 items-center gap-2 rounded-md border border-border/60 bg-card/50 px-3 text-sm text-muted-foreground transition-colors hover:border-border hover:bg-card sm:flex"
+        className="hidden h-9 w-64 items-center gap-2 rounded-full border border-border/60 bg-muted/60 px-3.5 text-xs text-muted-foreground transition-colors hover:bg-muted sm:flex"
       >
-        <Search className="h-4 w-4 shrink-0" />
-        <span className="flex-1 truncate text-left">Search or jump to...</span>
-        <kbd className="pointer-events-none hidden select-none rounded border border-border/70 bg-muted px-1.5 font-mono text-[10px] font-medium md:inline-block">
-          {PALETTE_SHORTCUT}
-        </kbd>
+        <Search className="h-3.5 w-3.5 shrink-0 opacity-70" />
+        <span className="flex-1 truncate text-left font-medium">Search anything...</span>
+        <span className="font-mono text-[10px] opacity-70">/</span>
       </button>
       <Button variant="ghost" size="icon" className="h-9 w-9 sm:hidden" onClick={() => setOpen(true)} data-testid="global-search-trigger-mobile" aria-label="Search">
         <Search className="h-[18px] w-[18px]" />
