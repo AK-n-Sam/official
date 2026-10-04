@@ -79,7 +79,7 @@ export function WorkspaceTabs() {
   };
 
   return (
-    <div className="flex items-center gap-1 border-b border-border/70 bg-card/40 px-2 py-1.5 backdrop-blur-sm" data-testid="workspace-tabs">
+    <div className="flex items-center gap-1 border-b border-border/70 bg-card/40 px-2 py-1 backdrop-blur-sm" data-testid="workspace-tabs">
       <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto scrollbar-none">
         {tabs.map((t) => {
           const isActive = t.path === active;
@@ -96,9 +96,9 @@ export function WorkspaceTabs() {
               onAuxClick={(e) => { if (e.button === 1 && closable) closeTab(t.path); }}
               data-testid={`tab-chip${tid(t.path)}`}
               className={cn(
-                "group flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors",
+                "group flex shrink-0 cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1 text-[11px] font-medium transition-colors",
                 isActive
-                  ? "border-primary/40 bg-primary/10 text-primary"
+                  ? "border-border bg-card text-foreground shadow-sm"
                   : "border-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
