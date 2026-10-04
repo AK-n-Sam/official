@@ -36,17 +36,17 @@ export function Sidebar({ onNavigate, collapsed = false }) {
     <aside
       className={cn(
         "flex h-full shrink-0 flex-col bg-[#0b0c10] text-slate-300 border-r border-white/5 transition-[width] duration-200 select-none",
-        collapsed ? "w-[68px]" : "w-64"
+        collapsed ? "w-[72px]" : "w-[248px]"
       )}
       data-testid="app-sidebar"
     >
       {/* Brand Header */}
-      <div className={cn("flex h-16 items-center gap-3", collapsed ? "justify-center px-2" : "px-5")}>
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white text-black font-extrabold text-xs tracking-tighter">
+      <div className={cn("flex h-[72px] items-center gap-3", collapsed ? "justify-center px-2" : "px-5")}>
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-white text-black font-extrabold text-[11px] tracking-tighter">
           6×
         </div>
         {!collapsed && (
-          <p className="font-heading text-lg font-bold tracking-tight text-white">
+          <p className="font-heading text-[17px] font-extrabold tracking-tight text-white">
             Six6Fix
           </p>
         )}
@@ -64,7 +64,7 @@ export function Sidebar({ onNavigate, collapsed = false }) {
         {filteredSections.map((section) => (
           <div key={section.label} className={collapsed ? "mb-2 border-b border-white/5 pb-2 last:border-0" : ""}>
             {!collapsed && (
-              <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+              <p className="mb-2 px-2 text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">
                 {section.label}
               </p>
             )}
@@ -80,16 +80,16 @@ export function Sidebar({ onNavigate, collapsed = false }) {
                     data-testid={`sidebar-nav-${item.name.toLowerCase()}`}
                     className={({ isActive }) =>
                       cn(
-                        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold text-slate-400 transition-all hover:bg-white/5 hover:text-white",
+                        "group relative flex items-center gap-3 rounded-[8px] px-3 py-[9px] text-[12px] font-semibold text-slate-400 transition-all hover:bg-white/5 hover:text-white",
                         collapsed && "justify-center px-0 py-2",
-                        isActive && "bg-[#191c24] text-white font-bold"
+                        isActive && "bg-[#1a1e25] text-white font-bold"
                       )
                     }
                   >
                     {({ isActive }) => (
                       <>
                         {isActive && (
-                          <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-white shadow-sm" />
+                          <span className="absolute left-0 top-2 bottom-2 w-[2px] rounded-r-full bg-white" />
                         )}
                         {item.name === "Automations" ? (
                           <Zap className="h-4 w-4 shrink-0 text-amber-500 fill-amber-500/20" />
