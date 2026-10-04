@@ -120,7 +120,7 @@ export function CommandPalette() {
             <CommandInput
               value={query}
               onValueChange={setQuery}
-              placeholder="Search customers, invoices, products... or type a command"
+              placeholder="Ask, find, or do anything... (e.g. 'Rahul', 'Overdue invoices', 'Create invoice')"
               className="h-12"
               data-testid="global-search-input"
             />

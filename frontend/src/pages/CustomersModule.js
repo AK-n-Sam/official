@@ -5,6 +5,7 @@ import api, { formatApiError } from "@/lib/api";
 import { useCurrency } from "@/context/CurrencyContext";
 import { PageHeader } from "@/components/common/PageHeader";
 import { ErrorState } from "@/components/common/States";
+import { DetailDrawer } from "@/components/common/DetailDrawer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,7 @@ export default function CustomersModule() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [drawerCustomer, setDrawerCustomer] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -181,6 +183,40 @@ export default function CustomersModule() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Side Drawer for Quick Record Inspection */}
+      <DetailDrawer
+        open={!!drawerCustomer}
+        onOpenChange={(open) => !open && setDrawerCustomer(null)}
+        title={drawerCustomer?.name || "Customer Details"}
+        subtitle={drawerCustomer?.email || drawerCustomer?.phone || "Customer summary"}
+        badge={drawerCustomer?.tier || "Customer"}
+        fullLink={drawerCustomer ? `/customers/${drawerCustomer.id}` : null}
+        actions={
+          <Button size="sm" onClick={() => navigate(`/invoices?new=1&customer_id=${drawerCustomer?.id}`)}>
+            <Plus className="mr-1 h-3.5 w-3.5" /> Create Invoice
+          </Button>
+        }
+      >
+        {drawerCustomer && (
+          <div className="space-y-4 text-xs">
+            <div className="p-3 rounded bg-muted/40 border border-border flex items-center justify-between">
+              <span>Total Spent:</span>
+              <span className="font-mono font-bold text-emerald-600">{format(drawerCustomer.total_spent || 0)}</span>
+            </div>
+            <div className="p-3 rounded bg-muted/40 border border-border flex items-center justify-between">
+              <span>Outstanding Balance:</span>
+              <span className="font-mono font-bold text-amber-600">{format(drawerCustomer.outstanding_balance || 0)}</span>
+            </div>
+            <div className="p-3 rounded bg-card border border-border space-y-1">
+              <p className="font-semibold text-muted-foreground uppercase text-[10px]">Contact Information</p>
+              <p className="mt-1 font-medium">Email: {drawerCustomer.email || "N/A"}</p>
+              <p className="font-medium">Phone: {drawerCustomer.phone || "N/A"}</p>
+              <p className="font-medium">Company: {drawerCustomer.company_name || "N/A"}</p>
+            </div>
+          </div>
+        )}
+      </DetailDrawer>
     </div>
   );
 }
