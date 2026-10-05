@@ -41,14 +41,11 @@ export function Sidebar({ onNavigate, collapsed = false }) {
       data-testid="app-sidebar"
     >
       {/* Brand Header */}
-      <div className={cn("flex h-[72px] items-center gap-3", collapsed ? "justify-center px-2" : "px-5")}>
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-white text-black font-extrabold text-[11px] tracking-tighter">
-          6×
-        </div>
-        {!collapsed && (
-          <p className="font-heading text-[17px] font-extrabold tracking-tight text-white">
-            Six6Fix
-          </p>
+      <div className={cn("flex h-16 items-center", collapsed ? "justify-center px-2" : "px-4 py-2")}>
+        {collapsed ? (
+          <img src="/six6fix-logo.png" alt="Six6Fix" className="h-7 w-7 object-cover object-left rounded-md shrink-0" />
+        ) : (
+          <img src="/six6fix-logo.png" alt="Six6Fix" className="h-8 max-w-[170px] w-auto object-contain shrink-0" />
         )}
       </div>
 
