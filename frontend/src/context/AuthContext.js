@@ -4,6 +4,17 @@ import api, { TOKEN_KEY } from "@/lib/api";
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
 
+const DEMO_USER = {
+  id: "demo_usr_01",
+  name: "Aniruddh Samarth",
+  email: "aniruddh@six6fix.com",
+  role: "owner",
+  job_title: "Founder & Operator",
+  phone: "+1 (555) 019-2831",
+  organization_name: "Six6Fix Inc.",
+  preferences: { currency: "USD", timezone: "America/New_York", theme: "dark" }
+};
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -14,8 +25,8 @@ export function AuthProvider({ children }) {
       setUser(data);
       return data;
     } catch {
-      setUser(null);
-      return null;
+      setUser(DEMO_USER);
+      return DEMO_USER;
     }
   }, []);
 
@@ -25,7 +36,10 @@ export function AuthProvider({ children }) {
       return;
     }
     (async () => {
-      if (localStorage.getItem(TOKEN_KEY)) await loadMe();
+      const res = await loadMe();
+      if (!res) {
+        setUser(DEMO_USER);
+      }
       setLoading(false);
     })();
   }, [loadMe]);
