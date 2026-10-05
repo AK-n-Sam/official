@@ -22,6 +22,7 @@ import EmployeeDetail from "@/pages/EmployeeDetail";
 import Settings from "@/pages/Settings";
 import Help from "@/pages/Help";
 import AdminCenter from "@/pages/AdminCenter";
+import CommunicationsModule from "@/pages/CommunicationsModule";
 
 export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -84,6 +85,8 @@ export function AppShell() {
               <Route path="/tasks" element={<Navigate to="/team?tab=workload" replace />} />
 
               {/* SECONDARY SYSTEM AREAS */}
+              <Route path="/communications" element={<CommunicationsModule />} />
+              <Route path="/inbox" element={<Navigate to="/communications" replace />} />
               <Route path="/automation" element={<AutomationCenter />} />
               <Route path="/automations" element={<AutomationCenter />} />
               <Route path="/insights" element={<InsightsModule />} />

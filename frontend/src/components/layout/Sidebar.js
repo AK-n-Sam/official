@@ -4,7 +4,7 @@ import { Icon } from "@/components/common/Icon";
 import { WorkspaceSwitcher } from "@/components/layout/WorkspaceSwitcher";
 import { useLayout } from "@/context/LayoutContext";
 import { cn } from "@/lib/utils";
-import { Zap, PanelLeftClose, PanelLeft, Settings, ShieldCheck, Home, Users, TrendingUp, Wallet, LayoutGrid, User, Plus } from "lucide-react";
+import { Zap, PanelLeftClose, PanelLeft, Settings, ShieldCheck, Home, Users, TrendingUp, Wallet, LayoutGrid, User, Plus, MessageSquare } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const NAV_ICONS = {
@@ -14,6 +14,7 @@ const NAV_ICONS = {
   Money: Wallet,
   Operations: LayoutGrid,
   People: User,
+  Communications: MessageSquare,
   Automations: Zap,
   "Team & Access": ShieldCheck
 };
@@ -90,6 +91,8 @@ export function Sidebar({ onNavigate, collapsed = false }) {
                         )}
                         {item.name === "Automations" ? (
                           <Zap className="h-4 w-4 shrink-0 text-amber-500 fill-amber-500/20" />
+                        ) : item.name === "Communications" ? (
+                          <MessageSquare className="h-4 w-4 shrink-0 text-sky-400" />
                         ) : item.name === "Team & Access" ? (
                           <Plus className="h-4 w-4 shrink-0 text-slate-400" />
                         ) : (

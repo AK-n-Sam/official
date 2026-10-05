@@ -89,6 +89,7 @@ export const PRIMARY_WORK_AREAS = [
 ];
 
 export const SYSTEM_WORK_AREAS = [
+  { id: "communications", name: "Communications", path: "/communications", icon: "MessageSquare", tagline: "Connected Email & WhatsApp Unified Inbox" },
   { id: "automations", name: "Automations", path: "/automation", icon: "Zap", tagline: "Continuous SME Autopilot engine" },
   { id: "team-access", name: "Team & Access", path: "/admin-center", icon: "ShieldCheck", tagline: "Roles, permissions & workspace settings" },
 ];

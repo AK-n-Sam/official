@@ -1938,8 +1938,13 @@ async def get_today_queue(user: dict = Depends(get_current_user)):
     return await compute_personalized_today_queue(user, org_id)
 
 
+from communications import router as comms_router, webhook_router
+
 app.include_router(auth_router, prefix="/api")
 app.include_router(auth_router)
+
+app.include_router(comms_router, prefix="/api")
+app.include_router(webhook_router, prefix="/api")
 
 app.include_router(api, prefix="/api")
 app.include_router(api)

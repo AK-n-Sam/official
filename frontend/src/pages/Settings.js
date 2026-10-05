@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TeamTab } from "@/components/settings/TeamTab";
 import { AuditLogTab } from "@/components/settings/AuditLogTab";
 import { PersonalizationTab } from "@/components/settings/PersonalizationTab";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail, MessageSquare, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
 
 function Row({ label, children }) {
   return (
@@ -30,7 +30,7 @@ function Row({ label, children }) {
   );
 }
 
-const SETTINGS_TABS = ["business", "team", "profile", "personalization", "preferences", "invoicing", "audit"];
+const SETTINGS_TABS = ["business", "team", "profile", "personalization", "preferences", "invoicing", "channels", "audit"];
 
 export default function Settings() {
   const { user, refresh } = useAuth();
@@ -96,6 +96,7 @@ export default function Settings() {
           <TabsTrigger value="personalization" data-testid="tab-personalization">Personalization</TabsTrigger>
           <TabsTrigger value="preferences" data-testid="tab-preferences">Preferences</TabsTrigger>
           <TabsTrigger value="invoicing" data-testid="tab-invoicing">Invoicing</TabsTrigger>
+          <TabsTrigger value="channels" data-testid="tab-channels">Connected Channels</TabsTrigger>
           <TabsTrigger value="audit" data-testid="tab-audit">Audit Trail</TabsTrigger>
         </TabsList>
 
@@ -196,10 +197,153 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="channels">
+          <ConnectedChannelsTab />
+        </TabsContent>
+
         <TabsContent value="audit">
           <AuditLogTab />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function ConnectedChannelsTab() {
+  const [accounts, setAccounts] = useState([]);
+  const [providersConfig, setProvidersConfig] = useState({});
+
+  useEffect(() => {
+    api.get("/communications/accounts")
+      .then((res) => {
+        setAccounts(res.data.accounts || []);
+        setProvidersConfig(res.data.providers_config || {});
+      })
+      .catch((e) => console.error(e));
+  }, []);
+
+  const gmailConnected = accounts.some((a) => a.provider === "gmail" && a.status === "connected");
+  const outlookConnected = accounts.some((a) => a.provider === "outlook" && a.status === "connected");
+  const whatsappConnected = accounts.some((a) => a.provider === "whatsapp" && a.status === "connected");
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-border/80 bg-card p-4">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">Connected Communications Layer</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">Manage real-time integrations for Gmail, Microsoft 365, and WhatsApp Business API.</p>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => window.location.href = "/communications"} className="text-xs gap-1.5 shrink-0">
+          Open Unified Inbox <ArrowRight className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Gmail Card */}
+        <Card className="p-5 border-border/70 bg-card/90 space-y-4 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Mail className="h-5 w-5 text-red-500" />
+                <span className="font-semibold text-sm">Google Gmail</span>
+              </div>
+              {gmailConnected ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400 px-2 py-0.5 rounded-full">
+                  <CheckCircle2 className="h-3 w-3" /> Connected
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+                  Not Connected
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Sync customer emails, send responses directly from Six6Fix, and trigger automated follow-ups.
+            </p>
+          </div>
+          <div className="pt-2 border-t border-border/40">
+            {providersConfig.gmail_configured ? (
+              <Button size="sm" className="w-full text-xs" onClick={() => window.location.href = "/api/communications/connect/gmail"}>
+                {gmailConnected ? "Reconnect Gmail" : "Connect Gmail OAuth"}
+              </Button>
+            ) : (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" /> Set GMAIL_CLIENT_ID in server environment to enable 1-click connect.
+              </p>
+            )}
+          </div>
+        </Card>
+
+        {/* Outlook Card */}
+        <Card className="p-5 border-border/70 bg-card/90 space-y-4 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Mail className="h-5 w-5 text-blue-500" />
+                <span className="font-semibold text-sm">Microsoft Outlook</span>
+              </div>
+              {outlookConnected ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400 px-2 py-0.5 rounded-full">
+                  <CheckCircle2 className="h-3 w-3" /> Connected
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+                  Not Connected
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Integrate Microsoft 365 or Outlook inbox for enterprise email sync, internal notes, and lead auto-creation.
+            </p>
+          </div>
+          <div className="pt-2 border-t border-border/40">
+            {providersConfig.outlook_configured ? (
+              <Button size="sm" className="w-full text-xs" onClick={() => window.location.href = "/api/communications/connect/outlook"}>
+                {outlookConnected ? "Reconnect Outlook" : "Connect Outlook OAuth"}
+              </Button>
+            ) : (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" /> Set MICROSOFT_CLIENT_ID in server environment to enable 1-click connect.
+              </p>
+            )}
+          </div>
+        </Card>
+
+        {/* WhatsApp Card */}
+        <Card className="p-5 border-border/70 bg-card/90 space-y-4 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-emerald-500" />
+                <span className="font-semibold text-sm">WhatsApp Business</span>
+              </div>
+              {whatsappConnected ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400 px-2 py-0.5 rounded-full">
+                  <CheckCircle2 className="h-3 w-3" /> Connected
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+                  Not Connected
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Send and receive official Meta WhatsApp messages. Webhook URL: <code className="bg-muted px-1 rounded text-[10px]">/api/webhooks/whatsapp</code>
+            </p>
+          </div>
+          <div className="pt-2 border-t border-border/40">
+            {providersConfig.whatsapp_configured ? (
+              <Button size="sm" variant="outline" className="w-full text-xs" onClick={() => window.location.href = "/communications?tab=channels"}>
+                Manage WhatsApp Webhooks
+              </Button>
+            ) : (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" /> Set WHATSAPP_ACCESS_TOKEN & WHATSAPP_PHONE_NUMBER_ID in server environment.
+              </p>
+            )}
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
