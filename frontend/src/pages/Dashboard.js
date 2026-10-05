@@ -7,7 +7,6 @@ import { usePersonalization } from "@/context/PersonalizationContext";
 import { CURRENCIES, formatDate } from "@/lib/format";
 import { PageHeader } from "@/components/common/PageHeader";
 import { KpiCard } from "@/components/dashboard/KpiCard";
-import { AiInsightsPlaceholder } from "@/components/dashboard/AiInsightsPlaceholder";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { WelcomeBanner } from "@/components/dashboard/WelcomeBanner";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -166,8 +165,8 @@ export default function Dashboard() {
 
         {/* OVERVIEW: trend + activity + a compact secondary stat strip */}
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <Card className="border-border bg-card p-5 shadow-sm lg:col-span-2" data-testid="sales-trend-chart">
+          <div className="grid grid-cols-1 gap-6">
+            <Card className="border-border bg-card p-5 shadow-sm" data-testid="sales-trend-chart">
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <h3 className="font-heading text-base font-semibold">Revenue vs Expenses</h3>
@@ -193,7 +192,6 @@ export default function Dashboard() {
                 </AreaChart>
               </ResponsiveContainer>
             </Card>
-            <AiInsightsPlaceholder />
           </div>
 
           <div>
