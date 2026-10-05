@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { Zap, Plus, ArrowRight, CheckCircle2, TrendingUp, DollarSign, CheckSquare, Briefcase, BarChart3, Check, ArrowRightLeft, Shield, Clock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Zap, Plus, ArrowRight, CheckCircle2, TrendingUp, DollarSign, CheckSquare, Briefcase, BarChart3, Check, Shield, Clock, AlertCircle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import api, { formatApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -10,16 +10,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-
-const CASH_PERFORMANCE_DATA = [
-  { month: "Apr", val: 310000 },
-  { month: "May", val: 380000 },
-  { month: "Jun", val: 290000 },
-  { month: "Jul", val: 420000 },
-  { month: "Aug", val: 390000 },
-  { month: "Sep", val: 460000 },
-  { month: "Oct", val: 482600, isCurrent: true },
-];
 
 export default function BusinessModule() {
   const { user } = useAuth();
@@ -45,9 +35,28 @@ export default function BusinessModule() {
 
   const hour = new Date().getHours();
   const timeOfDay = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
-  const userName = user?.name ? user.name.split(" ")[0] : "Aniruddh";
+  const userName = user?.name ? user.name.split(" ")[0] : "there";
 
   if (loading) return <div className="space-y-6"><Skeleton className="h-12 w-64" /><Skeleton className="h-96 rounded-2xl" /></div>;
+
+  const salesTrendData = (stats?.sales_trend || []).map((t) => ({
+    month: t.month,
+    val: t.sales || 0
+  }));
+
+  const hasSalesData = salesTrendData.some((t) => t.val > 0);
+  const tasksAttention = stats?.tasks_attention || [];
+  const totalSales = stats?.total_sales || 0;
+  const outstanding = stats?.outstanding || 0;
+  const openTasks = stats?.open_tasks || 0;
+  const employeeCount = stats?.employee_count || 1;
+
+  const formattedDate = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  }).toUpperCase();
 
   return (
     <div className="space-y-6 animate-in-up font-sans">
@@ -55,7 +64,7 @@ export default function BusinessModule() {
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="space-y-1">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground font-mono">
-            MONDAY · 4 OCTOBER 2026
+            {formattedDate}
           </p>
           <h1 className="font-heading text-3xl font-extrabold tracking-tight text-foreground">
             Good {timeOfDay}, {userName}.
@@ -65,7 +74,7 @@ export default function BusinessModule() {
           </p>
         </div>
 
-        {/* Action Buttons matching screenshot */}
+        {/* Action Buttons */}
         <div className="flex items-center gap-2.5 pt-1">
           <Button
             variant="outline"
@@ -93,42 +102,48 @@ export default function BusinessModule() {
         <Card className="border-border/70 bg-card p-4 rounded-2xl shadow-sm space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground">Revenue</span>
-            <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-              +12.4%
+            <span className="inline-flex items-center rounded-full bg-accent/60 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+              {totalSales > 0 ? "Live" : "No sales yet"}
             </span>
           </div>
           <p className="font-mono text-2xl font-extrabold tracking-tight text-foreground tabular-nums">
-            {format(stats?.total_sales || 482600)}
+            {totalSales > 0 ? format(totalSales) : "—"}
           </p>
-          <p className="text-[11px] text-muted-foreground">vs last month</p>
+          <p className="text-[11px] text-muted-foreground">
+            {totalSales > 0 ? "Total sales recorded" : "No sales recorded yet"}
+          </p>
         </Card>
 
         {/* Outstanding */}
         <Card className="border-border/70 bg-card p-4 rounded-2xl shadow-sm space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground">Outstanding</span>
-            <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-              -8.1%
+            <span className="inline-flex items-center rounded-full bg-accent/60 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+              {outstanding > 0 ? "Receivables" : "Clear"}
             </span>
           </div>
           <p className="font-mono text-2xl font-extrabold tracking-tight text-foreground tabular-nums">
-            {format(stats?.outstanding || 118400)}
+            {outstanding > 0 ? format(outstanding) : "—"}
           </p>
-          <p className="text-[11px] text-muted-foreground">vs last month</p>
+          <p className="text-[11px] text-muted-foreground">
+            {outstanding > 0 ? "Unpaid invoice balances" : "No unpaid invoices"}
+          </p>
         </Card>
 
         {/* Open work */}
         <Card className="border-border/70 bg-card p-4 rounded-2xl shadow-sm space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground">Open work</span>
-            <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-              +3
+            <span className="inline-flex items-center rounded-full bg-accent/60 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+              {openTasks > 0 ? `${openTasks} active` : "Zero open"}
             </span>
           </div>
           <p className="font-mono text-2xl font-extrabold tracking-tight text-foreground tabular-nums">
-            {stats?.open_tasks || 17}
+            {openTasks}
           </p>
-          <p className="text-[11px] text-muted-foreground">items this week</p>
+          <p className="text-[11px] text-muted-foreground">
+            {openTasks > 0 ? "Active action items" : "No open tasks"}
+          </p>
         </Card>
 
         {/* Team load */}
@@ -136,13 +151,15 @@ export default function BusinessModule() {
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground">Team load</span>
             <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-              Healthy
+              Balanced
             </span>
           </div>
           <p className="font-mono text-2xl font-extrabold tracking-tight text-foreground tabular-nums">
-            72%
+            {employeeCount}
           </p>
-          <p className="text-[11px] text-muted-foreground">4 active members</p>
+          <p className="text-[11px] text-muted-foreground">
+            {employeeCount === 1 ? "1 active workspace member" : `${employeeCount} active members`}
+          </p>
         </Card>
       </div>
 
@@ -152,25 +169,32 @@ export default function BusinessModule() {
         <Card className="lg:col-span-5 border-border/70 bg-card p-5 rounded-2xl shadow-sm flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-heading font-bold text-sm text-foreground">Cash performance</h3>
-            <span className="text-xs text-muted-foreground">Last 7 months</span>
+            <span className="text-xs text-muted-foreground">Last 6 months</span>
           </div>
-          <div className="h-44 w-full pt-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={CASH_PERFORMANCE_DATA} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                <YAxis hide />
-                <Tooltip
-                  formatter={(val) => [format(val), "Revenue"]}
-                  contentStyle={{ borderRadius: "8px", fontSize: "11px", backgroundColor: "#0f172a", color: "#fff" }}
-                />
-                <Bar
-                  dataKey="val"
-                  radius={[6, 6, 0, 0]}
-                  fill="#cbd5e1"
-                  cell={(entry) => (entry.isCurrent ? "#0f172a" : "#cbd5e1")}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="h-44 w-full pt-2 flex items-center justify-center">
+            {hasSalesData ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={salesTrendData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                  <YAxis hide />
+                  <Tooltip
+                    formatter={(val) => [format(val), "Revenue"]}
+                    contentStyle={{ borderRadius: "8px", fontSize: "11px", backgroundColor: "#0f172a", color: "#fff" }}
+                  />
+                  <Bar
+                    dataKey="val"
+                    radius={[6, 6, 0, 0]}
+                    fill="#0f172a"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center py-6 space-y-1">
+                <BarChart3 className="h-8 w-8 text-muted-foreground/40 mx-auto" />
+                <p className="text-xs font-semibold text-foreground">Not enough data yet</p>
+                <p className="text-[11px] text-muted-foreground">Your sales chart will appear here once invoices are paid.</p>
+              </div>
+            )}
           </div>
         </Card>
 
@@ -182,30 +206,39 @@ export default function BusinessModule() {
               View all
             </Button>
           </div>
-          <div className="divide-y divide-border/60 text-xs">
-            <div className="grid grid-cols-4 pb-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground font-mono">
-              <span>INVOICE</span>
-              <span>CLIENT</span>
-              <span className="text-right">AMOUNT</span>
-              <span className="text-right">STATUS</span>
-            </div>
-            {[
-              { id: "INV-1048", client: "Acme Foods", amount: "₹48,000", status: "Paid", tone: "bg-emerald-50 text-emerald-600 border-emerald-200" },
-              { id: "INV-1047", client: "Vertex Studio", amount: "₹72,400", status: "Pending", tone: "bg-amber-50 text-amber-600 border-amber-200" },
-              { id: "INV-1046", client: "Northstar Retail", amount: "₹31,200", status: "Overdue", tone: "bg-rose-50 text-rose-600 border-rose-200" },
-            ].map((inv) => (
-              <div key={inv.id} className="grid grid-cols-4 py-2.5 items-center">
-                <span className="font-mono text-[11px] font-semibold text-foreground">{inv.id}</span>
-                <span className="truncate text-[11px] text-muted-foreground">{inv.client}</span>
-                <span className="font-mono text-[11px] font-bold text-right text-foreground">{inv.amount}</span>
-                <div className="text-right">
-                  <span className={`inline-block text-[9px] font-bold px-1.5 py-0.5 rounded border ${inv.tone}`}>
-                    {inv.status}
-                  </span>
-                </div>
+          {invoices.length > 0 ? (
+            <div className="divide-y divide-border/60 text-xs">
+              <div className="grid grid-cols-4 pb-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground font-mono">
+                <span>INVOICE</span>
+                <span>CLIENT</span>
+                <span className="text-right">AMOUNT</span>
+                <span className="text-right">STATUS</span>
               </div>
-            ))}
-          </div>
+              {invoices.map((inv) => (
+                <div key={inv.id} className="grid grid-cols-4 py-2.5 items-center">
+                  <span className="font-mono text-[11px] font-semibold text-foreground truncate">{inv.invoice_number}</span>
+                  <span className="truncate text-[11px] text-muted-foreground">{inv.customer_name}</span>
+                  <span className="font-mono text-[11px] font-bold text-right text-foreground">{format(inv.total)}</span>
+                  <div className="text-right">
+                    <span className={`inline-block text-[9px] font-bold px-1.5 py-0.5 rounded border capitalize ${
+                      inv.status === "paid" ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
+                      inv.status === "overdue" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-amber-50 text-amber-600 border-amber-200"
+                    }`}>
+                      {inv.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-6 text-center space-y-2">
+              <p className="text-xs font-semibold text-foreground">No invoices yet</p>
+              <p className="text-[11px] text-muted-foreground">Create your first invoice to start tracking receivables.</p>
+              <Button size="sm" variant="outline" onClick={() => navigate("/invoices?new=1")} className="h-7 text-xs font-semibold">
+                + Create Invoice
+              </Button>
+            </div>
+          )}
         </Card>
 
         {/* My Next Actions (2 columns) */}
@@ -214,37 +247,42 @@ export default function BusinessModule() {
             <h3 className="font-heading font-bold text-sm text-foreground">My next actions</h3>
             <span className="text-[10px] text-muted-foreground font-medium">Today</span>
           </div>
-          <div className="space-y-3 pt-1 text-xs">
-            <div className="flex items-start gap-2 border-b border-border/50 pb-2">
-              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-emerald-500 bg-emerald-50 text-emerald-600 font-bold text-[10px] mt-0.5">✓</span>
-              <div>
-                <p className="font-bold text-foreground leading-tight">Review Northstar invoice</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">10 min</p>
-              </div>
+          {tasksAttention.length > 0 ? (
+            <div className="space-y-3 pt-1 text-xs">
+              {tasksAttention.map((task) => (
+                <div key={task.id} className="flex items-start gap-2 border-b border-border/50 pb-2 last:border-0">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-emerald-500 bg-emerald-50 text-emerald-600 font-bold text-[10px] mt-0.5">✓</span>
+                  <div>
+                    <p className="font-bold text-foreground leading-tight truncate">{task.title}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 capitalize">{task.priority} priority</p>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="flex items-start gap-2">
-              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-border text-muted-foreground font-bold text-[10px] mt-0.5">→</span>
-              <div>
-                <p className="font-bold text-foreground leading-tight">Approve Vertex proposal</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">15 min</p>
-              </div>
+          ) : (
+            <div className="py-6 text-center space-y-2">
+              <p className="text-xs font-semibold text-foreground">No active work</p>
+              <p className="text-[11px] text-muted-foreground">Create a task when something needs attention.</p>
+              <Button size="sm" variant="outline" onClick={() => navigate("/my-work")} className="h-7 text-xs font-semibold">
+                + Create Task
+              </Button>
             </div>
-          </div>
+          )}
         </Card>
 
         {/* Automation Health (2 columns) */}
         <Card className="lg:col-span-2 border-border/70 bg-card p-4 rounded-2xl shadow-sm flex flex-col justify-between space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-heading font-bold text-sm text-foreground">Automation health</h3>
-            <span className="text-[10px] text-muted-foreground font-medium">4 active</span>
+            <span className="text-[10px] text-muted-foreground font-medium">Engine Active</span>
           </div>
           <div className="space-y-1">
-            <p className="font-mono text-3xl font-extrabold text-foreground tracking-tight">98.7%</p>
-            <p className="text-[10px] text-muted-foreground">Successful runs this month</p>
+            <p className="font-mono text-3xl font-extrabold text-foreground tracking-tight">Active</p>
+            <p className="text-[10px] text-muted-foreground">Autopilot continuous monitoring</p>
           </div>
           <div className="pt-1 space-y-2">
             <span className="inline-block w-full text-center text-[10px] font-bold py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              All systems healthy
+              Autopilot Online
             </span>
             <Button
               variant="outline"
@@ -267,3 +305,4 @@ export default function BusinessModule() {
     </div>
   );
 }
+

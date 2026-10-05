@@ -18,7 +18,7 @@ export function WorkspaceSwitcher() {
   }, [user?.active_org_id]);
 
   const active = orgs.find((o) => o.id === user?.active_org_id);
-  const initials = (active?.name || "Acme Ventures").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  const initials = (active?.name || user?.name || "Workspace").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 
   const handleSwitch = async (orgId) => {
     if (orgId === user?.active_org_id) { setOpen(false); return; }
@@ -51,7 +51,7 @@ export function WorkspaceSwitcher() {
             </span>
             <span className="truncate leading-tight">
               <span className="block text-[8px] font-extrabold uppercase tracking-widest text-slate-500">WORKSPACE</span>
-              <span className="block truncate text-xs font-bold text-white">{active?.name || "Acme Ventures"}</span>
+              <span className="block truncate text-xs font-bold text-white">{active?.name || "My Workspace"}</span>
             </span>
           </span>
           <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-slate-500" />
