@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import "@/App.css";
 import { ThemeProvider } from "@/context/ThemeContext";
@@ -47,9 +47,9 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <BrowserRouter basename={process.env.PUBLIC_URL || ""}>
+        <HashRouter>
           <AppRoutes />
-        </BrowserRouter>
+        </HashRouter>
         <Toaster position="top-right" richColors />
       </AuthProvider>
     </ThemeProvider>
