@@ -51,6 +51,7 @@ export function PersonalizationProvider({ children }) {
       .finally(() => setLoading(false));
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(loadPersonalization, [user?.id, user?.active_org_id]);
 
   const preferences = personalization?.preferences || {
