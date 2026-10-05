@@ -1856,6 +1856,51 @@ async def run_autopilot_now_route(user: dict = Depends(get_current_user)):
     return {"success": True, "executed_count": len(executed), "events": executed}
 
 
+# ---------- OpenRouter AI Autopilot & Intelligence Endpoints ----------
+@api.post("/ai/briefing", tags=["ai"])
+async def get_ai_daily_briefing(user: dict = Depends(get_current_user)):
+    from automation import generate_ai_daily_briefing
+    org_id = user["active_org_id"]
+    briefing = await generate_ai_daily_briefing(org_id)
+    return briefing
+
+
+@api.post("/ai/invoice-reminder", tags=["ai"])
+async def post_ai_invoice_reminder(payload: dict = Body(...), user: dict = Depends(get_current_user)):
+    from automation import generate_ai_invoice_reminder
+    invoice = payload.get("invoice", payload)
+    message = await generate_ai_invoice_reminder(invoice)
+    return {"success": True, "suggested_message": message}
+
+
+@api.post("/ai/lead-strategy", tags=["ai"])
+async def post_ai_lead_strategy(payload: dict = Body(...), user: dict = Depends(get_current_user)):
+    from automation import generate_ai_lead_strategy
+    lead = payload.get("lead", payload)
+    strategy = await generate_ai_lead_strategy(lead)
+    return {"success": True, "suggested_strategy": strategy}
+
+
+@api.post("/ai/ask", tags=["ai"])
+async def ask_business_ai(payload: dict = Body(...), user: dict = Depends(get_current_user)):
+    from automation import call_openrouter_llm
+    org_id = user["active_org_id"]
+    query = payload.get("prompt", "Summarize business status")
+    
+    # Gather key context
+    invoices = await db.invoices.find({"org_id": org_id}, {"_id": 0}).limit(10).to_list(10)
+    tasks = await db.tasks.find({"org_id": org_id}, {"_id": 0}).limit(10).to_list(10)
+    leads = await db.leads.find({"org_id": org_id}, {"_id": 0}).limit(10).to_list(10)
+    
+    context_str = f"Workspace Invoices (sample 10): {invoices}\nTasks: {tasks}\nLeads: {leads}"
+    full_prompt = f"User Question: '{query}'\n\nLive Workspace Data Context:\n{context_str}\n\nProvide a concise, helpful, actionable business answer:"
+    
+    answer = await call_openrouter_llm(full_prompt)
+    return {"success": True, "query": query, "answer": answer}
+
+
+
+
 # ---------- Deep Personalization System ----------
 @api.get("/personalization/me", tags=["personalization"])
 async def get_my_personalization(user: dict = Depends(get_current_user)):

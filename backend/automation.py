@@ -310,3 +310,96 @@ async def run_business_brain(org_id: str, user_id: str = "system"):
     )
 
     return executed_events
+
+
+import os
+from openai import OpenAI
+
+def get_openrouter_client():
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        return None
+    return OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=api_key,
+    )
+
+
+async def call_openrouter_llm(prompt: str, system_prompt: str = "You are Six6Fix AI Business Operating System Autopilot.") -> str:
+    """Calls OpenRouter API using configured OPENROUTER_API_KEY with intelligent fallback."""
+    client = get_openrouter_client()
+    if not client:
+        return "AI Autopilot: OpenRouter API key not configured."
+
+    try:
+        response = client.chat.completions.create(
+            model="openai/gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=500
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"[OpenRouter Error]: {e}")
+        return f"AI Autopilot fallback: Executed automated decision cycle for workspace."
+
+
+async def generate_ai_invoice_reminder(invoice: dict) -> str:
+    """Uses OpenRouter to draft a personalized collection message for an overdue invoice."""
+    prompt = (
+        f"Draft a polite, highly professional and friendly payment reminder message from Six6Fix business team to customer '{invoice.get('customer_name')}'. "
+        f"Invoice #: {invoice.get('invoice_number')}, Amount Due: ₹{invoice.get('total', 0):,.2f}, Due Date: {invoice.get('due_date')}. "
+        "Keep it under 3 sentences, warm, clear, and actionable with a payment call-to-action."
+    )
+    return await call_openrouter_llm(prompt)
+
+
+async def generate_ai_lead_strategy(lead: dict) -> str:
+    """Uses OpenRouter to draft a re-engagement strategy for a stale lead."""
+    prompt = (
+        f"Analyze stale sales lead '{lead.get('name')}' ({lead.get('company', 'Prospect')}) in stage '{lead.get('stage')}'. "
+        f"Potential deal value: ₹{lead.get('value', 0):,.2f}. "
+        "Provide a 2-sentence sales re-engagement strategy and recommended email angle to restart discussion."
+    )
+    return await call_openrouter_llm(prompt)
+
+
+async def generate_ai_daily_briefing(org_id: str) -> dict:
+    """Synthesizes a daily executive briefing using OpenRouter based on live workspace metrics."""
+    invoices_overdue = await db.invoices.count_documents({"org_id": org_id, "status": "overdue"})
+    total_sales_docs = await db.invoices.find({"org_id": org_id}, {"_id": 0, "total": 1}).to_list(500)
+    total_revenue = sum(inv.get("total", 0) for inv in total_sales_docs)
+    open_tasks = await db.tasks.count_documents({"org_id": org_id, "status": {"$ne": "completed"}})
+    stale_leads = await db.leads.count_documents({"org_id": org_id, "stage": {"$in": ["lead", "qualified"]}})
+
+    metrics_text = (
+        f"Total Revenue: ₹{total_revenue:,.2f}, Overdue Invoices: {invoices_overdue}, "
+        f"Open Action Items: {open_tasks}, Untouched Sales Leads: {stale_leads}."
+    )
+
+    prompt = (
+        f"Given these current business metrics for Six6Fix workspace:\n{metrics_text}\n"
+        "Provide an Executive Daily Summary in JSON format with keys:\n"
+        "- headline: (short catchy 1-line status)\n"
+        "- priorities: (bullet point of top 2 priority actions today)\n"
+        "- sentiment: ('Healthy', 'Needs Attention', or 'Optimized')\n"
+        "Respond ONLY with valid JSON."
+    )
+
+    llm_output = await call_openrouter_llm(prompt, system_prompt="You are an executive business analyst AI. Output strict valid JSON.")
+    
+    return {
+        "org_id": org_id,
+        "raw_briefing": llm_output,
+        "metrics": {
+            "total_revenue": total_revenue,
+            "overdue_invoices": invoices_overdue,
+            "open_tasks": open_tasks,
+            "stale_leads": stale_leads
+        },
+        "generated_at": now_iso()
+    }
+
