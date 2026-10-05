@@ -47,7 +47,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <BrowserRouter>
+        <BrowserRouter basename={process.env.PUBLIC_URL || ""}>
           <AppRoutes />
         </BrowserRouter>
         <Toaster position="top-right" richColors />
