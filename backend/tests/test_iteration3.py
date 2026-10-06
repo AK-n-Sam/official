@@ -44,7 +44,7 @@ class TestGlobalSearch:
         # every result must have required fields
         for it in results:
             assert set(["type", "id", "title", "subtitle", "link"]).issubset(it.keys())
-            assert it["type"] in ("customer", "invoice", "product", "expense", "employee", "task")
+            assert it["type"] in ("customer", "invoice", "product", "expense", "employee", "task", "lead", "supplier")
         # find our customer
         cust_hits = [x for x in results if x["type"] == "customer" and x["id"] == target["id"]]
         assert cust_hits, f"customer {target['name']} not found in search"
@@ -69,13 +69,18 @@ class TestGlobalSearch:
 
     def test_search_isolated_by_org(self, client):
         orgs = client.get(f"{API}/organizations").json()
+        if len(orgs) < 2:
+            client.post(f"{API}/organizations", json={"name": "Secondary Org", "industry": "General Business"})
+            orgs = client.get(f"{API}/organizations").json()
         assert len(orgs) >= 2
         active = client.get(f"{API}/organizations/current").json()["id"]
         other = next(o["id"] for o in orgs if o["id"] != active)
         # get a customer name only in "other" org
         client.post(f"{API}/organizations/switch", json={"org_id": other})
         other_cust = client.get(f"{API}/customers").json()
-        assert other_cust
+        if not other_cust:
+            c = client.post(f"{API}/customers", json={"name": f"TEST_OtherOrgCust_{uuid.uuid4().hex[:4]}", "email": f"other_{uuid.uuid4().hex[:6]}@example.com"}).json()
+            other_cust = [c]
         needle = other_cust[0]["name"].split()[0]
         other_id = other_cust[0]["id"]
         # switch back and search

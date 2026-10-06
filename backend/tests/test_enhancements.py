@@ -1,4 +1,7 @@
 """Unit and integration test suite for the Deep Feature Enhancements."""
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pytest
 from fastapi.testclient import TestClient
 from server import app, _derive_customer_insights, _compute_invoice, _invoice_status, log_audit_event

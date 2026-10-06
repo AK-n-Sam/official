@@ -134,7 +134,7 @@ class TestInvoiceStatuses:
 class TestRealisticWorkflow:
     def test_full_flow(self, client):
         # 1. Create customer
-        r = client.post(f"{API}/customers", json={"name": "TEST_Flow_Cust", "email": "flow@t.com", "status": "active"})
+        r = client.post(f"{API}/customers", json={"name": "TEST_Flow_Cust", "email": f"flow_{uuid.uuid4().hex[:6]}@t.com", "status": "active"})
         assert r.status_code == 200
         cust = r.json()
 

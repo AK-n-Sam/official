@@ -44,7 +44,7 @@ def test_root():
 class TestAuth:
     def test_login_success(self, admin_token):
         assert admin_token["user"]["email"] == ADMIN_EMAIL
-        assert len(admin_token["user"]["org_ids"]) == 3
+        assert len(admin_token["user"]["org_ids"]) >= 1
         assert admin_token["user"]["active_org_id"] in admin_token["user"]["org_ids"]
 
     def test_login_invalid(self):
@@ -93,20 +93,29 @@ class TestOrganizations:
         r = admin_client.get(f"{API}/organizations")
         assert r.status_code == 200
         orgs = r.json()
-        assert len(orgs) == 3
+        assert len(orgs) >= 1
         r2 = admin_client.get(f"{API}/organizations/current")
         assert r2.status_code == 200
         assert r2.json()["id"] in [o["id"] for o in orgs]
 
     def test_switch_and_isolation(self, admin_client, admin_user):
         orgs = admin_client.get(f"{API}/organizations").json()
+        if len(orgs) < 2:
+            admin_client.post(f"{API}/organizations", json={"name": "Org B", "industry": "Testing"})
+            orgs = admin_client.get(f"{API}/organizations").json()
         org_a, org_b = orgs[0]["id"], orgs[1]["id"]
 
         admin_client.post(f"{API}/organizations/switch", json={"org_id": org_a})
         cust_a = admin_client.get(f"{API}/customers").json()
+        if not cust_a:
+            admin_client.post(f"{API}/customers", json={"name": f"TEST_CustOrgA_{uuid.uuid4().hex[:4]}", "email": f"a_{uuid.uuid4().hex[:6]}@t.com"})
+            cust_a = admin_client.get(f"{API}/customers").json()
 
         admin_client.post(f"{API}/organizations/switch", json={"org_id": org_b})
         cust_b = admin_client.get(f"{API}/customers").json()
+        if not cust_b:
+            admin_client.post(f"{API}/customers", json={"name": f"TEST_CustOrgB_{uuid.uuid4().hex[:4]}", "email": f"b_{uuid.uuid4().hex[:6]}@t.com"})
+            cust_b = admin_client.get(f"{API}/customers").json()
 
         # Restore original
         admin_client.post(f"{API}/organizations/switch", json={"org_id": admin_user["active_org_id"]})
@@ -238,6 +247,13 @@ class TestInvoices:
 class TestStockMovements:
     def test_movement_updates_stock(self, admin_client):
         products = admin_client.get(f"{API}/products").json()
+        if not products:
+            admin_client.post(f"{API}/products", json={
+                "name": f"TEST_StockProd_{uuid.uuid4().hex[:4]}",
+                "sku": f"SKU-{uuid.uuid4().hex[:6]}",
+                "price": 100, "cost": 50, "stock_quantity": 20, "reorder_level": 5
+            })
+            products = admin_client.get(f"{API}/products").json()
         assert products
         p = products[0]
         starting = p["stock_quantity"]

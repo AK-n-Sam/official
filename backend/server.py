@@ -876,7 +876,11 @@ async def convert_lead(lead_id: str, user: dict = Depends(get_current_user)):
 
     customer.pop("_id", None)
     task.pop("_id", None)
-    return {"customer": customer, "created_task": task, "created_invoice": draft_invoice}
+    if draft_invoice:
+        draft_invoice.pop("_id", None)
+    customer["created_task"] = task
+    customer["created_invoice"] = draft_invoice
+    return customer
 
 
 # ---------------- Product & Inventory Intelligence ----------------
@@ -1247,8 +1251,10 @@ async def list_team(user: dict = Depends(get_current_user)):
 async def invite_member(payload: InviteInput, user: dict = Depends(get_current_user)):
     if not is_privileged(user):
         raise HTTPException(status_code=403, detail="Only owners and admins can invite members")
-    name = payload.name.strip()
-    email = payload.email.strip().lower()
+    name = (payload.name or "").strip()
+    email = (payload.email or "").strip().lower()
+    if not name or not email:
+        raise HTTPException(status_code=400, detail="Name and email are required")
     role = payload.role if payload.role in ("admin", "member") else "member"
     org_id = user["active_org_id"]
     existing = await db.users.find_one({"email": email})
@@ -1657,6 +1663,28 @@ async def list_orgs(user: dict = Depends(get_current_user)):
     order = {oid: idx for idx, oid in enumerate(user.get("org_ids", []))}
     orgs.sort(key=lambda o: order.get(o["id"], 999))
     return orgs
+
+
+@api.post("/organizations", tags=["settings"])
+async def create_organization(payload: dict = Body(...), user: dict = Depends(get_current_user)):
+    name = (payload.get("name") or "New Workspace").strip()
+    org_id = str(uuid.uuid4())
+    doc = {
+        "id": org_id,
+        "owner_user_id": user["id"],
+        "name": name,
+        "industry": payload.get("industry", "General Business"),
+        "email": user.get("email", ""),
+        "phone": "", "website": "", "address": "", "city": "", "country": "",
+        "currency": "USD", "timezone": "America/New_York", "tax_id": "",
+        "invoice_prefix": "INV", "invoice_tax_rate": 0.0, "invoice_due_days": 30,
+        "invoice_notes": "Thank you for your business.",
+        "created_at": now_iso(), "updated_at": now_iso(),
+    }
+    await db.organizations.insert_one(doc)
+    await db.users.update_one({"id": user["id"]}, {"$addToSet": {"org_ids": org_id}})
+    doc.pop("_id", None)
+    return doc
 
 
 @api.get("/organizations/current", tags=["settings"])
