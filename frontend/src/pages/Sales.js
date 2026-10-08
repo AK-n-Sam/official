@@ -67,7 +67,7 @@ export default function Sales() {
   }, []);
 
   const rate = CURRENCIES[currency]?.rate || 1;
-  const safeMembers = Array.isArray(members) ? members : [];
+  const safeMembers = useMemo(() => (Array.isArray(members) ? members : []), [members]);
 
   const fields = useMemo(() => FIELDS.map((f) => (
     f.name === "owner_id"

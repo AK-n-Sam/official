@@ -53,7 +53,7 @@ export default function Leads() {
     api.get("/team").then(({ data }) => setMembers(Array.isArray(data) ? data : [])).catch(() => setMembers([]));
   }, []);
 
-  const safeMembers = Array.isArray(members) ? members : [];
+  const safeMembers = useMemo(() => (Array.isArray(members) ? members : []), [members]);
 
   const fields = useMemo(() => FIELDS.map((f) => (
     f.name === "owner_id"
