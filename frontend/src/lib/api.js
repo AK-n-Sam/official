@@ -14,12 +14,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Demo fallback data for GitHub Pages / static hosting when backend is offline
+// Demo fallback data when explicitly in demo mode (REACT_APP_DEMO_MODE=true)
+const isDemoMode = process.env.REACT_APP_DEMO_MODE === "true";
+
 const DEMO_FALLBACKS = {
   "/auth/me": {
     id: "demo_usr_01",
-    name: "Aniruddh Samarth",
-    email: "aniruddh@six6fix.com",
+    name: "Demo Operator",
+    email: "demo@six6fix.com",
     role: "owner",
     job_title: "Founder & Operator",
     phone: "+1 (555) 019-2831",
@@ -100,38 +102,8 @@ const DEMO_FALLBACKS = {
   },
   "/employees": {
     items: [
-      { id: "emp_1", name: "Aniruddh Samarth", role: "Owner", email: "aniruddh@six6fix.com", status: "active" },
+      { id: "emp_1", name: "Demo User", role: "Owner", email: "demo@six6fix.com", status: "active" },
       { id: "emp_2", name: "Sarah Jenkins", role: "Manager", email: "sarah@six6fix.com", status: "active" }
-    ]
-  },
-  "/communications/accounts": {
-    accounts: [
-      { id: "acc_1", provider: "gmail", name: "Google Gmail", status: "connected", email: "support@six6fix.com" },
-      { id: "acc_2", provider: "outlook", name: "Microsoft Outlook", status: "connected", email: "contact@six6fix.com" },
-      { id: "acc_3", provider: "whatsapp", name: "WhatsApp Business", status: "connected", phone: "+1 (555) 019-2831" }
-    ],
-    providers_config: { gmail_configured: true, outlook_configured: true, whatsapp_configured: true }
-  },
-  "/communications/conversations": {
-    conversations: [
-      {
-        id: "conv_1",
-        channel: "email",
-        customer: { name: "Apex Global Labs", email: "contact@apexlabs.com" },
-        subject: "Q4 Operating License Renewal & Support",
-        snippet: "Hi team, we would like to proceed with the contract extension...",
-        status: "open",
-        updated_at: "2026-10-05T16:30:00Z"
-      },
-      {
-        id: "conv_2",
-        channel: "whatsapp",
-        customer: { name: "Starlight Digital", phone: "+1 (555) 876-5432" },
-        subject: "WhatsApp Inquiry — Custom Implementation",
-        snippet: "Can you send over the updated statement of work?",
-        status: "open",
-        updated_at: "2026-10-05T14:15:00Z"
-      }
     ]
   }
 };
@@ -139,13 +111,15 @@ const DEMO_FALLBACKS = {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (!isDemoMode) {
+      return Promise.reject(error);
+    }
     const url = error?.config?.url || "";
     for (const [key, fallbackData] of Object.entries(DEMO_FALLBACKS)) {
       if (url.includes(key)) {
         return Promise.resolve({ data: fallbackData, status: 200, statusText: "OK", headers: {}, config: error.config });
       }
     }
-    // Generic fallback for any other failed API GET calls on static demo environment
     if (error?.config?.method === "get") {
       return Promise.resolve({ data: { items: [], total: 0 }, status: 200, statusText: "OK", headers: {}, config: error.config });
     }

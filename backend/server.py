@@ -2058,14 +2058,21 @@ app.include_router(api, prefix="/api")
 app.include_router(api)
 
 cors_origins = [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()]
+is_production = os.environ.get("VERCEL") is not None or os.environ.get("NODE_ENV") == "production"
+
 if not cors_origins:
-    cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:8000", "http://127.0.0.1:8000"]
+    if is_production:
+        cors_origins = []
+    else:
+        cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:8000", "http://127.0.0.1:8000"]
+
+origin_regex = None if is_production else r"http://localhost:\d+|http://127\.0\.0\.1:\d+"
 
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=cors_origins,
-    allow_origin_regex=r"https://.*\.vercel\.app|http://localhost:\d+|http://127\.0\.0\.1:\d+",
+    allow_origin_regex=origin_regex,
     allow_methods=["*"],
     allow_headers=["*"],
 )

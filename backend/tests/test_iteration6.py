@@ -7,8 +7,7 @@ import uuid
 import pytest
 import requests
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
-assert BASE_URL, "REACT_APP_BACKEND_URL not set"
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "http://127.0.0.1:8000").rstrip("/")
 
 OWNER_EMAIL = "aniruddh.samarth@gmail.com"
 OWNER_PASSWORD = "Admin@12345"
