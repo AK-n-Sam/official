@@ -1816,6 +1816,86 @@ async def get_admin_overview(user: dict = Depends(get_current_user)):
     }
 
 
+
+@api.get("/admin/access-requests", tags=["admin"])
+async def list_access_requests(user: dict = Depends(get_current_user)):
+    if user.get("role") not in ["owner", "admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    requests = await db.access_requests.find({}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return requests
+
+
+@api.post("/admin/access-requests/{req_id}/action", tags=["admin"])
+async def handle_access_request_action(req_id: str, payload: dict = Body(...), user: dict = Depends(get_current_user)):
+    if user.get("role") not in ["owner", "admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    action = payload.get("action", "approve").lower()
+    req = await db.access_requests.find_one({"id": req_id})
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    new_status = "approved" if action == "approve" else "rejected"
+    await db.access_requests.update_one({"id": req_id}, {"$set": {"status": new_status, "decided_by": user["id"], "updated_at": now_iso()}})
+    
+    if new_status == "approved":
+        existing_user = await db.users.find_one({"email": req["email"]})
+        if not existing_user:
+            temp_pass = secrets.token_urlsafe(6)
+            uid = f"user_{uuid.uuid4().hex[:12]}"
+            await db.users.insert_one({
+                "id": uid, "name": req["name"], "email": req["email"], "password_hash": hash_password(temp_pass),
+                "picture": "", "phone": "", "job_title": f"{req.get('requested_role', 'member').title()} (Approved)", "provider": "password",
+                "role": req.get("requested_role", "member"),
+                "org_ids": [user["active_org_id"]], "active_org_id": user["active_org_id"],
+                "preferences": {"currency": "USD", "timezone": "America/New_York", "date_format": "MMM d, yyyy", "email_notifications": True},
+                "created_at": now_iso(), "updated_at": now_iso()
+            })
+
+    await log_audit_event(user["active_org_id"], user, f"access_request_{new_status}", "security", req_id, req["name"], f"Access request {new_status} for {req['email']}")
+    return {"success": True, "status": new_status}
+
+
+@api.get("/admin/system-data-preview", tags=["admin"])
+async def get_system_data_preview(user: dict = Depends(get_current_user)):
+    if user.get("role") not in ["owner", "admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required for backend data preview")
+    
+    all_orgs = await db.organizations.find({}, {"_id": 0}).to_list(100)
+    all_users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(500)
+    total_customers = await db.customers.count_documents({})
+    total_invoices = await db.invoices.count_documents({})
+    total_products = await db.products.count_documents({})
+    total_expenses = await db.expenses.count_documents({})
+    total_audits = await db.audit_logs.count_documents({})
+    access_requests = await db.access_requests.find({}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    recent_audits = await db.audit_logs.find({}).sort("created_at", -1).limit(20).to_list(20)
+
+    all_invoices = await db.invoices.find({"status": "paid"}, {"_id": 0, "total": 1}).to_list(5000)
+    global_revenue = sum(float(i.get("total", 0)) for i in all_invoices)
+
+    return {
+        "admin_user": _public_user(user),
+        "total_organizations": len(all_orgs),
+        "total_users": len(all_users),
+        "total_customers": total_customers,
+        "total_invoices": total_invoices,
+        "total_products": total_products,
+        "total_expenses": total_expenses,
+        "total_audit_logs": total_audits,
+        "global_platform_revenue": round(global_revenue, 2),
+        "organizations": all_orgs,
+        "users": all_users[:50],
+        "access_requests": access_requests,
+        "recent_audits": [{**a, "_id": str(a.get("_id", ""))} for a in recent_audits],
+        "system_status": {
+            "database": "CONNECTED",
+            "engine_version": "Six6Fix v2.4 Commercial OS",
+            "tenant_partitioning": "ACTIVE_MULTI_TENANT",
+            "last_health_check": now_iso()
+        }
+    }
+
+
 @api.get("/automations", tags=["automation"])
 async def list_automations(user: dict = Depends(get_current_user)):
     from automation import ensure_default_automations

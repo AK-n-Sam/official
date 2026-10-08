@@ -67,6 +67,17 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
+  const demoLogin = async (role) => {
+    const { data } = await api.post("/auth/demo-login", { role });
+    persist(data);
+    return data.user;
+  };
+
+  const requestAccess = async (payload) => {
+    const { data } = await api.post("/auth/request-access", payload);
+    return data;
+  };
+
   const logout = async () => {
     try { await api.post("/auth/logout"); } catch { /* ignore */ }
     localStorage.removeItem(TOKEN_KEY);
@@ -74,7 +85,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, login, register, googleSession, logout, refresh: loadMe }}>
+    <AuthContext.Provider value={{ user, setUser, loading, login, register, demoLogin, requestAccess, googleSession, logout, refresh: loadMe }}>
       {children}
     </AuthContext.Provider>
   );

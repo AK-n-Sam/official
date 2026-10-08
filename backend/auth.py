@@ -3,7 +3,7 @@ import uuid
 import bcrypt
 import jwt
 from datetime import datetime, timezone, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, Body
 import httpx
 
 from database import db, now_iso
@@ -212,3 +212,89 @@ async def logout(request: Request, response: Response):
 @router.get("/me")
 async def me(user: dict = Depends(get_current_user)):
     return user
+
+
+@router.post("/request-access")
+async def request_access(payload: dict = Body(...)):
+    name = (payload.get("name") or "").strip()
+    email = (payload.get("email") or "").strip().lower()
+    role = (payload.get("role") or "member").lower()
+    organization_name = (payload.get("organization_name") or "").strip()
+    reason = (payload.get("reason") or "").strip()
+
+    if not name or not email:
+        raise HTTPException(status_code=400, detail="Full name and email address are required")
+
+    req_doc = {
+        "id": str(uuid.uuid4()),
+        "name": name,
+        "email": email,
+        "requested_role": role,
+        "organization_name": organization_name,
+        "reason": reason,
+        "status": "pending",
+        "created_at": now_iso(),
+        "updated_at": now_iso()
+    }
+    await db.access_requests.insert_one(req_doc)
+
+    # Log security audit log for access request
+    await db.audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "org_id": "system",
+        "user_id": "public",
+        "user_name": name,
+        "user_email": email,
+        "event_type": "access_requested",
+        "category": "security",
+        "target_id": req_doc["id"],
+        "target_name": f"Access Request: {role}",
+        "details": f"{name} ({email}) requested {role} access for organization '{organization_name or 'Default Workspace'}'",
+        "created_at": now_iso()
+    })
+
+    req_doc.pop("_id", None)
+    return {
+        "success": True,
+        "message": f"Access request submitted successfully for {name} ({email}). An administrator will review your application.",
+        "request": req_doc
+    }
+
+
+@router.post("/demo-login")
+async def demo_login(payload: dict = Body(...), response: Response = None):
+    requested_role = (payload.get("role") or "owner").lower()
+    await ensure_admin_seeded()
+
+    admin_email = os.environ.get("ADMIN_EMAIL", "aniruddh.samarth@gmail.com").lower().strip()
+
+    if requested_role in ("admin", "enterprise_owner", "owner"):
+        user = await db.users.find_one({"email": admin_email})
+        if user and requested_role == "admin" and user.get("role") != "admin":
+            await db.users.update_one({"id": user["id"]}, {"$set": {"role": "admin"}})
+            user["role"] = "admin"
+        elif user and requested_role in ("enterprise_owner", "owner") and user.get("role") != "owner":
+            await db.users.update_one({"id": user["id"]}, {"$set": {"role": "owner"}})
+            user["role"] = "owner"
+    else:  # member
+        email = "member@six6fix.com"
+        user = await db.users.find_one({"email": email})
+        if not user:
+            admin_user = await db.users.find_one({"email": admin_email})
+            active_org_id = admin_user.get("active_org_id") if admin_user else "org_default"
+            uid = f"user_{uuid.uuid4().hex[:12]}"
+            user = {
+                "id": uid, "name": "Team Member Demo", "email": email,
+                "password_hash": hash_password("Member@12345"), "picture": "", "phone": "+1 555-0199",
+                "job_title": "Operations Specialist", "provider": "password", "role": "member",
+                "org_ids": [active_org_id], "active_org_id": active_org_id,
+                "preferences": {"currency": "USD", "timezone": "America/New_York", "date_format": "MMM d, yyyy", "email_notifications": True},
+                "created_at": now_iso(), "updated_at": now_iso()
+            }
+            await db.users.insert_one(user)
+
+    token = create_access_token(user["id"], user["email"])
+    if response:
+        response.set_cookie("access_token", token, httponly=True, secure=False if os.environ.get("VERCEL") is None else True, samesite="lax", max_age=604800, path="/")
+    active_org = await db.organizations.find_one({"id": user.get("active_org_id")}, {"_id": 0})
+    return {"token": token, "user": _public_user(user), "active_org": active_org}
