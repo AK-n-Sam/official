@@ -10,7 +10,7 @@ load_dotenv(ROOT_DIR / ".env")
 mongo_url = os.environ.get("MONGO_URL")
 db_name = os.environ.get("DB_NAME", "official_db")
 
-is_production = os.environ.get("VERCEL") is not None or os.environ.get("NODE_ENV") == "production"
+is_production = os.environ.get("NODE_ENV") == "production" or os.environ.get("RENDER") is not None
 
 def _is_mongo_reachable(url_str: str) -> bool:
     if not url_str:

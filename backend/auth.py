@@ -28,7 +28,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 def _secret() -> str:
     jwt_secret = os.environ.get("JWT_SECRET")
     if not jwt_secret:
-        if os.environ.get("VERCEL") or os.environ.get("NODE_ENV") == "production":
+        if os.environ.get("NODE_ENV") == "production" or os.environ.get("RENDER") is not None:
             raise RuntimeError("JWT_SECRET environment variable is required in production.")
         return "dev-jwt-secret-do-not-use-in-production-123456789"
     return jwt_secret
@@ -76,8 +76,6 @@ async def ensure_admin_seeded():
             "preferences": {"currency": "USD", "timezone": "America/New_York", "date_format": "MMM d, yyyy", "email_notifications": True},
             "created_at": now_iso(), "updated_at": now_iso(),
         })
-    elif not verify_password(admin_password, existing.get("password_hash", "")):
-        await db.users.update_one({"email": admin_email}, {"$set": {"password_hash": hash_password(admin_password)}})
 
 
 async def get_current_user(request: Request) -> dict:
@@ -157,7 +155,7 @@ async def register(payload: RegisterInput, response: Response):
         raise HTTPException(status_code=400, detail="An account with this email already exists")
     user = await _build_user(payload.name.strip(), email, hash_password(payload.password), organization_name=payload.organization_name)
     token = create_access_token(user["id"], email)
-    is_secure = os.environ.get("VERCEL") is not None or os.environ.get("NODE_ENV") == "production"
+    is_secure = os.environ.get("NODE_ENV") == "production" or os.environ.get("RENDER") is not None
     response.set_cookie("access_token", token, httponly=True, secure=is_secure, samesite="lax", max_age=604800, path="/")
     active_org = await db.organizations.find_one({"id": user["active_org_id"]}, {"_id": 0})
     return {"token": token, "user": _public_user(user), "active_org": active_org}
@@ -179,7 +177,7 @@ async def login(payload: LoginInput, response: Response):
         user["active_org_id"] = payload.workspace_id
 
     token = create_access_token(user["id"], email)
-    is_secure = os.environ.get("VERCEL") is not None or os.environ.get("NODE_ENV") == "production"
+    is_secure = os.environ.get("NODE_ENV") == "production" or os.environ.get("RENDER") is not None
     response.set_cookie("access_token", token, httponly=True, secure=is_secure, samesite="lax", max_age=604800, path="/")
     active_org = await db.organizations.find_one({"id": user.get("active_org_id")}, {"_id": 0})
     return {"token": token, "user": _public_user(user), "active_org": active_org}
@@ -257,7 +255,7 @@ async def request_access(payload: dict = Body(...)):
 @router.post("/demo-login")
 async def demo_login(payload: dict = Body(...), response: Response = None):
     demo_mode = os.environ.get("REACT_APP_DEMO_MODE", "").lower() in ("true", "1")
-    is_dev = os.environ.get("VERCEL") is None and os.environ.get("NODE_ENV") != "production"
+    is_dev = os.environ.get("NODE_ENV") != "production" and os.environ.get("RENDER") is None
     if not demo_mode and not is_dev:
         raise HTTPException(status_code=403, detail="Demo login is disabled in production.")
 
@@ -295,7 +293,7 @@ async def demo_login(payload: dict = Body(...), response: Response = None):
 
     token = create_access_token(user["id"], user["email"])
     if response:
-        is_secure = os.environ.get("VERCEL") is not None or os.environ.get("NODE_ENV") == "production"
+        is_secure = os.environ.get("NODE_ENV") == "production" or os.environ.get("RENDER") is not None
         response.set_cookie("access_token", token, httponly=True, secure=is_secure, samesite="lax", max_age=604800, path="/")
     active_org = await db.organizations.find_one({"id": user.get("active_org_id")}, {"_id": 0})
     return {"token": token, "user": _public_user(user), "active_org": active_org}

@@ -27,6 +27,11 @@ app = FastAPI(title="Six6Fix API")
 api = APIRouter()
 
 
+@api.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
+
 @api.get("/")
 async def root():
     return {"message": "Six6Fix API", "status": "ok"}
@@ -2049,16 +2054,12 @@ async def get_today_queue(user: dict = Depends(get_current_user)):
 from communications import router as comms_router, webhook_router
 
 app.include_router(auth_router, prefix="/api")
-app.include_router(auth_router)
-
 app.include_router(comms_router, prefix="/api")
 app.include_router(webhook_router, prefix="/api")
-
 app.include_router(api, prefix="/api")
-app.include_router(api)
 
 cors_origins = [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()]
-is_production = os.environ.get("VERCEL") is not None or os.environ.get("NODE_ENV") == "production"
+is_production = os.environ.get("NODE_ENV") == "production" or os.environ.get("RENDER") is not None
 
 if not cors_origins:
     if is_production:
