@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const rawBackendUrl = process.env.REACT_APP_BACKEND_URL;
+const rawBackendUrl = process.env.REACT_APP_BACKEND_URL || process.env.BACKEND_URL;
 const API = rawBackendUrl
   ? (rawBackendUrl.endsWith('/api') ? rawBackendUrl : `${rawBackendUrl.replace(/\/$/, '')}/api`)
   : "/api";
