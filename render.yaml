@@ -21,13 +21,16 @@ services:
       - key: DEMO_MODE
         value: "false"
 
-  - type: static
+  - type: web
+    runtime: static
     name: six6fix-frontend
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: build
     envVars:
       - key: REACT_APP_BACKEND_URL
+        sync: false
+      - key: REACT_APP_DEMO_MODE
         sync: false
     routes:
       - type: rewrite

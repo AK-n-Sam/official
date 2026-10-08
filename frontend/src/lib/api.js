@@ -1,5 +1,7 @@
 import axios from "axios";
 
+const DEMO_MODE = process.env.REACT_APP_DEMO_MODE === "true";
+
 const rawBackendUrl = process.env.REACT_APP_BACKEND_URL || process.env.BACKEND_URL;
 const API = rawBackendUrl
   ? (rawBackendUrl.endsWith('/api') ? rawBackendUrl : `${rawBackendUrl.replace(/\/$/, '')}/api`)
@@ -139,15 +141,17 @@ const DEMO_FALLBACKS = {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const url = error?.config?.url || "";
-    for (const [key, fallbackData] of Object.entries(DEMO_FALLBACKS)) {
-      if (url.includes(key)) {
-        return Promise.resolve({ data: fallbackData, status: 200, statusText: "OK", headers: {}, config: error.config });
+    if (DEMO_MODE) {
+      const url = error?.config?.url || "";
+      for (const [key, fallbackData] of Object.entries(DEMO_FALLBACKS)) {
+        if (url.includes(key)) {
+          return Promise.resolve({ data: fallbackData, status: 200, statusText: "OK", headers: {}, config: error.config });
+        }
       }
-    }
-    // Generic fallback for any other failed API GET calls on static demo environment
-    if (error?.config?.method === "get") {
-      return Promise.resolve({ data: { items: [], total: 0 }, status: 200, statusText: "OK", headers: {}, config: error.config });
+      // Generic fallback for any other failed API GET calls on static demo environment
+      if (error?.config?.method === "get") {
+        return Promise.resolve({ data: { items: [], total: 0 }, status: 200, statusText: "OK", headers: {}, config: error.config });
+      }
     }
     return Promise.reject(error);
   }
