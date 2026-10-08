@@ -13,19 +13,19 @@ from auth import get_current_user
 router = APIRouter(prefix="/communications", tags=["communications"])
 webhook_router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
-# ---------------- Provider Credentials Configuration Helper ----------------
 def get_provider_config():
+    app_base = os.getenv("APP_URL") or (f"https://{os.getenv('VERCEL_URL')}" if os.getenv("VERCEL_URL") else "http://localhost:3000")
     return {
         "gmail": {
             "client_id": os.getenv("GMAIL_CLIENT_ID", ""),
             "client_secret": os.getenv("GMAIL_CLIENT_SECRET", ""),
-            "redirect_uri": os.getenv("GMAIL_REDIRECT_URI", "http://localhost:3000/settings?tab=integrations&callback=gmail"),
+            "redirect_uri": os.getenv("GMAIL_REDIRECT_URI", f"{app_base}/settings?tab=integrations&callback=gmail"),
             "configured": bool(os.getenv("GMAIL_CLIENT_ID") and os.getenv("GMAIL_CLIENT_SECRET")),
         },
         "outlook": {
             "client_id": os.getenv("MICROSOFT_CLIENT_ID", ""),
             "client_secret": os.getenv("MICROSOFT_CLIENT_SECRET", ""),
-            "redirect_uri": os.getenv("MICROSOFT_REDIRECT_URI", "http://localhost:3000/settings?tab=integrations&callback=outlook"),
+            "redirect_uri": os.getenv("MICROSOFT_REDIRECT_URI", f"{app_base}/settings?tab=integrations&callback=outlook"),
             "configured": bool(os.getenv("MICROSOFT_CLIENT_ID") and os.getenv("MICROSOFT_CLIENT_SECRET")),
         },
         "whatsapp": {

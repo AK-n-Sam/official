@@ -11,13 +11,12 @@ def can_manage_team(user: dict) -> bool:
 
 
 def sees_all_records(user: dict) -> bool:
-    """Data visibility: owners always see everything. Admins see everything only when
-    the workspace owner enabled 'admins_see_all'. Members only see their own records."""
+    """Data visibility: owners and admins see all org records by default. Members only see their own records."""
     role = user.get("role")
-    if role == "owner":
+    if role in ("owner", "enterprise_owner"):
         return True
     if role == "admin":
-        return bool(user.get("admins_see_all", False))
+        return bool(user.get("admins_see_all", True))
     return False
 
 

@@ -92,6 +92,10 @@ class TestMemberScoping:
         assert created["name"] == payload["name"]
         lst = member["session"].get(f"{API}/customers").json()
         assert any(x["id"] == created["id"] for x in lst)
+
+        # Ensure owner is in member's active org
+        m_me = member["session"].get(f"{API}/auth/me").json()
+        owner.post(f"{API}/auth/switch-workspace", json={"org_id": m_me["active_org_id"]})
         owner_lst = owner.get(f"{API}/customers").json()
         assert any(x["id"] == created["id"] for x in owner_lst)
 
