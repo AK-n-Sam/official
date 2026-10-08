@@ -61,11 +61,6 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
-  const googleSession = async (session_id) => {
-    const { data } = await api.post("/auth/google/session", { session_id });
-    persist(data);
-    return data.user;
-  };
 
   const demoLogin = async (role) => {
     const { data } = await api.post("/auth/demo-login", { role });

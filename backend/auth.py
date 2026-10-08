@@ -11,7 +11,6 @@ from models import RegisterInput, LoginInput, GoogleSessionInput
 from seed import create_user_workspaces
 
 JWT_ALGORITHM = "HS256"
-EMERGENT_SESSION_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -175,28 +174,6 @@ async def login(payload: LoginInput, response: Response):
     response.set_cookie("access_token", token, httponly=True, secure=False if os.environ.get("VERCEL") is None else True, samesite="lax", max_age=604800, path="/")
     active_org = await db.organizations.find_one({"id": user.get("active_org_id")}, {"_id": 0})
     return {"token": token, "user": _public_user(user), "active_org": active_org}
-
-
-@router.post("/google/session")
-async def google_session(payload: GoogleSessionInput, response: Response):
-    async with httpx.AsyncClient(timeout=15) as http:
-        r = await http.get(EMERGENT_SESSION_URL, headers={"X-Session-ID": payload.session_id})
-    if r.status_code != 200:
-        raise HTTPException(status_code=401, detail="Invalid session")
-    data = r.json()
-    email = data["email"].lower().strip()
-    user = await db.users.find_one({"id": {"$exists": True}, "email": email})
-    if not user:
-        user = await _build_user(data.get("name", email), email, None, data.get("picture", ""), "google")
-    session_token = data["session_token"]
-    await db.user_sessions.insert_one({
-        "user_id": user["id"],
-        "session_token": session_token,
-        "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
-        "created_at": now_iso(),
-    })
-    response.set_cookie("session_token", session_token, httponly=True, secure=False if os.environ.get("VERCEL") is None else True, samesite="lax", max_age=604800, path="/")
-    return {"token": session_token, "user": _public_user(user)}
 
 
 @router.post("/logout")

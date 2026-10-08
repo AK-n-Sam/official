@@ -7,7 +7,7 @@ Build a production-structured, fully runnable foundation for an all-in-one Busin
 - **Frontend**: React 19 (CRA/craco), TailwindCSS + shadcn/ui, react-router-dom v7, recharts, sonner, lucide-react.
 - **Backend**: FastAPI + Motor (async MongoDB). All routes under `/api`.
 - **DB**: MongoDB. UUID string `id` per document (no ObjectId exposure). Every record scoped by `org_id`.
-- **Auth**: Dual — JWT email/password + Emergent-managed Google login. Bearer token in localStorage (`bmp_token`) + httpOnly cookies. `get_current_user` resolves JWT or session token, returns org-scoped user.
+- **Auth**: JWT email/password authentication. Bearer token in localStorage (`bmp_token`) + httpOnly cookies. `get_current_user` resolves JWT, returns org-scoped user.
 - **Multi-tenancy**: user has `org_ids[]` + `active_org_id`; workspace switch updates `active_org_id`; all queries filter by it.
 
 ## User Personas
@@ -18,7 +18,7 @@ Build a production-structured, fully runnable foundation for an all-in-one Busin
 Auth & workspaces · App shell (sidebar, header, workspace switcher, notifications, global search placeholder, user menu, responsive) · 12 module routes · Core data models with relationships + org ownership · Reusable CRUD engine · Live dashboard from real data · Design system (dark default + light toggle) · Multi-currency (USD/EUR/GBP/INR) · Realistic seed data · Settings.
 
 ## Implemented (2026-06-28)
-- **Auth**: register/login/logout/me, JWT + Emergent Google session exchange, protected routes, session persistence, admin seeding (aniruddh.samarth@gmail.com / Admin@12345).
+- **Auth**: register/login/logout/me, JWT authentication, protected routes, session persistence, admin seeding (aniruddh.samarth@gmail.com / Admin@12345).
 - **Data models & seed**: Organization, User, Customer, Supplier, Product, Invoice(+items), Expense, Employee, Task, StockMovement, Payment. Each new user auto-gets 3 fully-seeded demo workspaces (Acme Global Ventures / Nexus Retail Logistics / Apex Studio LLC) with different currencies and disjoint data (verified isolation).
 - **Reusable CRUD engine**: generic `make_crud` backend factory + `ResourceManager` frontend component (search, filters, validation, empty/loading/error states, edit modal, delete confirm) powering Customers, Products, Expenses, Suppliers, Employees.
 - **Invoices**: create with line items (auto price fill), live subtotal/tax/total, status tabs, mark-paid → records Payment.
