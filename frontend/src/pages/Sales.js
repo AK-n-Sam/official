@@ -62,22 +62,23 @@ export default function Sales() {
   const [deleting, setDeleting] = useState(null);
 
   useEffect(() => {
-    api.get("/team").then(({ data }) => setMembers(data)).catch(() => {});
+    api.get("/team").then(({ data }) => setMembers(Array.isArray(data) ? data : [])).catch(() => setMembers([]));
     api.get("/dashboard/stats").then(({ data }) => setStats(data)).catch(() => {});
   }, []);
 
   const rate = CURRENCIES[currency]?.rate || 1;
+  const safeMembers = Array.isArray(members) ? members : [];
 
   const fields = useMemo(() => FIELDS.map((f) => (
     f.name === "owner_id"
-      ? { ...f, options: members.map((m) => ({ value: m.id, label: m.name + (m.is_you ? " (you)" : "") })) }
+      ? { ...f, options: safeMembers.map((m) => ({ value: m.id, label: m.name + (m.is_you ? " (you)" : "") })) }
       : f
-  )), [members]);
+  )), [safeMembers]);
 
   useCreateParam(() => { setEditing(null); setModalOpen(true); });
 
   const submit = async (payload) => {
-    const m = members.find((x) => x.id === payload.owner_id);
+    const m = safeMembers.find((x) => x.id === payload.owner_id);
     payload.owner = m ? m.name : "";
     try {
       if (editing) { await api.put(`/leads/${editing.id}`, payload); toast.success("Deal updated"); }

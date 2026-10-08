@@ -41,8 +41,8 @@ export function InvoiceModal({ open, onOpenChange, initial, template, defaultCus
 
   useEffect(() => {
     if (!open) return;
-    api.get("/customers").then(({ data }) => setCustomers(data)).catch(() => {});
-    api.get("/products").then(({ data }) => setProducts(data)).catch(() => {});
+    api.get("/customers").then(({ data }) => setCustomers(Array.isArray(data) ? data : [])).catch(() => setCustomers([]));
+    api.get("/products").then(({ data }) => setProducts(Array.isArray(data) ? data : [])).catch(() => setProducts([]));
     setErr("");
     if (initial) {
       setCustomerId(initial.customer_id || "");
@@ -82,7 +82,7 @@ export function InvoiceModal({ open, onOpenChange, initial, template, defaultCus
       if (i !== idx) return it;
       const next = { ...it, [field]: value };
       if (field === "product_id") {
-        const p = products.find((pr) => pr.id === value);
+        const p = Array.isArray(products) ? products.find((pr) => pr.id === value) : null;
         if (p) { next.description = p.name; next.unit_price = p.price; }
       }
       return next;
@@ -96,7 +96,7 @@ export function InvoiceModal({ open, onOpenChange, initial, template, defaultCus
   const save = async () => {
     if (!customerId) { setErr("Please select a customer"); return; }
     if (!items.some((it) => it.description && Number(it.quantity) > 0)) { setErr("Add at least one line item"); return; }
-    const customer = customers.find((c) => c.id === customerId);
+    const customer = Array.isArray(customers) ? customers.find((c) => c.id === customerId) : null;
     const payload = {
       customer_id: customerId, customer_name: customer?.name || initial?.customer_name || "",
       issue_date: issueDate, due_date: dueDate, tax_rate: Number(taxRate) / 100, notes,

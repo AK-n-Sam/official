@@ -74,16 +74,18 @@ export default function Tasks() {
   useCreateParam(() => { setEditing(null); setModalOpen(true); });
 
   useEffect(() => {
-    api.get("/team").then(({ data }) => setMembers(data)).catch(() => {});
+    api.get("/team").then(({ data }) => setMembers(Array.isArray(data) ? data : [])).catch(() => setMembers([]));
   }, []);
+
+  const safeMembers = Array.isArray(members) ? members : [];
 
   const fields = useMemo(() => FIELDS.map((f) => (
     f.name === "assignee_id"
-      ? { ...f, options: members.map((m) => ({ value: m.id, label: m.name + (m.is_you ? " (you)" : "") })) }
+      ? { ...f, options: safeMembers.map((m) => ({ value: m.id, label: m.name + (m.is_you ? " (you)" : "") })) }
       : f
-  )), [members]);
+  )), [safeMembers]);
 
-  const filtered = useMemo(() => data.filter((t) => {
+  const filtered = useMemo(() => (Array.isArray(data) ? data : []).filter((t) => {
     if (search && !t.title.toLowerCase().includes(search.toLowerCase()) && !(t.customer_name || "").toLowerCase().includes(search.toLowerCase())) return false;
     if (priority !== "all" && t.priority !== priority) return false;
     if (statusFilter === "overdue") return isOverdue(t);
@@ -92,7 +94,7 @@ export default function Tasks() {
   }), [data, search, priority, statusFilter]);
 
   const submit = async (payload) => {
-    const m = members.find((x) => x.id === payload.assignee_id);
+    const m = safeMembers.find((x) => x.id === payload.assignee_id);
     payload.assignee = m ? m.name : "";
     try {
       if (editing) { await api.put(`/tasks/${editing.id}`, payload); toast.success("Task updated"); }

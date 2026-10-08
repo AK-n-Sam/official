@@ -40,12 +40,13 @@ export function TeamTab() {
 
   const load = useCallback(() => {
     setLoading(true);
-    api.get("/team").then(({ data }) => setMembers(data)).catch(() => {}).finally(() => setLoading(false));
+    api.get("/team").then(({ data }) => setMembers(Array.isArray(data) ? data : [])).catch(() => setMembers([])).finally(() => setLoading(false));
     api.get("/organizations/current").then(({ data }) => setOrg(data)).catch(() => {});
   }, []);
   useEffect(load, [load]);
 
-  const me = members.find((m) => m.is_you);
+  const safeMembers = Array.isArray(members) ? members : [];
+  const me = safeMembers.find((m) => m.is_you);
   const isOwner = me?.role === "owner";
   const isPrivileged = me?.role === "owner" || me?.role === "admin";
 

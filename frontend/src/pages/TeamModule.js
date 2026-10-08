@@ -57,9 +57,9 @@ export default function TeamModule() {
       api.get("/tasks"),
       api.get("/collaboration/approvals")
     ]).then(([resEmp, resTasks, resAppr]) => {
-      const empList = resEmp.data || [];
-      const taskList = resTasks.data || [];
-      const apprList = resAppr.data || [];
+      const empList = Array.isArray(resEmp.data) ? resEmp.data : [];
+      const taskList = Array.isArray(resTasks.data) ? resTasks.data : [];
+      const apprList = Array.isArray(resAppr.data) ? resAppr.data : [];
 
       setEmployees(empList);
       setTasks(taskList);

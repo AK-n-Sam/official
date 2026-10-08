@@ -28,7 +28,8 @@ export default function BusinessModule() {
       api.get("/invoices")
     ]).then(([resStats, resInv]) => {
       setStats(resStats.data);
-      setInvoices((resInv.data?.items || resInv.data || []).slice(0, 3));
+      const invArray = Array.isArray(resInv.data) ? resInv.data : (Array.isArray(resInv.data?.items) ? resInv.data.items : []);
+      setInvoices(invArray.slice(0, 3));
       setError(null);
     }).catch((e) => setError(e)).finally(() => setLoading(false));
   }, []);

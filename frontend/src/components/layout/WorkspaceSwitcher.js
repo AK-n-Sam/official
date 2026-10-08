@@ -14,14 +14,26 @@ export function WorkspaceSwitcher() {
   const [switching, setSwitching] = useState(false);
 
   useEffect(() => {
-    api.get("/organizations").then(({ data }) => setOrgs(data)).catch(() => {});
+    api
+      .get("/organizations")
+      .then(({ data }) => setOrgs(Array.isArray(data) ? data : []))
+      .catch(() => setOrgs([]));
   }, [user?.active_org_id]);
 
-  const active = orgs.find((o) => o.id === user?.active_org_id);
-  const initials = (active?.name || user?.name || "Workspace").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  const safeOrgs = Array.isArray(orgs) ? orgs : [];
+  const active = safeOrgs.find((o) => o?.id === user?.active_org_id);
+  const initials = (active?.name || user?.name || "Workspace")
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   const handleSwitch = async (orgId) => {
-    if (orgId === user?.active_org_id) { setOpen(false); return; }
+    if (orgId === user?.active_org_id) {
+      setOpen(false);
+      return;
+    }
     setSwitching(true);
     try {
       const { data } = await api.post("/organizations/switch", { org_id: orgId });
@@ -59,7 +71,7 @@ export function WorkspaceSwitcher() {
       </PopoverTrigger>
       <PopoverContent className="w-64 p-1.5 bg-[#171920] border-white/10 text-white" align="start">
         <p className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Switch Workspace</p>
-        {orgs.map((o) => (
+        {safeOrgs.map((o) => (
           <button
             key={o.id}
             onClick={() => handleSwitch(o.id)}
