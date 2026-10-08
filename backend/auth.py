@@ -27,7 +27,10 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def _secret() -> str:
-    return os.environ.get("JWT_SECRET", "sme-bmp-secure-jwt-production-secret-key-2026-xyz889")
+    secret = os.environ.get("JWT_SECRET")
+    if not secret:
+        raise RuntimeError("JWT_SECRET environment variable is required")
+    return secret
 
 
 def create_access_token(user_id: str, email: str) -> str:
@@ -55,8 +58,11 @@ def _public_user(user: dict) -> dict:
 
 
 async def ensure_admin_seeded():
-    admin_email = os.environ.get("ADMIN_EMAIL", "aniruddh.samarth@gmail.com").lower().strip()
-    admin_password = os.environ.get("ADMIN_PASSWORD", "Admin@12345")
+    admin_email = os.environ.get("ADMIN_EMAIL")
+    admin_password = os.environ.get("ADMIN_PASSWORD")
+    if not admin_email or not admin_password:
+        raise RuntimeError("ADMIN_EMAIL and ADMIN_PASSWORD environment variables are required")
+    admin_email = admin_email.lower().strip()
     existing = await db.users.find_one({"email": admin_email})
     if existing is None:
         user_id = f"user_{uuid.uuid4().hex[:12]}"
@@ -150,7 +156,7 @@ async def register(payload: RegisterInput, response: Response):
         raise HTTPException(status_code=400, detail="An account with this email already exists")
     user = await _build_user(payload.name.strip(), email, hash_password(payload.password), organization_name=payload.organization_name)
     token = create_access_token(user["id"], email)
-    response.set_cookie("access_token", token, httponly=True, secure=False if os.environ.get("VERCEL") is None else True, samesite="lax", max_age=604800, path="/")
+    response.set_cookie("access_token", token, httponly=True, secure=True, samesite="lax", max_age=604800, path="/")
     active_org = await db.organizations.find_one({"id": user["active_org_id"]}, {"_id": 0})
     return {"token": token, "user": _public_user(user), "active_org": active_org}
 
@@ -171,7 +177,7 @@ async def login(payload: LoginInput, response: Response):
         user["active_org_id"] = payload.workspace_id
 
     token = create_access_token(user["id"], email)
-    response.set_cookie("access_token", token, httponly=True, secure=False if os.environ.get("VERCEL") is None else True, samesite="lax", max_age=604800, path="/")
+    response.set_cookie("access_token", token, httponly=True, secure=True, samesite="lax", max_age=604800, path="/")
     active_org = await db.organizations.find_one({"id": user.get("active_org_id")}, {"_id": 0})
     return {"token": token, "user": _public_user(user), "active_org": active_org}
 
@@ -243,7 +249,10 @@ async def demo_login(payload: dict = Body(...), response: Response = None):
     requested_role = (payload.get("role") or "owner").lower()
     await ensure_admin_seeded()
 
-    admin_email = os.environ.get("ADMIN_EMAIL", "aniruddh.samarth@gmail.com").lower().strip()
+    admin_email_raw = os.environ.get("ADMIN_EMAIL")
+    if not admin_email_raw:
+        raise RuntimeError("ADMIN_EMAIL environment variable is required")
+    admin_email = admin_email_raw.lower().strip()
 
     if requested_role in ("admin", "enterprise_owner", "owner"):
         user = await db.users.find_one({"email": admin_email})
@@ -272,6 +281,6 @@ async def demo_login(payload: dict = Body(...), response: Response = None):
 
     token = create_access_token(user["id"], user["email"])
     if response:
-        response.set_cookie("access_token", token, httponly=True, secure=False if os.environ.get("VERCEL") is None else True, samesite="lax", max_age=604800, path="/")
+        response.set_cookie("access_token", token, httponly=True, secure=True, samesite="lax", max_age=604800, path="/")
     active_org = await db.organizations.find_one({"id": user.get("active_org_id")}, {"_id": 0})
     return {"token": token, "user": _public_user(user), "active_org": active_org}

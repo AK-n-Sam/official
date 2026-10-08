@@ -14,7 +14,7 @@ router = APIRouter(prefix="/communications", tags=["communications"])
 webhook_router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 def get_provider_config():
-    app_base = os.getenv("APP_URL") or (f"https://{os.getenv('VERCEL_URL')}" if os.getenv("VERCEL_URL") else "http://localhost:3000")
+    app_base = os.getenv("APP_URL") or "http://localhost:3000"
     return {
         "gmail": {
             "client_id": os.getenv("GMAIL_CLIENT_ID", ""),

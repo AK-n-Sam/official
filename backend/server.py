@@ -2048,24 +2048,28 @@ async def get_today_queue(user: dict = Depends(get_current_user)):
 
 from communications import router as comms_router, webhook_router
 
+DEMO_MODE = os.environ.get("DEMO_MODE", "false").lower() == "true"
+
+
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok"}
+
+
 app.include_router(auth_router, prefix="/api")
-app.include_router(auth_router)
 
 app.include_router(comms_router, prefix="/api")
 app.include_router(webhook_router, prefix="/api")
 
 app.include_router(api, prefix="/api")
-app.include_router(api)
 
-cors_origins = [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()]
-if not cors_origins:
-    cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:8000", "http://127.0.0.1:8000"]
+_raw_origins = os.environ.get("CORS_ORIGINS", "")
+cors_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()] if _raw_origins else ["*"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=cors_origins,
-    allow_origin_regex=r"https://.*\.vercel\.app|http://localhost:\d+|http://127\.0\.0\.1:\d+",
     allow_methods=["*"],
     allow_headers=["*"],
 )
