@@ -46,6 +46,7 @@ export default function BusinessModule() {
   }));
 
   const hasSalesData = salesTrendData.some((t) => t.val > 0);
+  const safeInvoices = Array.isArray(invoices) ? invoices : [];
   const tasksAttention = stats?.tasks_attention || [];
   const totalSales = stats?.total_sales || 0;
   const outstanding = stats?.outstanding || 0;
@@ -207,7 +208,7 @@ export default function BusinessModule() {
               View all
             </Button>
           </div>
-          {invoices.length > 0 ? (
+          {safeInvoices.length > 0 ? (
             <div className="divide-y divide-border/60 text-xs">
               <div className="grid grid-cols-4 pb-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground font-mono">
                 <span>INVOICE</span>
@@ -215,7 +216,7 @@ export default function BusinessModule() {
                 <span className="text-right">AMOUNT</span>
                 <span className="text-right">STATUS</span>
               </div>
-              {invoices.map((inv) => (
+              {safeInvoices.map((inv) => (
                 <div key={inv.id} className="grid grid-cols-4 py-2.5 items-center">
                   <span className="font-mono text-[11px] font-semibold text-foreground truncate">{inv.invoice_number}</span>
                   <span className="truncate text-[11px] text-muted-foreground">{inv.customer_name}</span>
@@ -248,9 +249,9 @@ export default function BusinessModule() {
             <h3 className="font-heading font-bold text-sm text-foreground">My next actions</h3>
             <span className="text-[10px] text-muted-foreground font-medium">Today</span>
           </div>
-          {tasksAttention.length > 0 ? (
+          {(Array.isArray(tasksAttention) ? tasksAttention : []).length > 0 ? (
             <div className="space-y-3 pt-1 text-xs">
-              {tasksAttention.map((task) => (
+              {(Array.isArray(tasksAttention) ? tasksAttention : []).map((task) => (
                 <div key={task.id} className="flex items-start gap-2 border-b border-border/50 pb-2 last:border-0">
                   <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-emerald-500 bg-emerald-50 text-emerald-600 font-bold text-[10px] mt-0.5">✓</span>
                   <div>

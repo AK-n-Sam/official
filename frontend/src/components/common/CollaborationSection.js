@@ -105,11 +105,11 @@ export function CollaborationSection({ targetType, targetId, title = "Team Conte
       </div>
 
       {/* Work Handoff Trail */}
-      {handoffs.length > 0 && (
+      {(Array.isArray(handoffs) ? handoffs : []).length > 0 && (
         <div className="my-4 space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-3.5">
           <p className="text-xs font-semibold text-primary uppercase tracking-wider">Handoff History</p>
           <div className="space-y-1.5">
-            {handoffs.map((h) => (
+            {(Array.isArray(handoffs) ? handoffs : []).map((h) => (
               <div key={h.id} className="flex flex-wrap items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5">
                   <span className="font-medium text-foreground">{h.from_user_name}</span>
@@ -128,11 +128,11 @@ export function CollaborationSection({ targetType, targetId, title = "Team Conte
       <div className="mt-4 space-y-4">
         {loading ? (
           <p className="py-4 text-center text-xs text-muted-foreground">Loading collaboration history...</p>
-        ) : comments.length === 0 ? (
+        ) : (Array.isArray(comments) ? comments : []).length === 0 ? (
           <p className="py-3 text-center text-xs text-muted-foreground">No notes or @mentions yet. Type below to add contextual team notes.</p>
         ) : (
           <div className="space-y-3">
-            {comments.map((c) => (
+            {(Array.isArray(comments) ? comments : []).map((c) => (
               <div key={c.id} className="rounded-lg border border-border/50 bg-muted/20 p-3 text-xs">
                 <div className="flex items-center justify-between font-medium">
                   <div className="flex items-center gap-1.5">
@@ -178,7 +178,7 @@ export function CollaborationSection({ targetType, targetId, title = "Team Conte
               <Select value={handoffTarget} onValueChange={setHandoffTarget}>
                 <SelectTrigger className="mt-1.5"><SelectValue placeholder="Select teammate..." /></SelectTrigger>
                 <SelectContent>
-                  {members.map((m) => (
+                  {(Array.isArray(members) ? members : []).map((m) => (
                     <SelectItem key={m.id} value={m.id}>
                       {m.name} ({m.role.toUpperCase()})
                     </SelectItem>

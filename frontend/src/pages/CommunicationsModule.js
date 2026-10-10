@@ -148,7 +148,7 @@ export default function CommunicationsModule() {
     }
   };
 
-  const filteredConvs = conversations.filter((c) => {
+  const filteredConvs = (Array.isArray(conversations) ? conversations : []).filter((c) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (c.subject || "").toLowerCase().includes(q) || (c.channel || "").toLowerCase().includes(q);

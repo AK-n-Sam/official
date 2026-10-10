@@ -120,7 +120,7 @@ class TestReassign:
         cr = requests.post(
             f"{BASE_URL}/api/customers",
             headers=_h(mtok),
-            json={"name": f"TEST_cust_{uuid.uuid4().hex[:5]}", "email": "x@y.com"},
+            json={"name": f"TEST_cust_{uuid.uuid4().hex[:5]}", "email": f"test_{uuid.uuid4().hex[:6]}@example.com"},
             timeout=30,
         )
         assert cr.status_code in (200, 201), cr.text

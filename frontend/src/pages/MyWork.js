@@ -91,19 +91,19 @@ export default function MyWork() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Card className="border-border/70 bg-card/90 p-4" data-testid="mywork-open-tasks">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">My Tasks</p>
-          <p className="mt-2 font-mono text-2xl font-extrabold">{data.open_tasks}</p>
+          <p className="mt-2 font-mono text-2xl font-extrabold">{data?.open_tasks || 0}</p>
         </Card>
         <Card className="border-border/70 bg-card/90 p-4" data-testid="mywork-open-leads">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active Deals</p>
-          <p className="mt-2 font-mono text-2xl font-extrabold">{data.open_leads}</p>
+          <p className="mt-2 font-mono text-2xl font-extrabold">{data?.open_leads || 0}</p>
         </Card>
         <Card className="border-border/70 bg-card/90 p-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pending Approvals</p>
-          <p className={`mt-2 font-mono text-2xl font-extrabold ${data.pending_approvals_count > 0 ? "text-amber-500" : ""}`}>{data.pending_approvals_count}</p>
+          <p className={`mt-2 font-mono text-2xl font-extrabold ${(data?.pending_approvals_count || 0) > 0 ? "text-amber-500" : ""}`}>{data?.pending_approvals_count || 0}</p>
         </Card>
         <Card className="border-border/70 bg-card/90 p-4" data-testid="mywork-overdue">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Overdue Items</p>
-          <p className="mt-2 font-mono text-2xl font-extrabold text-rose-500">{data.tasks.filter(isOverdue).length}</p>
+          <p className="mt-2 font-mono text-2xl font-extrabold text-rose-500">{(data?.tasks || []).filter(isOverdue).length}</p>
         </Card>
       </div>
 
@@ -243,8 +243,8 @@ export default function MyWork() {
             <h3 className="font-heading text-base font-semibold">My Assigned Tasks</h3>
           </div>
           <div className="max-h-[380px] divide-y divide-border/50 overflow-y-auto">
-            {data.tasks.length === 0 ? <EmptyState icon={CheckSquare} title="No open tasks" description="You're all caught up." /> :
-              data.tasks.map((t) => (
+            {(data?.tasks || []).length === 0 ? <EmptyState icon={CheckSquare} title="No open tasks" description="You're all caught up." /> :
+              (data?.tasks || []).map((t) => (
                 <button key={t.id} onClick={() => navigate("/tasks")} className="flex w-full items-start gap-3 px-5 py-3 text-left hover:bg-accent/40">
                   {isOverdue(t) ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" /> : <CheckSquare className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />}
                   <div className="min-w-0 flex-1">
@@ -268,8 +268,8 @@ export default function MyWork() {
             <h3 className="font-heading text-base font-semibold">My Active Leads</h3>
           </div>
           <div className="max-h-[380px] divide-y divide-border/50 overflow-y-auto">
-            {data.leads.length === 0 ? <EmptyState icon={Target} title="No active leads" description="Leads you own appear here." /> :
-              data.leads.map((l) => (
+            {(data?.leads || []).length === 0 ? <EmptyState icon={Target} title="No active leads" description="Leads you own appear here." /> :
+              (data?.leads || []).map((l) => (
                 <button key={l.id} onClick={() => navigate("/leads")} className="flex w-full items-center justify-between px-5 py-3 text-left hover:bg-accent/40">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{l.company || l.name}</p>
@@ -291,8 +291,8 @@ export default function MyWork() {
           <h3 className="font-heading text-base font-semibold">My Recent Activity History</h3>
         </div>
         <div className="divide-y divide-border/50">
-          {data.activity.length === 0 ? <p className="px-5 py-10 text-center text-sm text-muted-foreground">No activity yet — create an invoice or customer to get started.</p> :
-            data.activity.map((a, i) => {
+          {(data?.activity || []).length === 0 ? <p className="px-5 py-10 text-center text-sm text-muted-foreground">No activity yet — create an invoice or customer to get started.</p> :
+            (data?.activity || []).map((a, i) => {
               const Icon = ACT_ICON[a.type] || Activity;
               return (
                 <button key={i} onClick={() => a.link && navigate(a.link)} className="flex w-full items-start gap-3 px-5 py-3 text-left hover:bg-accent/40">

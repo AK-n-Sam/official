@@ -154,10 +154,10 @@ export default function ExecutiveCockpit() {
           </div>
 
           <div className="divide-y divide-border/50">
-            {data.top_customers.length === 0 ? (
+            {(data?.top_customers || []).length === 0 ? (
               <p className="py-6 text-center text-xs text-muted-foreground">No customer sales recorded yet.</p>
             ) : (
-              data.top_customers.map((c, idx) => (
+              (data?.top_customers || []).map((c, idx) => (
                 <div key={idx} className="flex items-center justify-between py-2.5">
                   <div className="flex items-center gap-2">
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">{idx + 1}</span>
@@ -172,18 +172,18 @@ export default function ExecutiveCockpit() {
       </div>
 
       {/* Strategic Pending Approvals */}
-      {data.pending_approvals.length > 0 && (
+      {(data?.pending_approvals || []).length > 0 && (
         <Card className="border-amber-500/40 bg-amber-500/5 p-5 space-y-3">
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-2 text-sm font-semibold text-amber-600 dark:text-amber-400">
-              <Activity className="h-4 w-4" /> Pending Executive Sign-Offs & Approvals ({data.pending_approvals.length})
+              <Activity className="h-4 w-4" /> Pending Executive Sign-Offs & Approvals ({(data?.pending_approvals || []).length})
             </span>
             <Button size="sm" variant="outline" onClick={() => navigate("/my-work")} className="h-7 text-xs">
               Review in My Work <ChevronRight className="ml-1 h-3.5 w-3.5" />
             </Button>
           </div>
           <div className="divide-y divide-border/50">
-            {data.pending_approvals.map((a) => (
+            {(data?.pending_approvals || []).map((a) => (
               <div key={a.id} className="flex items-center justify-between py-2 text-xs">
                 <div>
                   <p className="font-semibold text-foreground">{a.title}</p>

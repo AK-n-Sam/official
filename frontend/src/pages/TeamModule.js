@@ -106,7 +106,7 @@ export default function TeamModule() {
     if (!selectedTask || !assigneeId) return;
     try {
       await api.put(`/tasks/${selectedTask.id}`, { assigned_to: assigneeId });
-      toast.success(`Task assigned to ${employees.find((e) => e.id === assigneeId)?.name || "team member"}`);
+      toast.success(`Task assigned to ${(Array.isArray(employees) ? employees : []).find((e) => e.id === assigneeId)?.name || "team member"}`);
       setAssignOpen(false);
       loadData();
     } catch (err) {
@@ -117,9 +117,13 @@ export default function TeamModule() {
   if (loading) return <div className="space-y-6"><Skeleton className="h-12 w-64" /><Skeleton className="h-96 rounded-xl" /></div>;
   if (error) return <ErrorState message={formatApiError(error)} onRetry={loadData} />;
 
+  const safeEmployees = Array.isArray(employees) ? employees : [];
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  const safeApprovals = Array.isArray(approvals) ? approvals : [];
+
   // Calculate workload per employee
-  const employeeWorkload = employees.map((emp) => {
-    const assigned = tasks.filter((t) => t.assigned_to === emp.name || t.assigned_to === emp.id);
+  const employeeWorkload = safeEmployees.map((emp) => {
+    const assigned = safeTasks.filter((t) => t.assigned_to === emp.name || t.assigned_to === emp.id);
     const active = assigned.filter((t) => t.status !== "completed");
     const overdue = active.filter((t) => t.due_date && t.due_date < new Date().toISOString().slice(0, 10));
     let status = "Balanced";
@@ -132,8 +136,8 @@ export default function TeamModule() {
 
   const overloadedList = employeeWorkload.filter((e) => e.status === "Overloaded");
   const underloadedList = employeeWorkload.filter((e) => e.status === "Underloaded");
-  const overdueTasks = tasks.filter((t) => t.due_date && t.due_date < new Date().toISOString().slice(0, 10) && t.status !== "completed");
-  const pendingApprovals = approvals.filter((a) => a.status === "pending");
+  const overdueTasks = safeTasks.filter((t) => t.due_date && t.due_date < new Date().toISOString().slice(0, 10) && t.status !== "completed");
+  const pendingApprovals = safeApprovals.filter((a) => a.status === "pending");
 
   return (
     <div className="space-y-6 animate-in-up">

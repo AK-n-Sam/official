@@ -120,7 +120,7 @@ export default function Dashboard() {
       )}
 
       {/* Decision Support: Priority Attention Card */}
-      {stats.decision_support?.length > 0 && (
+      {(stats?.decision_support || []).length > 0 && (
         <Card className="border-amber-500/30 bg-amber-500/5 p-5 shadow-sm space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -128,11 +128,11 @@ export default function Dashboard() {
               <h3 className="font-heading font-bold text-base">Business Attention & Next Actions</h3>
             </div>
             <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
-              {stats.decision_support.length} Action Needed
+              {(stats?.decision_support || []).length} Action Needed
             </Badge>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-            {stats.decision_support.map((item) => (
+            {(stats?.decision_support || []).map((item) => (
               <div key={item.id} className="rounded-lg border border-border bg-card p-4 space-y-2 flex flex-col justify-between">
                 <div>
                   <h4 className="font-semibold text-sm">{item.title}</h4>
@@ -214,11 +214,11 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card className="border-border bg-card p-5 shadow-sm" data-testid="sales-by-category-chart">
               <h3 className="mb-4 font-heading text-base font-semibold">Sales by Category</h3>
-              {stats.sales_by_category.length === 0 ? (
+              {(stats?.sales_by_category || []).length === 0 ? (
                 <p className="py-12 text-center text-sm text-muted-foreground">No sales data yet.</p>
               ) : (
                 <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={stats.sales_by_category} layout="vertical" margin={{ left: 20, right: 16 }}>
+                  <BarChart data={stats.sales_by_category || []} layout="vertical" margin={{ left: 20, right: 16 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={yFmt} />
                     <YAxis type="category" dataKey="category" width={90} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
@@ -232,8 +232,8 @@ export default function Dashboard() {
               <h3 className="mb-4 font-heading text-base font-semibold">Invoice Status</h3>
               <ResponsiveContainer width="100%" height={260}>
                 <PieChart>
-                  <Pie data={stats.invoice_status_breakdown} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={95} innerRadius={52} paddingAngle={2} isAnimationActive={false}>
-                    {stats.invoice_status_breakdown.map((_, i) => (
+                  <Pie data={stats?.invoice_status_breakdown || []} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={95} innerRadius={52} paddingAngle={2} isAnimationActive={false}>
+                    {(stats?.invoice_status_breakdown || []).map((_, i) => (
                       <Cell key={i} stroke="hsl(var(--card))" strokeWidth={2} fill={["hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-1))", "hsl(var(--chart-5))", "hsl(var(--chart-4))", "hsl(var(--muted-foreground))", "hsl(var(--border))"][i % 7]} />
                     ))}
                   </Pie>
@@ -248,9 +248,9 @@ export default function Dashboard() {
             <div className="lg:col-span-2">
               <SectionCard title="Recent Invoices" action="View all" onAction={() => navigate("/invoices")} testId="recent-invoices">
                 <div className="divide-y divide-border/50">
-                  {stats.recent_invoices.length === 0 ? (
+                  {(stats?.recent_invoices || []).length === 0 ? (
                     <p className="px-5 py-8 text-center text-sm text-muted-foreground">No invoices yet.</p>
-                  ) : stats.recent_invoices.map((inv) => (
+                  ) : (stats?.recent_invoices || []).map((inv) => (
                     <button key={inv.id} onClick={() => navigate(`/invoices/${inv.id}`)} className="flex w-full items-center justify-between px-5 py-3 text-left hover:bg-accent/40">
                       <div className="flex items-center gap-3">
                         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted"><FileText className="h-4 w-4 text-muted-foreground" /></div>
@@ -264,7 +264,7 @@ export default function Dashboard() {
             </div>
             <SectionCard title="Recent Transactions" testId="recent-transactions">
               <div className="divide-y divide-border/50">
-                {stats.recent_transactions.map((t, i) => (
+                {(stats?.recent_transactions || []).map((t, i) => (
                   <div key={i} className="flex items-center justify-between px-5 py-3">
                     <div className="flex items-center gap-3">
                       <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${t.type === "income" ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"}`}>
@@ -291,9 +291,9 @@ export default function Dashboard() {
 
           <SectionCard title="Tasks Requiring Attention" action="View all" onAction={() => navigate("/tasks")} testId="tasks-attention">
             <div className="divide-y divide-border/50">
-              {stats.tasks_attention.length === 0 ? (
+              {(stats?.tasks_attention || []).length === 0 ? (
                 <p className="px-5 py-8 text-center text-sm text-muted-foreground">Nothing urgent — you're all caught up.</p>
-              ) : stats.tasks_attention.map((t) => (
+              ) : (stats?.tasks_attention || []).map((t) => (
                 <button key={t.id} onClick={() => navigate("/tasks")} className="flex w-full items-start gap-3 px-5 py-3 text-left hover:bg-accent/40">
                   <CheckSquare className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                   <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{t.title}</p><p className="text-xs text-muted-foreground">Due {formatDate(t.due_date)}{t.customer_name ? ` · ${t.customer_name}` : ""}</p></div>

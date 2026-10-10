@@ -62,20 +62,22 @@ export default function Invoices() {
   // the summary cards always reflect the whole list and switching tabs is instant.
   const { data, loading, error, refetch } = useResource("/invoices", debounced ? { search: debounced } : {});
 
+  const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+
   const counts = useMemo(
-    () => Object.fromEntries(STATUSES.map((s) => [s, data.filter(TAB_FILTERS[s]).length])),
-    [data]
+    () => Object.fromEntries(STATUSES.map((s) => [s, safeData.filter(TAB_FILTERS[s]).length])),
+    [safeData]
   );
   const summary = useMemo(() => {
-    const unpaid = data.filter(TAB_FILTERS.unpaid);
-    const overdue = data.filter(TAB_FILTERS.overdue);
+    const unpaid = safeData.filter(TAB_FILTERS.unpaid);
+    const overdue = safeData.filter(TAB_FILTERS.overdue);
     return {
       outstanding: unpaid.reduce((s, r) => s + balanceOf(r), 0),
       overdue: overdue.reduce((s, r) => s + balanceOf(r), 0),
-      collected: data.reduce((s, r) => s + (r.amount_paid || 0), 0),
+      collected: safeData.reduce((s, r) => s + (r.amount_paid || 0), 0),
     };
-  }, [data]);
-  const rows = useMemo(() => data.filter(TAB_FILTERS[status]), [data, status]);
+  }, [safeData]);
+  const rows = useMemo(() => safeData.filter(TAB_FILTERS[status]), [safeData, status]);
 
   const handleDelete = async () => {
     try { await api.delete(`/invoices/${deleting.id}`); toast.success("Invoice deleted"); setDeleting(null); refetch(); }

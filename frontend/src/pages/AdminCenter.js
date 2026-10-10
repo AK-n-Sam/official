@@ -57,7 +57,7 @@ export default function AdminCenter() {
 
       if (overviewRes.status === "fulfilled") setData(overviewRes.value.data);
       if (previewRes.status === "fulfilled") setSystemPreview(previewRes.value.data);
-      if (requestsRes.status === "fulfilled") setAccessRequests(requestsRes.value.data);
+      if (requestsRes.status === "fulfilled") setAccessRequests(Array.isArray(requestsRes.value.data) ? requestsRes.value.data : []);
       setError(null);
     } catch (e) {
       setError(e);
@@ -191,9 +191,9 @@ export default function AdminCenter() {
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Access Requests</span>
             <Inbox className="h-4 w-4 text-amber-500" />
           </div>
-          <p className="mt-2 font-mono text-3xl font-extrabold">{accessRequests.length}</p>
+          <p className="mt-2 font-mono text-3xl font-extrabold">{(Array.isArray(accessRequests) ? accessRequests : []).length}</p>
           <p className="mt-1 text-xs text-muted-foreground font-medium">
-            {accessRequests.filter((r) => r.status === "pending").length} Pending Review
+            {(Array.isArray(accessRequests) ? accessRequests : []).filter((r) => r.status === "pending").length} Pending Review
           </p>
         </Card>
 
@@ -216,7 +216,7 @@ export default function AdminCenter() {
             <ShieldCheck className="mr-2 h-4 w-4" /> Governance Overview
           </TabsTrigger>
           <TabsTrigger value="requests" data-testid="tab-admin-requests">
-            <Inbox className="mr-2 h-4 w-4" /> Access Requests ({accessRequests.filter((r) => r.status === "pending").length})
+            <Inbox className="mr-2 h-4 w-4" /> Access Requests ({(Array.isArray(accessRequests) ? accessRequests : []).filter((r) => r.status === "pending").length})
           </TabsTrigger>
           <TabsTrigger value="preview" data-testid="tab-admin-data-preview">
             <Database className="mr-2 h-4 w-4" /> Backend Data Preview
@@ -348,7 +348,7 @@ export default function AdminCenter() {
               </div>
             ) : (
               <div className="divide-y divide-border/50">
-                {accessRequests.map((req) => (
+                {(Array.isArray(accessRequests) ? accessRequests : []).map((req) => (
                   <div key={req.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-4 gap-4">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">

@@ -222,9 +222,10 @@ function ConnectedChannelsTab() {
       .catch((e) => console.error(e));
   }, []);
 
-  const gmailConnected = accounts.some((a) => a.provider === "gmail" && a.status === "connected");
-  const outlookConnected = accounts.some((a) => a.provider === "outlook" && a.status === "connected");
-  const whatsappConnected = accounts.some((a) => a.provider === "whatsapp" && a.status === "connected");
+  const safeAccounts = Array.isArray(accounts) ? accounts : [];
+  const gmailConnected = safeAccounts.some((a) => a.provider === "gmail" && a.status === "connected");
+  const outlookConnected = safeAccounts.some((a) => a.provider === "outlook" && a.status === "connected");
+  const whatsappConnected = safeAccounts.some((a) => a.provider === "whatsapp" && a.status === "connected");
 
   return (
     <div className="space-y-6">

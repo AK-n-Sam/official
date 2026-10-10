@@ -246,16 +246,13 @@ class TestInvoices:
 # ---------- Stock Movements ----------
 class TestStockMovements:
     def test_movement_updates_stock(self, admin_client):
-        products = admin_client.get(f"{API}/products").json()
-        if not products:
-            admin_client.post(f"{API}/products", json={
-                "name": f"TEST_StockProd_{uuid.uuid4().hex[:4]}",
-                "sku": f"SKU-{uuid.uuid4().hex[:6]}",
-                "price": 100, "cost": 50, "stock_quantity": 20, "reorder_level": 5
-            })
-            products = admin_client.get(f"{API}/products").json()
-        assert products
-        p = products[0]
+        res = admin_client.post(f"{API}/products", json={
+            "name": f"TEST_StockProd_{uuid.uuid4().hex[:4]}",
+            "sku": f"SKU-{uuid.uuid4().hex[:6]}",
+            "price": 100, "cost": 50, "stock_quantity": 20, "reorder_level": 5
+        })
+        assert res.status_code == 200
+        p = res.json()
         starting = p["stock_quantity"]
 
         r = admin_client.post(f"{API}/stock-movements", json={

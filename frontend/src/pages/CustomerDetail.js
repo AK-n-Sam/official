@@ -180,10 +180,10 @@ export default function CustomerDetail() {
 
       <Tabs defaultValue="timeline">
         <TabsList data-testid="customer-tabs">
-          <TabsTrigger value="timeline">Activity Timeline ({data.timeline?.length || 0})</TabsTrigger>
-          <TabsTrigger value="invoices">Invoices ({data.invoices.length})</TabsTrigger>
-          <TabsTrigger value="payments">Payments ({data.payments.length})</TabsTrigger>
-          <TabsTrigger value="tasks">Tasks ({data.tasks.length})</TabsTrigger>
+          <TabsTrigger value="timeline">Activity Timeline ({data?.timeline?.length || 0})</TabsTrigger>
+          <TabsTrigger value="invoices">Invoices ({data?.invoices?.length || 0})</TabsTrigger>
+          <TabsTrigger value="payments">Payments ({data?.payments?.length || 0})</TabsTrigger>
+          <TabsTrigger value="tasks">Tasks ({data?.tasks?.length || 0})</TabsTrigger>
           <TabsTrigger value="about">About</TabsTrigger>
         </TabsList>
 
@@ -193,7 +193,7 @@ export default function CustomerDetail() {
               <p className="px-5 py-8 text-center text-sm text-muted-foreground">No recent activity recorded.</p>
             ) : (
               <div className="divide-y divide-border/50">
-                {data.timeline.map((evt) => (
+                {(data.timeline || []).map((evt) => (
                   <div key={evt.id} className="flex items-start justify-between px-5 py-3.5 hover:bg-accent/30 transition-colors">
                     <div className="flex items-start gap-3">
                       {evt.type === "invoice" && <FileText className="h-4 w-4 text-blue-500 mt-0.5" />}
@@ -223,9 +223,9 @@ export default function CustomerDetail() {
 
         <TabsContent value="invoices">
           <Card className="border-border/70 bg-card/90">
-            {data.invoices.length === 0 ? <p className="px-5 py-8 text-center text-sm text-muted-foreground">No invoices.</p> :
+            {(data?.invoices || []).length === 0 ? <p className="px-5 py-8 text-center text-sm text-muted-foreground">No invoices.</p> :
               <div className="divide-y divide-border/50">
-                {data.invoices.map((inv) => (
+                {(data.invoices || []).map((inv) => (
                   <div key={inv.id} className="flex cursor-pointer items-center justify-between px-5 py-3 hover:bg-accent/40" onClick={() => navigate(`/invoices/${inv.id}`)} data-testid={`customer-invoice-${inv.id}`}>
                     <div className="flex items-center gap-3"><FileText className="h-4 w-4 text-muted-foreground" />
                       <div><p className="font-mono text-sm font-medium">{inv.invoice_number}</p><p className="text-xs text-muted-foreground">{formatDate(inv.issue_date)}</p></div></div>
@@ -238,9 +238,9 @@ export default function CustomerDetail() {
 
         <TabsContent value="payments">
           <Card className="border-border/70 bg-card/90">
-            {data.payments.length === 0 ? <p className="px-5 py-8 text-center text-sm text-muted-foreground">No payments.</p> :
+            {(data?.payments || []).length === 0 ? <p className="px-5 py-8 text-center text-sm text-muted-foreground">No payments.</p> :
               <div className="divide-y divide-border/50">
-                {data.payments.map((p) => (
+                {(data.payments || []).map((p) => (
                   <div key={p.id} className="flex items-center justify-between px-5 py-3">
                     <div className="flex items-center gap-3"><CreditCard className="h-4 w-4 text-emerald-500" />
                       <div><p className="text-sm font-medium">{p.invoice_number}</p><p className="text-xs text-muted-foreground capitalize">{String(p.method).replace(/_/g, " ")} · {formatDate(p.date)}</p></div></div>
@@ -253,9 +253,9 @@ export default function CustomerDetail() {
 
         <TabsContent value="tasks">
           <Card className="border-border/70 bg-card/90">
-            {data.tasks.length === 0 ? <p className="px-5 py-8 text-center text-sm text-muted-foreground">No related tasks.</p> :
+            {(data?.tasks || []).length === 0 ? <p className="px-5 py-8 text-center text-sm text-muted-foreground">No related tasks.</p> :
               <div className="divide-y divide-border/50">
-                {data.tasks.map((t) => (
+                {(data.tasks || []).map((t) => (
                   <div key={t.id} className="flex items-center justify-between px-5 py-3">
                     <div className="flex items-center gap-3"><CheckSquare className="h-4 w-4 text-muted-foreground" />
                       <div><p className="text-sm font-medium">{t.title}</p><p className="text-xs text-muted-foreground">Due {formatDate(t.due_date)}</p></div></div>

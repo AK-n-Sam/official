@@ -105,7 +105,7 @@ export default function Tasks() {
   // Optimistic: the card moves immediately and snaps back if the save fails.
   const moveTo = async (task, status) => {
     const previous = data;
-    setData((rows) => rows.map((t) => (t.id === task.id ? { ...t, status } : t)));
+    setData((rows) => (Array.isArray(rows) ? rows : []).map((t) => (t.id === task.id ? { ...t, status } : t)));
     try { await api.put(`/tasks/${task.id}`, { status }); }
     catch (e) { setData(previous); toast.error(formatApiError(e)); }
   };
@@ -114,7 +114,8 @@ export default function Tasks() {
   const dropOn = (col) => (e) => {
     e.preventDefault();
     setOverCol(null);
-    const task = data.find((t) => t.id === e.dataTransfer.getData("text/plain"));
+    const safeData = Array.isArray(data) ? data : [];
+    const task = safeData.find((t) => t.id === e.dataTransfer.getData("text/plain"));
     if (task && !col.match.includes(task.status)) {
       moveTo(task, col.key);
       toast.success(`Moved to ${col.label}`, { description: task.title });
@@ -125,7 +126,7 @@ export default function Tasks() {
     catch (e) { toast.error(formatApiError(e)); }
   };
 
-  const overdueCount = data.filter(isOverdue).length;
+  const overdueCount = (Array.isArray(data) ? data : []).filter(isOverdue).length;
 
   const columns = [
     { key: "title", label: "Task", render: (r) => (

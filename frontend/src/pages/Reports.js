@@ -107,8 +107,8 @@ export default function Reports() {
           ) : (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie data={stats.expense_breakdown} dataKey="amount" nameKey="category" cx="50%" cy="50%" outerRadius={100} innerRadius={55} paddingAngle={2} isAnimationActive={false}>
-                  {stats.expense_breakdown.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="hsl(var(--card))" strokeWidth={2} />)}
+                <Pie data={stats?.expense_breakdown || []} dataKey="amount" nameKey="category" cx="50%" cy="50%" outerRadius={100} innerRadius={55} paddingAngle={2} isAnimationActive={false}>
+                  {(stats?.expense_breakdown || []).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="hsl(var(--card))" strokeWidth={2} />)}
                 </Pie>
                 <Tooltip contentStyle={TOOLTIP} formatter={(v) => format(v)} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />

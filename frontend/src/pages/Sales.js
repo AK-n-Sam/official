@@ -99,7 +99,7 @@ export default function Sales() {
 
   const moveStage = async (lead, stage) => {
     const previous = leads;
-    setData((rows) => rows.map((l) => (l.id === lead.id ? { ...l, stage } : l)));
+    setData((rows) => (Array.isArray(rows) ? rows : []).map((l) => (l.id === lead.id ? { ...l, stage } : l)));
     try {
       await api.put(`/leads/${lead.id}`, { stage });
       if (stage === "won" && !lead.customer_id) {
@@ -111,10 +111,13 @@ export default function Sales() {
     } catch (e) { setData(previous); toast.error(formatApiError(e)); }
   };
 
+  const safeLeads = useMemo(() => (Array.isArray(leads) ? leads : []), [leads]);
+  const safePayments = useMemo(() => (Array.isArray(payments) ? payments : []), [payments]);
+
   const dropOn = (stage) => (e) => {
     e.preventDefault();
     setOverStage(null);
-    const lead = leads.find((l) => l.id === e.dataTransfer.getData("text/plain"));
+    const lead = safeLeads.find((l) => l.id === e.dataTransfer.getData("text/plain"));
     if (lead && lead.stage !== stage.key) moveStage(lead, stage.key);
   };
 
@@ -123,11 +126,11 @@ export default function Sales() {
     catch (e) { toast.error(formatApiError(e)); }
   };
 
-  const stageTotal = (key) => leads.filter((l) => l.stage === key).reduce((s, l) => s + (l.value || 0), 0);
-  const openDeals = leads.filter((l) => !["won", "lost"].includes(l.stage));
+  const stageTotal = (key) => safeLeads.filter((l) => l.stage === key).reduce((s, l) => s + (l.value || 0), 0);
+  const openDeals = safeLeads.filter((l) => !["won", "lost"].includes(l.stage));
   const openValue = openDeals.reduce((s, l) => s + (l.value || 0), 0);
-  const wonCount = leads.filter((l) => l.stage === "won").length;
-  const lostCount = leads.filter((l) => l.stage === "lost").length;
+  const wonCount = safeLeads.filter((l) => l.stage === "won").length;
+  const lostCount = safeLeads.filter((l) => l.stage === "lost").length;
   const closedCount = wonCount + lostCount;
 
   const paymentColumns = [
@@ -182,7 +185,7 @@ export default function Sales() {
         <TabsContent value="pipeline" className="space-y-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-5">
             {STAGES.map((stage) => {
-              const stageLeads = leads.filter((l) => l.stage === stage.key);
+              const stageLeads = safeLeads.filter((l) => l.stage === stage.key);
               return (
                 <div
                   key={stage.key}
@@ -284,10 +287,10 @@ export default function Sales() {
         <TabsContent value="history" className="space-y-4">
           <Card className="border-border bg-card p-5">
             <h3 className="mb-3 font-heading text-base font-semibold">Recent Payment Transactions</h3>
-            {payments.length === 0 ? (
+            {safePayments.length === 0 ? (
               <EmptyState icon={TrendingUp} title="No payments recorded yet" description="Payments appear here automatically as invoices are paid." />
             ) : (
-              <DataTable columns={paymentColumns} rows={payments} testId="payments-table" />
+              <DataTable columns={paymentColumns} rows={safePayments} testId="payments-table" />
             )}
           </Card>
         </TabsContent>

@@ -85,7 +85,7 @@ export default function OperationsModule() {
             </Card>
             <Card className="border-border bg-card p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Stock Value</p>
-              <p className="font-mono text-2xl font-extrabold text-emerald-600 mt-1">{format(items.reduce((acc, i) => acc + (i.price * (i.stock_quantity || 0)), 0))}</p>
+              <p className="font-mono text-2xl font-extrabold text-emerald-600 mt-1">{format(items.reduce((acc, i) => acc + ((i.price || 0) * (i.stock_quantity || 0)), 0))}</p>
             </Card>
             <Card className="border-border bg-card p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Fulfillment Health</p>

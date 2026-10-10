@@ -174,7 +174,7 @@ export default function AutomationCenter() {
           </div>
 
           <div className="divide-y divide-border/50">
-            {rules.map((rule) => (
+            {(Array.isArray(rules) ? rules : []).map((rule) => (
               <div key={rule.id} className="py-4 space-y-2">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -205,17 +205,17 @@ export default function AutomationCenter() {
             <span className="flex items-center gap-2 text-sm font-semibold">
               <HelpCircle className="h-4 w-4 text-primary" /> Autopilot Explainability Audit Trail
             </span>
-            <span className="text-xs text-muted-foreground">{logs.length} Recent Logs</span>
+            <span className="text-xs text-muted-foreground">{(Array.isArray(logs) ? logs : []).length} Recent Logs</span>
           </div>
 
           <div className="divide-y divide-border/50 max-h-[460px] overflow-y-auto space-y-3">
-            {logs.length === 0 ? (
+            {(Array.isArray(logs) ? logs : []).length === 0 ? (
               <div className="py-12 text-center text-xs text-muted-foreground">
                 <p>No automated actions executed yet.</p>
                 <p className="mt-1">Click <strong>Run Autopilot Scan Now</strong> to evaluate your workspace rules.</p>
               </div>
             ) : (
-              logs.map((log) => (
+              (Array.isArray(logs) ? logs : []).map((log) => (
                 <div key={log.id} className="pt-3 text-xs space-y-1 bg-muted/20 p-3 rounded-lg border border-border/50">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">

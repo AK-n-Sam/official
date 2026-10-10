@@ -184,7 +184,7 @@ export default function InvoiceDetail() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {inv.items.map((it, i) => (
+              {(inv?.items || []).map((it, i) => (
                 <TableRow key={i}>
                   <TableCell className="font-medium">{it.description}</TableCell>
                   <TableCell className="font-mono">{it.quantity}</TableCell>

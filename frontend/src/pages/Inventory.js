@@ -37,14 +37,15 @@ export default function Inventory() {
       .catch(() => {});
   }, [products]);
 
+  const safeProducts = Array.isArray(products) ? products : [];
   const isLow = (p) => p.stock_quantity <= p.reorder_level;
-  const lowStock = products.filter(isLow);
-  const totalUnits = products.reduce((s, p) => s + p.stock_quantity, 0);
-  const stockValue = intel?.total_cost_valuation || products.reduce((s, p) => s + p.stock_quantity * (p.cost || 0), 0);
-  const retailValue = intel?.total_retail_valuation || products.reduce((s, p) => s + p.stock_quantity * (p.price || 0), 0);
+  const lowStock = safeProducts.filter(isLow);
+  const totalUnits = safeProducts.reduce((s, p) => s + (p.stock_quantity || 0), 0);
+  const stockValue = intel?.total_cost_valuation || safeProducts.reduce((s, p) => s + (p.stock_quantity || 0) * (p.cost || 0), 0);
+  const retailValue = intel?.total_retail_valuation || safeProducts.reduce((s, p) => s + (p.stock_quantity || 0) * (p.price || 0), 0);
   const potentialProfit = intel?.potential_gross_profit || (retailValue - stockValue);
 
-  const shown = lowOnly ? lowStock : products;
+  const shown = lowOnly ? lowStock : safeProducts;
 
   const openMovement = (prefill = {}) => {
     setProductId(prefill.productId || "");
@@ -206,7 +207,7 @@ export default function Inventory() {
               <Label className="text-xs text-muted-foreground">Product</Label>
               <Select value={productId} onValueChange={setProductId}>
                 <SelectTrigger className="mt-1.5" data-testid="movement-product"><SelectValue placeholder="Select product" /></SelectTrigger>
-                <SelectContent>{products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} ({p.stock_quantity})</SelectItem>)}</SelectContent>
+                <SelectContent>{safeProducts.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} ({p.stock_quantity})</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">

@@ -84,7 +84,7 @@ export default function Leads() {
   // Optimistic: the card moves immediately and snaps back if the save fails.
   const moveStage = async (lead, stage) => {
     const previous = data;
-    setData((rows) => rows.map((l) => (l.id === lead.id ? { ...l, stage } : l)));
+    setData((rows) => (Array.isArray(rows) ? rows : []).map((l) => (l.id === lead.id ? { ...l, stage } : l)));
     try {
       await api.put(`/leads/${lead.id}`, { stage });
       if (stage === "won" && !lead.customer_id) {
@@ -98,7 +98,7 @@ export default function Leads() {
   const dropOn = (stage) => (e) => {
     e.preventDefault();
     setOverStage(null);
-    const lead = data.find((l) => l.id === e.dataTransfer.getData("text/plain"));
+    const lead = (Array.isArray(data) ? data : []).find((l) => l.id === e.dataTransfer.getData("text/plain"));
     if (lead && lead.stage !== stage.key) moveStage(lead, stage.key);
   };
   const remove = async () => {
@@ -106,11 +106,12 @@ export default function Leads() {
     catch (e) { toast.error(formatApiError(e)); }
   };
 
-  const stageTotal = (key) => data.filter((l) => l.stage === key).reduce((s, l) => s + (l.value || 0), 0);
-  const openDeals = data.filter((l) => !["won", "lost"].includes(l.stage));
+  const safeData = Array.isArray(data) ? data : [];
+  const stageTotal = (key) => safeData.filter((l) => l.stage === key).reduce((s, l) => s + (l.value || 0), 0);
+  const openDeals = safeData.filter((l) => !["won", "lost"].includes(l.stage));
   const openValue = openDeals.reduce((s, l) => s + (l.value || 0), 0);
-  const wonCount = data.filter((l) => l.stage === "won").length;
-  const lostCount = data.filter((l) => l.stage === "lost").length;
+  const wonCount = safeData.filter((l) => l.stage === "won").length;
+  const lostCount = safeData.filter((l) => l.stage === "lost").length;
   const closedCount = wonCount + lostCount;
 
   return (
@@ -132,7 +133,7 @@ export default function Leads() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-5">
         {STAGES.map((stage) => {
-          const leads = data.filter((l) => l.stage === stage.key);
+          const leads = safeData.filter((l) => l.stage === stage.key);
           return (
             <div
               key={stage.key}
