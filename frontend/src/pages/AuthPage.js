@@ -105,7 +105,7 @@ export default function AuthPage() {
         await login(form.email, form.password);
         toast.success("Signed in successfully!");
         if (roleMode === "admin") {
-          navigate("/admin");
+          navigate("/admin-center");
         } else {
           navigate("/dashboard");
         }
@@ -124,7 +124,7 @@ export default function AuthPage() {
       const u = await demoLogin(role);
       toast.success(`Logged in as ${role === "admin" ? "System Admin" : role === "owner" ? "Enterprise Owner" : "Team Member"}`);
       if (role === "admin") {
-        navigate("/admin");
+        navigate("/admin-center");
       } else {
         navigate("/dashboard");
       }

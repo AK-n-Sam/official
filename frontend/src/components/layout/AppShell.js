@@ -93,6 +93,7 @@ export function AppShell() {
               <Route path="/reports" element={<Navigate to="/insights?tab=reports" replace />} />
 
               <Route path="/admin-center" element={<AdminCenter />} />
+              <Route path="/admin" element={<Navigate to="/admin-center" replace />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/help" element={<Help />} />
 

@@ -42,7 +42,7 @@ export default function CustomersModule() {
   if (loading) return <div className="space-y-6"><Skeleton className="h-12 w-64" /><Skeleton className="h-96 rounded-xl" /></div>;
   if (error) return <ErrorState message={formatApiError(error)} onRetry={() => window.location.reload()} />;
 
-  const customersList = data.items || [];
+  const customersList = Array.isArray(data) ? data : (data?.items || []);
   const atRiskList = customersList.filter((c) => c.status === "at_risk" || c.tier === "At-Risk");
   const vipList = customersList.filter((c) => c.tier === "VIP" || c.total_spent > 50000);
 

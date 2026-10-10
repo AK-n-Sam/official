@@ -35,7 +35,7 @@ export default function MyWork() {
       api.get("/personalization/today")
     ]).then(([resMyWork, resToday]) => {
       setData(resMyWork.data);
-      setTodayQueue(resToday.data?.items || []);
+      setTodayQueue(Array.isArray(resToday.data) ? resToday.data : (resToday.data?.items || []));
       setError(null);
     }).catch((e) => setError(e)).finally(() => setLoading(false));
   };

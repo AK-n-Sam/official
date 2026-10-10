@@ -24,22 +24,19 @@ export function AuthProvider({ children }) {
       const { data } = await api.get("/auth/me");
       setUser(data);
       return data;
-    } catch {
-      setUser(DEMO_USER);
-      return DEMO_USER;
+    } catch (err) {
+      if (process.env.REACT_APP_DEMO_MODE === "true") {
+        setUser(DEMO_USER);
+        return DEMO_USER;
+      }
+      setUser(null);
+      return null;
     }
   }, []);
 
   useEffect(() => {
-    if (window.location.hash?.includes("session_id=")) {
-      setLoading(false);
-      return;
-    }
     (async () => {
-      const res = await loadMe();
-      if (!res) {
-        setUser(DEMO_USER);
-      }
+      await loadMe();
       setLoading(false);
     })();
   }, [loadMe]);
@@ -61,7 +58,6 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
-
   const demoLogin = async (role) => {
     const { data } = await api.post("/auth/demo-login", { role });
     persist(data);
@@ -80,7 +76,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, login, register, demoLogin, requestAccess, googleSession, logout, refresh: loadMe }}>
+    <AuthContext.Provider value={{ user, setUser, loading, login, register, demoLogin, requestAccess, logout, refresh: loadMe }}>
       {children}
     </AuthContext.Provider>
   );

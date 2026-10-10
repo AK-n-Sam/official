@@ -40,7 +40,7 @@ export default function OperationsModule() {
   if (loading) return <div className="space-y-6"><Skeleton className="h-12 w-64" /><Skeleton className="h-96 rounded-xl" /></div>;
   if (error) return <ErrorState message={formatApiError(error)} onRetry={() => window.location.reload()} />;
 
-  const items = data.items || [];
+  const items = Array.isArray(data) ? data : (data?.items || []);
   const lowStock = items.filter((i) => i.is_low_stock || (i.stock_quantity <= (i.reorder_level || 5)));
 
   return (

@@ -75,8 +75,6 @@ async def ensure_admin_seeded():
             "preferences": {"currency": "USD", "timezone": "America/New_York", "date_format": "MMM d, yyyy", "email_notifications": True},
             "created_at": now_iso(), "updated_at": now_iso(),
         })
-    elif not verify_password(admin_password, existing.get("password_hash", "")):
-        await db.users.update_one({"email": admin_email}, {"$set": {"password_hash": hash_password(admin_password)}})
 
 
 async def get_current_user(request: Request) -> dict:
@@ -246,6 +244,10 @@ async def request_access(payload: dict = Body(...)):
 
 @router.post("/demo-login")
 async def demo_login(payload: dict = Body(...), response: Response = None):
+    demo_mode_env = os.environ.get("DEMO_MODE", "true").lower()
+    if demo_mode_env in ("false", "0", "no", "off"):
+        raise HTTPException(status_code=403, detail="Demo login is disabled in production")
+
     requested_role = (payload.get("role") or "owner").lower()
     await ensure_admin_seeded()
 

@@ -1,11 +1,17 @@
 services:
+  # Backend Web Service
   - type: web
     name: six6fix-backend
     runtime: python
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.13
+      - key: DEMO_MODE
+        value: "false"
       - key: JWT_SECRET
         sync: false
       - key: ADMIN_EMAIL
@@ -18,21 +24,22 @@ services:
         sync: false
       - key: CORS_ORIGINS
         sync: false
-      - key: DEMO_MODE
-        value: "false"
 
+  # Frontend Static Service
   - type: web
-    runtime: static
     name: six6fix-frontend
+    runtime: static
     rootDir: frontend
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     staticPublishPath: build
-    envVars:
-      - key: REACT_APP_BACKEND_URL
-        sync: false
-      - key: REACT_APP_DEMO_MODE
-        sync: false
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: REACT_APP_BACKEND_URL
+        sync: false
+      - key: REACT_APP_DEMO_MODE
+        value: "false"

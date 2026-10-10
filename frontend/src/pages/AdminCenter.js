@@ -89,19 +89,23 @@ export default function AdminCenter() {
         api.get("/products"),
       ]);
 
+      const custArr = Array.isArray(customersRes.data) ? customersRes.data : (customersRes.data?.items || []);
+      const invArr = Array.isArray(invoicesRes.data) ? invoicesRes.data : (invoicesRes.data?.items || []);
+      const prodArr = Array.isArray(productsRes.data) ? productsRes.data : (productsRes.data?.items || []);
+
       const backup = {
         workspace: data?.organization || {},
         exported_at: new Date().toISOString(),
         exported_by: user.email,
         counts: {
-          customers: customersRes.data.length,
-          invoices: invoicesRes.data.length,
-          products: productsRes.data.length,
+          customers: custArr.length,
+          invoices: invArr.length,
+          products: prodArr.length,
         },
         data: {
-          customers: customersRes.data,
-          invoices: invoicesRes.data,
-          products: productsRes.data,
+          customers: custArr,
+          invoices: invArr,
+          products: prodArr,
         },
       };
 

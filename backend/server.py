@@ -32,6 +32,21 @@ async def root():
     return {"message": "Six6Fix API", "status": "ok"}
 
 
+@api.get("/health")
+async def health_check():
+    return {"status": "ok", "service": "six6fix-backend"}
+
+
+@app.get("/api/health")
+async def app_api_health():
+    return {"status": "ok", "service": "six6fix-backend"}
+
+
+@app.get("/health")
+async def app_health():
+    return {"status": "ok", "service": "six6fix-backend"}
+
+
 async def log_audit_event(org_id: str, user: dict, action: str, category: str, target_id: str = "", target_name: str = "", details: str = ""):
     doc = {
         "id": str(uuid.uuid4()),
@@ -2070,6 +2085,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=cors_origins,
+<<<<<<< HEAD
+=======
+    allow_origin_regex=r"https://.*\.onrender\.com|https://.*\.vercel\.app|http://localhost:\d+|http://127\.0\.0\.1:\d+",
+>>>>>>> f4752b3 (feat(render): dedicated Render deployment-readiness pass for Six6Fix)
     allow_methods=["*"],
     allow_headers=["*"],
 )

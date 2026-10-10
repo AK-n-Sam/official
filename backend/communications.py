@@ -210,6 +210,19 @@ async def get_connect_url(payload: dict = Body(...), user: dict = Depends(get_cu
     return {"url": url}
 
 
+@router.get("/connect/{provider}", tags=["communications"])
+async def connect_provider_redirect(provider: str, redirect_uri: Optional[str] = None):
+    p = provider.lower()
+    if p == "gmail":
+        url = GmailAdapter.get_auth_url(redirect_uri or "")
+    elif p == "outlook":
+        url = OutlookAdapter.get_auth_url(redirect_uri or "")
+    else:
+        raise HTTPException(status_code=400, detail="Invalid provider")
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=url)
+
+
 @router.post("/accounts/{account_id}/disconnect", tags=["communications"])
 async def disconnect_account(account_id: str, user: dict = Depends(get_current_user)):
     org_id = user["active_org_id"]
