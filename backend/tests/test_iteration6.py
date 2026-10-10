@@ -126,6 +126,10 @@ class TestReassign:
         assert cr.status_code in (200, 201), cr.text
         cid = cr.json()["id"]
 
+        # Ensure owner is in the member's org
+        org_target = invited_member.get("org_id", owner_user["active_org_id"])
+        requests.post(f"{BASE_URL}/api/organizations/switch", headers=_h(owner_token), json={"org_id": org_target})
+
         # As owner: create a task assigned to member
         tr = requests.post(
             f"{BASE_URL}/api/tasks",
