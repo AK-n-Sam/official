@@ -11,7 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 const NAV_MAP = {};
 NAV_SECTIONS.forEach((s) => s.items.forEach((i) => { NAV_MAP[i.path] = i; }));
 
-const HOME = "/dashboard";
+const HOME = "/business";
 const STORAGE = "bmp_open_tabs";
 const DETAIL_ROUTES = {
   customers: { label: "Customer", icon: "Users" },
@@ -20,14 +20,20 @@ const DETAIL_ROUTES = {
 };
 
 function resolveTab(pathname) {
+  if (!pathname) return { path: HOME, label: "Overview", icon: "LayoutDashboard" };
+  const cleanPath = pathname.split("?")[0];
+  if (cleanPath === "/dashboard" || cleanPath === "/overview" || cleanPath === "/") {
+    return { path: HOME, label: "Overview", icon: "LayoutDashboard" };
+  }
+  if (NAV_MAP[cleanPath]) return { path: cleanPath, label: NAV_MAP[cleanPath].name, icon: NAV_MAP[cleanPath].icon };
   if (NAV_MAP[pathname]) return { path: pathname, label: NAV_MAP[pathname].name, icon: NAV_MAP[pathname].icon };
-  const [section, id] = pathname.split("/").filter(Boolean);
+  const [section, id] = cleanPath.split("/").filter(Boolean);
   const detail = DETAIL_ROUTES[section];
-  if (detail && id) return { path: pathname, label: `${detail.label} · ${id.slice(-4)}`, icon: detail.icon };
-  return null; // unknown route: the shell redirects it, so don't open a tab for it
+  if (detail && id) return { path: cleanPath, label: `${detail.label} · ${id.slice(-4)}`, icon: detail.icon };
+  return { path: cleanPath, label: cleanPath.slice(1).replace(/-/g, " "), icon: "LayoutDashboard" };
 }
 
-const tid = (p) => p.replace(/\//g, "-");
+const tid = (p) => (p || "").replace(/\//g, "-");
 
 export function WorkspaceTabs() {
   const location = useLocation();
@@ -37,40 +43,61 @@ export function WorkspaceTabs() {
   const [tabs, setTabs] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE) || "[]");
-      const valid = Array.isArray(saved) ? saved.filter((t) => t?.path && resolveTab(t.path)) : [];
-      if (valid.length) return valid;
+      const valid = Array.isArray(saved)
+        ? saved.map((t) => (t?.path ? resolveTab(t.path) : null)).filter(Boolean)
+        : [];
+      if (valid.length) {
+        const unique = [];
+        const seen = new Set();
+        for (const t of valid) {
+          if (t && !seen.has(t.path)) {
+            seen.add(t.path);
+            unique.push(t);
+          }
+        }
+        if (unique.length) return unique;
+      }
     } catch (e) { /* ignore */ }
     return [resolveTab(HOME)];
   });
 
-  useEffect(() => { localStorage.setItem(STORAGE, JSON.stringify(tabs)); }, [tabs]);
+  useEffect(() => {
+    const validTabs = (tabs || []).filter((t) => t && t.path);
+    localStorage.setItem(STORAGE, JSON.stringify(validTabs));
+  }, [tabs]);
 
   useEffect(() => {
     const tab = resolveTab(active);
-    if (!tab) return;
-    setTabs((prev) => (prev.some((t) => t.path === active) ? prev : [...prev, tab]));
+    if (!tab || !tab.path) return;
+    setTabs((prev) => {
+      const cleanPrev = (prev || []).filter((t) => t && t.path);
+      return cleanPrev.some((t) => t.path === tab.path) ? cleanPrev : [...cleanPrev, tab];
+    });
   }, [active]);
 
   // Detail pages report a readable title once their record loads (see useTabTitle).
   useEffect(() => {
     const onTitle = (e) => {
-      const { path, title } = e.detail;
-      setTabs((prev) => prev.map((t) => (t.path === path && t.label !== title ? { ...t, label: title } : t)));
+      const { path, title } = e.detail || {};
+      if (!path || !title) return;
+      setTabs((prev) => (prev || []).filter(Boolean).map((t) => (t.path === path && t.label !== title ? { ...t, label: title } : t)));
     };
     window.addEventListener(TAB_TITLE_EVENT, onTitle);
     return () => window.removeEventListener(TAB_TITLE_EVENT, onTitle);
   }, []);
 
   const closeTab = useCallback((path) => {
-    const idx = tabs.findIndex((t) => t.path === path);
-    const remaining = tabs.filter((t) => t.path !== path);
+    const currentTabs = (tabs || []).filter((t) => t && t.path);
+    const idx = currentTabs.findIndex((t) => t.path === path);
+    const remaining = currentTabs.filter((t) => t.path !== path);
     const safe = remaining.length ? remaining : [resolveTab(HOME)];
     setTabs(safe);
     if (path === active) navigate((safe[Math.max(0, idx - 1)] || safe[0]).path);
   }, [tabs, active, navigate]);
 
   const closeOthers = () => {
-    setTabs(tabs.filter((t) => t.path === HOME || t.path === active));
+    const currentTabs = (tabs || []).filter((t) => t && t.path);
+    setTabs(currentTabs.filter((t) => t.path === HOME || t.path === active));
   };
 
   const closeAll = () => {
@@ -78,10 +105,12 @@ export function WorkspaceTabs() {
     if (active !== HOME) navigate(HOME);
   };
 
+  const safeTabs = (tabs || []).filter((t) => t && t.path);
+
   return (
     <div className="flex items-center gap-1 border-b border-border/70 bg-card/40 px-2 py-1 backdrop-blur-sm" data-testid="workspace-tabs">
       <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto scrollbar-none">
-        {tabs.map((t) => {
+        {safeTabs.map((t) => {
           const isActive = t.path === active;
           const closable = t.path !== HOME;
           return (
@@ -122,11 +151,11 @@ export function WorkspaceTabs() {
         })}
       </div>
 
-      {tabs.length > 2 && (
+      {safeTabs.length > 2 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="h-8 shrink-0 gap-1 px-2 text-xs text-muted-foreground" data-testid="tabs-menu-button">
-              {tabs.length} tabs <ChevronDown className="h-3.5 w-3.5" />
+              {safeTabs.length} tabs <ChevronDown className="h-3.5 w-3.5" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
