@@ -36,8 +36,10 @@ export function Header({ onMenuClick }) {
   const [notifsOpen, setNotifsOpen] = useState(false);
 
   useEffect(() => {
-    api.get("/notifications").then(({ data }) => setNotifs(data)).catch(() => {});
+    api.get("/notifications").then(({ data }) => setNotifs(Array.isArray(data) ? data : (data?.items || []))).catch(() => setNotifs([]));
   }, [user?.active_org_id]);
+
+  const safeNotifs = Array.isArray(notifs) ? notifs : [];
 
   // "?" opens the guide for the current page (ignored while typing in a field).
   useEffect(() => {
@@ -153,9 +155,9 @@ export function Header({ onMenuClick }) {
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon" className="relative h-9 w-9" data-testid="notifications-button">
               <Bell className="h-[18px] w-[18px]" />
-              {notifs.length > 0 && (
+              {safeNotifs.length > 0 && (
                 <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
-                  {notifs.length}
+                  {safeNotifs.length}
                 </span>
               )}
             </Button>
@@ -163,13 +165,13 @@ export function Header({ onMenuClick }) {
           <PopoverContent className="w-80 p-0" align="end">
             <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
               <p className="text-sm font-semibold">Notifications</p>
-              <Badge variant="secondary" className="text-xs">{notifs.length} new</Badge>
+              <Badge variant="secondary" className="text-xs">{safeNotifs.length} new</Badge>
             </div>
             <div className="max-h-80 overflow-y-auto" data-testid="notifications-list">
-              {notifs.length === 0 ? (
+              {safeNotifs.length === 0 ? (
                 <p className="px-4 py-8 text-center text-sm text-muted-foreground">You're all caught up.</p>
               ) : (
-                notifs.map((n) => {
+                safeNotifs.map((n) => {
                   const NIcon = NOTIF_ICON[n.type] || Bell;
                   const link = NOTIF_LINK[n.type]?.(n);
                   return (
