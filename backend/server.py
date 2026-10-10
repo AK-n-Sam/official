@@ -2085,10 +2085,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=cors_origins,
-<<<<<<< HEAD
-=======
     allow_origin_regex=r"https://.*\.onrender\.com|https://.*\.vercel\.app|http://localhost:\d+|http://127\.0\.0\.1:\d+",
->>>>>>> f4752b3 (feat(render): dedicated Render deployment-readiness pass for Six6Fix)
     allow_methods=["*"],
     allow_headers=["*"],
 )
