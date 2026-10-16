@@ -2778,13 +2778,33 @@ DEMO_MODE=false</code></pre>
         }
 
         /* ---------- copy to clipboard ---------- */
+        function legacyCopy(text) {
+          var area = document.createElement("textarea");
+          area.value = text;
+          area.setAttribute("readonly", "");
+          area.style.position = "fixed";
+          area.style.top = "-1000px";
+          area.style.opacity = "0";
+          document.body.appendChild(area);
+          area.select();
+          var ok = false;
+          try {
+            ok = document.execCommand("copy");
+          } catch (e) {
+            ok = false;
+          }
+          document.body.removeChild(area);
+          return ok;
+        }
+
         Array.prototype.forEach.call(document.querySelectorAll(".copy[data-copy]"), function (button) {
           button.addEventListener("click", function () {
             var source = document.getElementById("copy-" + button.getAttribute("data-copy"));
             if (!source) return;
             var text = source.textContent.replace(/\u00a0/g, " ");
+            var original = button.textContent;
+
             var done = function () {
-              var original = button.textContent;
               button.textContent = "Copied";
               button.classList.add("is-done");
               window.setTimeout(function () {
@@ -2792,22 +2812,24 @@ DEMO_MODE=false</code></pre>
                 button.classList.remove("is-done");
               }, 1600);
             };
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-              navigator.clipboard.writeText(text).then(done, function () {
-                button.textContent = "Press ⌘C";
-              });
-            } else {
-              var area = document.createElement("textarea");
-              area.value = text;
-              document.body.appendChild(area);
-              area.select();
-              try {
-                document.execCommand("copy");
+            var failed = function () {
+              button.textContent = "Press ⌘C";
+              window.setTimeout(function () {
+                button.textContent = original;
+              }, 1600);
+            };
+            var tryLegacy = function () {
+              if (legacyCopy(text)) {
                 done();
-              } catch (e) {
-                button.textContent = "Press ⌘C";
+              } else {
+                failed();
               }
-              document.body.removeChild(area);
+            };
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(text).then(done, tryLegacy);
+            } else {
+              tryLegacy();
             }
           });
         });
