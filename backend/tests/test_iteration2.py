@@ -65,13 +65,17 @@ class TestCustomersExtended:
         assert "total_sales" in c0 and "outstanding" in c0
 
     def test_history(self, client):
-        customers = client.get(f"{API}/customers").json()
-        cid = customers[0]["id"]
-        r = client.get(f"{API}/customers/{cid}/history")
-        assert r.status_code == 200
-        h = r.json()
-        for k in ("customer", "invoices", "payments", "tasks", "total_sales", "outstanding", "total_paid"):
-            assert k in h, f"missing {k}"
+        c_res = client.post(f"{API}/customers", json={"name": f"TEST_HistCust_{uuid.uuid4().hex[:4]}", "email": f"hist_{uuid.uuid4().hex[:6]}@t.com", "status": "active"})
+        assert c_res.status_code == 200
+        cust = c_res.json()
+        try:
+            r = client.get(f"{API}/customers/{cust['id']}/history")
+            assert r.status_code == 200
+            h = r.json()
+            for k in ("customer", "invoices", "payments", "tasks", "total_sales", "outstanding", "total_paid"):
+                assert k in h, f"missing {k}"
+        finally:
+            client.delete(f"{API}/customers/{cust['id']}")
 
 
 # ---------------- Dashboard extended KPIs ----------------
@@ -240,13 +244,17 @@ class TestEmployees:
 # ---------------- Tasks with customer link ----------------
 class TestTasksLinked:
     def test_create_with_customer(self, client):
-        customers = client.get(f"{API}/customers").json()
-        cid = customers[0]["id"]
-        r = client.post(f"{API}/tasks", json={
-            "title": "TEST_LinkedTask", "priority": "high", "status": "todo",
-            "due_date": "2026-02-01", "customer_id": cid, "customer_name": customers[0]["name"]
-        })
-        assert r.status_code == 200, r.text
-        tid = r.json()["id"]
-        assert r.json().get("customer_id") == cid
-        client.delete(f"{API}/tasks/{tid}")
+        c_res = client.post(f"{API}/customers", json={"name": f"TEST_TaskCust_{uuid.uuid4().hex[:4]}", "email": f"taskc_{uuid.uuid4().hex[:6]}@t.com", "status": "active"})
+        assert c_res.status_code == 200
+        cust = c_res.json()
+        try:
+            r = client.post(f"{API}/tasks", json={
+                "title": "TEST_LinkedTask", "priority": "high", "status": "todo",
+                "due_date": "2026-02-01", "customer_id": cust["id"], "customer_name": cust["name"]
+            })
+            assert r.status_code == 200, r.text
+            tid = r.json()["id"]
+            assert r.json().get("customer_id") == cust["id"]
+            client.delete(f"{API}/tasks/{tid}")
+        finally:
+            client.delete(f"{API}/customers/{cust['id']}")

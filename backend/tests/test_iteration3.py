@@ -124,11 +124,7 @@ class TestActivityFeed:
         assert r.status_code in (401, 403)
 
     def test_new_invoice_appears_in_feed(self, client):
-        customers = client.get(f"{API}/customers").json()
-        if not customers:
-            c = client.post(f"{API}/customers", json={"name": f"TEST_FeedCust_{uuid.uuid4().hex[:4]}", "email": f"fcust_{uuid.uuid4().hex[:6]}@example.com"}).json()
-            customers = [c]
-        c = customers[0]
+        c = client.post(f"{API}/customers", json={"name": f"TEST_FeedCust_{uuid.uuid4().hex[:4]}", "email": f"fcust_{uuid.uuid4().hex[:6]}@example.com"}).json()
         payload = {
             "customer_id": c["id"], "customer_name": c["name"],
             "issue_date": "2026-01-15", "due_date": "2026-02-15",
@@ -146,3 +142,4 @@ class TestActivityFeed:
             assert inv_events[0]["link"] == f"/invoices/{inv['id']}"
         finally:
             client.delete(f"{API}/invoices/{inv['id']}")
+            client.delete(f"{API}/customers/{c['id']}")
